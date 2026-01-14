@@ -800,4 +800,594 @@ describe("MIDIController", () => {
       })
     })
   })
+
+  describe("Patch Management", () => {
+    beforeEach(async () => {
+      await midiController.initialize()
+      await midiController.connection.connect()
+    })
+
+    describe("getPatch", () => {
+      it("should create patch with default name", () => {
+        const patch = midiController.getPatch()
+
+        expect(patch).toHaveProperty("name", "Unnamed Patch")
+        expect(patch).toHaveProperty("device")
+        expect(patch).toHaveProperty("timestamp")
+        expect(patch).toHaveProperty("version", "1.0")
+        expect(patch).toHaveProperty("channels")
+        expect(patch).toHaveProperty("settings")
+      })
+
+      it("should create patch with custom name", () => {
+        const patch = midiController.getPatch("My Patch")
+
+        expect(patch.name).toBe("My Patch")
+      })
+
+      it("should include current CC values", () => {
+        midiController.sendCC(74, 100, 2)
+        midiController.sendCC(71, 64, 3)
+
+        const patch = midiController.getPatch()
+
+        expect(patch.channels["2"].ccs["74"]).toBe(100)
+        expect(patch.channels["3"].ccs["71"]).toBe(64)
+      })
+
+      it("should include device information", () => {
+        const patch = midiController.getPatch()
+
+        expect(patch.device).toBe("Test Output 1")
+      })
+
+      it("should handle null device", async () => {
+        await midiController.connection.disconnect()
+        const patch = midiController.getPatch()
+
+        expect(patch.device).toBeNull()
+      })
+
+      it("should collect control settings", () => {
+        const element = {
+          value: "50",
+          id: "cutoff-slider",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn((attr) => {
+            if (attr === "data-midi-label") return "Filter Cutoff"
+            if (attr === "min" || attr === "max") return "0"
+            return null
+          }),
+        }
+
+        midiController.bind(element, {
+          cc: 74,
+          min: 20,
+          max: 20000,
+          channel: 2,
+          invert: false,
+        })
+
+        const patch = midiController.getPatch()
+
+        expect(patch.settings.cc74).toEqual({
+          min: 20,
+          max: 20000,
+          invert: false,
+          is14Bit: false,
+          label: "Filter Cutoff",
+          elementId: "cutoff-slider",
+        })
+      })
+    })
+
+    describe("setPatch", () => {
+      it("should apply CC values from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: {
+              ccs: {
+                74: 100,
+                71: 64,
+              },
+            },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        expect(midiController.getCC(74, 1)).toBe(100)
+        expect(midiController.getCC(71, 1)).toBe(64)
+        expect(mockOutputs[0].send).toHaveBeenCalled()
+      })
+
+      it("should throw error for invalid patch", async () => {
+        await expect(midiController.setPatch(null)).rejects.toThrow("Invalid patch format")
+        await expect(midiController.setPatch({})).rejects.toThrow("Invalid patch format")
+      })
+
+      it("should apply notes from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: {
+              notes: {
+                60: 100, // Note on
+                64: 0, // Note off
+              },
+            },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x90, 60, 100]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x90, 64, 0]))
+      })
+
+      it("should emit PATCH_LOADED event", async () => {
+        const spy = vi.fn()
+        midiController.on(MIDI_EVENTS.PATCH_LOADED, spy)
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: { ccs: { 74: 100 } },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        expect(spy).toHaveBeenCalledWith({ patch })
+      })
+
+      it("should apply settings to controls when possible", async () => {
+        const element = {
+          value: "50",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, min: 0, max: 127, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 100 } },
+          },
+          settings: {
+            cc74: { min: 10, max: 1000 },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        expect(element.min).toBe("10")
+        expect(element.max).toBe("1000")
+      })
+
+      it("should convert MIDI CC value to element value with custom min/max", async () => {
+        const element = {
+          value: "1000",
+          min: "20",
+          max: "20000",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, min: 20, max: 20000, channel: 2 })
+
+        // Create a patch with settings that match the binding config
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 63 } }, // MIDI value ~50%
+          },
+          settings: {
+            cc74: { min: 20, max: 20000, channel: 2 },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // MIDI value 63/127 ~ 0.496, so 20 + 0.496 * (20000-20) ≈ 9940
+        const expectedValue = 20 + (63 / 127) * (20000 - 20)
+        expect(Math.round(parseFloat(element.value))).toBe(Math.round(expectedValue))
+        expect(element.dispatchEvent).toHaveBeenCalled()
+        expect(element.dispatchEvent.mock.calls[0][0].type).toBe("input")
+      })
+
+      it("should convert MIDI CC value with inverted mapping", async () => {
+        const element = {
+          value: "64",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, invert: true, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 63 } }, // MIDI value ~50%
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // Inverted: 127 - (63/127)*(127-0) = 127 - 62.7 = 64.3
+        const expectedValue = 127 - (63 / 127) * (127 - 0)
+        expect(Math.round(parseFloat(element.value))).toBe(Math.round(expectedValue))
+        expect(element.dispatchEvent).toHaveBeenCalled()
+      })
+
+      it("should handle CC values with default min/max", async () => {
+        const element = {
+          value: "64",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 100 } },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // With default min/max (0/127), MIDI value 100 should map to element value 100
+        expect(parseFloat(element.value)).toBe(100)
+        expect(element.dispatchEvent).toHaveBeenCalled()
+      })
+
+      it("should handle missing CC values in patch gracefully", async () => {
+        const element = {
+          value: "64",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 75: 100 } }, // Different CC
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // Element value should not change if CC is not in patch
+        expect(parseFloat(element.value)).toBe(64)
+        // Should not dispatch event for missing CC
+        expect(element.dispatchEvent).not.toHaveBeenCalled()
+      })
+
+      it("should handle numeric string min/max values", async () => {
+        const element = {
+          value: "500",
+          min: "100",
+          max: "1000",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn((attr) => {
+            if (attr === "min") return "100"
+            if (attr === "max") return "1000"
+            return null
+          }),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 100 } }, // Default min=100, max=1000
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // Should parse string values correctly: 100 + (100/127)*(1000-100) = 100 + 708.66 = 808.66
+        expect(parseFloat(element.value)).toBeGreaterThan(500)
+        expect(element.dispatchEvent).toHaveBeenCalled()
+      })
+
+      it("should apply multiple CC values to multiple bound elements", async () => {
+        const element1 = {
+          value: "50",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn((attr) => {
+            if (attr === "min") return "0"
+            if (attr === "max") return "127"
+            return null
+          }),
+          dispatchEvent: vi.fn(),
+        }
+
+        const element2 = {
+          value: "1000",
+          min: "20",
+          max: "20000",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn((attr) => {
+            if (attr === "min") return "20"
+            if (attr === "max") return "20000"
+            return null
+          }),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element1, { cc: 74, channel: 2 })
+        midiController.bind(element2, { cc: 75, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: {
+              ccs: {
+                74: 100, // Should map to exactly 100 in 0-127 range
+                75: 63, // Should map to 20 + (63/127)*(20000-20) ≈ 9940 in 20-20000 range
+              },
+            },
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        expect(parseFloat(element1.value)).toBe(100)
+        const expectedValue = 20 + (63 / 127) * (20000 - 20)
+        expect(Math.round(parseFloat(element2.value))).toBe(Math.round(expectedValue))
+        expect(element1.dispatchEvent).toHaveBeenCalled()
+        expect(element2.dispatchEvent).toHaveBeenCalled()
+      })
+    })
+
+    describe("savePatch", () => {
+      beforeEach(() => {
+        vi.stubGlobal("localStorage", {
+          setItem: vi.fn(),
+          getItem: vi.fn(),
+          removeItem: vi.fn(),
+          length: 0,
+          key: vi.fn(),
+          clear: vi.fn(),
+        })
+      })
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it("should save patch to localStorage", () => {
+        const patch = { name: "Test Patch", channels: { 1: { ccs: { 74: 100 } } } }
+        const key = midiController.savePatch("Test Patch", patch)
+
+        expect(key).toBe("midiwire_patch_Test Patch")
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          "midiwire_patch_Test Patch",
+          JSON.stringify(patch),
+        )
+      })
+
+      it("should use getPatch() if no patch provided", () => {
+        midiController.sendCC(74, 100, 1)
+
+        midiController.savePatch("My Patch")
+
+        expect(localStorage.setItem).toHaveBeenCalled()
+        const savedData = JSON.parse(localStorage.setItem.mock.calls[0][1])
+        expect(savedData.name).toBe("My Patch")
+        expect(savedData.channels["1"].ccs["74"]).toBe(100)
+      })
+
+      it("should emit PATCH_SAVED event", () => {
+        const spy = vi.fn()
+        midiController.on(MIDI_EVENTS.PATCH_SAVED, spy)
+
+        midiController.savePatch("Test Patch")
+
+        expect(spy).toHaveBeenCalled()
+        expect(spy.mock.calls[0][0]).toHaveProperty("name", "Test Patch")
+      })
+
+      it("should handle localStorage errors", () => {
+        localStorage.setItem = vi.fn().mockImplementation(() => {
+          throw new Error("Quota exceeded")
+        })
+
+        expect(() => midiController.savePatch("Test Patch")).toThrow("Quota exceeded")
+      })
+    })
+
+    describe("loadPatch", () => {
+      beforeEach(() => {
+        vi.stubGlobal("localStorage", {
+          setItem: vi.fn(),
+          getItem: vi.fn(),
+          removeItem: vi.fn(),
+          length: 0,
+          key: vi.fn(),
+          clear: vi.fn(),
+        })
+      })
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it("should load patch from localStorage", () => {
+        const patch = { name: "Test Patch", channels: { 1: { ccs: { 74: 100 } } } }
+        localStorage.getItem = vi.fn().mockReturnValue(JSON.stringify(patch))
+
+        const loaded = midiController.loadPatch("Test Patch")
+
+        expect(loaded).toEqual(patch)
+        expect(localStorage.getItem).toHaveBeenCalledWith("midiwire_patch_Test Patch")
+      })
+
+      it("should return null if patch not found", () => {
+        localStorage.getItem = vi.fn().mockReturnValue(null)
+
+        const loaded = midiController.loadPatch("Nonexistent")
+
+        expect(loaded).toBeNull()
+      })
+
+      it("should emit PATCH_LOADED event", () => {
+        const patch = { name: "Test Patch", channels: { 1: { ccs: { 74: 100 } } } }
+        localStorage.getItem = vi.fn().mockReturnValue(JSON.stringify(patch))
+
+        const spy = vi.fn()
+        midiController.on(MIDI_EVENTS.PATCH_LOADED, spy)
+
+        midiController.loadPatch("Test Patch")
+
+        expect(spy).toHaveBeenCalledWith({ name: "Test Patch", patch })
+      })
+
+      it("should handle JSON parse errors", () => {
+        localStorage.getItem = vi.fn().mockReturnValue("invalid json")
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+        const loaded = midiController.loadPatch("Test Patch")
+
+        expect(loaded).toBeNull()
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("deletePatch", () => {
+      beforeEach(() => {
+        vi.stubGlobal("localStorage", {
+          setItem: vi.fn(),
+          getItem: vi.fn(),
+          removeItem: vi.fn(),
+          length: 0,
+          key: vi.fn(),
+          clear: vi.fn(),
+        })
+      })
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it("should delete patch from localStorage", () => {
+        const result = midiController.deletePatch("Test Patch")
+
+        expect(result).toBe(true)
+        expect(localStorage.removeItem).toHaveBeenCalledWith("midiwire_patch_Test Patch")
+      })
+
+      it("should emit PATCH_DELETED event", () => {
+        const spy = vi.fn()
+        midiController.on(MIDI_EVENTS.PATCH_DELETED, spy)
+
+        midiController.deletePatch("Test Patch")
+
+        expect(spy).toHaveBeenCalledWith({ name: "Test Patch" })
+      })
+
+      it("should handle errors gracefully", () => {
+        localStorage.removeItem = vi.fn().mockImplementation(() => {
+          throw new Error("Storage error")
+        })
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+        const result = midiController.deletePatch("Test Patch")
+
+        expect(result).toBe(false)
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("listPatches", () => {
+      beforeEach(() => {
+        vi.stubGlobal("localStorage", {
+          setItem: vi.fn(),
+          getItem: vi.fn(),
+          removeItem: vi.fn(),
+          length: 3,
+          key: vi.fn((index) => {
+            const keys = ["other_key", "midiwire_patch_A", "midiwire_patch_B"]
+            return keys[index]
+          }),
+          clear: vi.fn(),
+        })
+      })
+
+      afterEach(() => {
+        vi.unstubAllGlobals()
+      })
+
+      it("should list all midiwire patches", () => {
+        const patchA = { name: "Patch A", channels: { 1: { ccs: { 74: 100 } } } }
+        const patchB = { name: "Patch B", channels: { 1: { ccs: { 71: 64 } } } }
+
+        localStorage.getItem = vi.fn((key) => {
+          if (key === "midiwire_patch_A") return JSON.stringify(patchA)
+          if (key === "midiwire_patch_B") return JSON.stringify(patchB)
+          return null
+        })
+
+        const patches = midiController.listPatches()
+
+        expect(patches).toHaveLength(2)
+        expect(patches[0].name).toBe("A")
+        expect(patches[0].patch).toEqual(patchA)
+        expect(patches[1].name).toBe("B")
+        expect(patches[1].patch).toEqual(patchB)
+      })
+
+      it("should filter out invalid patches", () => {
+        localStorage.getItem = vi.fn(() => null)
+
+        const patches = midiController.listPatches()
+
+        expect(patches).toHaveLength(0)
+      })
+
+      it("should sort patches by name", () => {
+        const patchB = { name: "Patch B", channels: { 1: { ccs: { 74: 100 } } } }
+        const patchA = { name: "Patch A", channels: { 1: { ccs: { 71: 64 } } } }
+
+        localStorage.getItem = vi.fn((key) => {
+          if (key === "midiwire_patch_A") return JSON.stringify(patchA)
+          if (key === "midiwire_patch_B") return JSON.stringify(patchB)
+          return null
+        })
+
+        const patches = midiController.listPatches()
+
+        expect(patches[0].name).toBe("A")
+        expect(patches[1].name).toBe("B")
+      })
+    })
+  })
 })

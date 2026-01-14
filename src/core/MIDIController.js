@@ -20,6 +20,9 @@ export const MIDI_EVENTS = {
   INPUT_CONNECTED: "input-connected",
   DESTROYED: "destroyed",
   MIDI_MSG: "midi-msg",
+  PATCH_SAVED: "patch-saved",
+  PATCH_LOADED: "patch-loaded",
+  PATCH_DELETED: "patch-deleted",
 }
 
 /**
@@ -212,7 +215,7 @@ export class MIDIController extends EventEmitter {
     this.bindings.set(element, binding)
 
     // Send initial value
-    if (element.value !== undefined && element.value !== "") {
+    if (this.initialized) {
       binding.handler({ target: element })
     }
 
@@ -366,9 +369,21 @@ export class MIDIController extends EventEmitter {
     const {
       min = parseFloat(element.getAttribute("min")) || 0,
       max = parseFloat(element.getAttribute("max")) || 127,
-      channel = this.options.channel,
+      channel,
       invert = false,
     } = config
+
+    // Store resolved values back to config for patch saving
+    // Don't store channel if not explicitly provided - use dynamic midi.options.channel
+    const resolvedConfig = {
+      ...config,
+      min,
+      max,
+      invert,
+    }
+    if (channel !== undefined) {
+      resolvedConfig.channel = channel
+    }
 
     // Handle 14-bit CC (MSB + LSB)
     if (config.is14Bit) {
@@ -382,9 +397,10 @@ export class MIDIController extends EventEmitter {
         // Normalize to 14-bit range (0-16383)
         const { msb: msbValue, lsb: lsbValue } = normalize14BitValue(value, min, max, invert)
 
-        // Send MSB and LSB
-        this.sendCC(msb, msbValue, channel)
-        this.sendCC(lsb, lsbValue, channel)
+        // Send MSB and LSB using dynamic channel
+        const channelToUse = channel || this.options.channel
+        this.sendCC(msb, msbValue, channelToUse)
+        this.sendCC(lsb, lsbValue, channelToUse)
       }
 
       element.addEventListener("input", handler)
@@ -392,7 +408,7 @@ export class MIDIController extends EventEmitter {
 
       return {
         element,
-        config,
+        config: resolvedConfig,
         handler,
         destroy: () => {
           element.removeEventListener("input", handler)
@@ -412,7 +428,9 @@ export class MIDIController extends EventEmitter {
       // Normalize to 0-127 MIDI range
       const midiValue = normalizeValue(value, min, max, invert)
 
-      this.sendCC(cc, midiValue, channel)
+      // Use dynamic channel from midi.options.channel
+      const channelToUse = channel === undefined ? this.options.channel : channel
+      this.sendCC(cc, midiValue, channelToUse)
     }
 
     element.addEventListener("input", handler)
@@ -420,12 +438,233 @@ export class MIDIController extends EventEmitter {
 
     return {
       element,
-      config,
+      config: resolvedConfig,
       handler,
       destroy: () => {
         element.removeEventListener("input", handler)
         element.removeEventListener("change", handler)
       },
     }
+  }
+
+  /**
+   * Get current state as a patch object
+   * @param {string} [name] - Optional patch name
+   * @returns {Object} Patch object
+   */
+  getPatch(name = "Unnamed Patch") {
+    const patch = {
+      name,
+      device: this.getCurrentOutput()?.name || null,
+      timestamp: new Date().toISOString(),
+      version: "1.0",
+      channels: {},
+      settings: {},
+    }
+
+    // Collect CC values by channel
+    for (const [key, value] of this.state.entries()) {
+      const [channel, cc] = key.split(":").map(Number)
+      if (!patch.channels[channel]) {
+        patch.channels[channel] = { ccs: {}, notes: {} }
+      }
+      patch.channels[channel].ccs[cc] = value
+    }
+
+    // Collect control settings
+    for (const [element, binding] of this.bindings.entries()) {
+      const { config } = binding
+      if (config.cc) {
+        const settingKey = `cc${config.cc}`
+        const setting = {
+          min: config.min,
+          max: config.max,
+          invert: config.invert || false,
+          is14Bit: config.is14Bit || false,
+          label: element.getAttribute?.("data-midi-label") || null,
+          elementId: element.id || null,
+        }
+
+        patch.settings[settingKey] = setting
+      }
+    }
+
+    return patch
+  }
+
+  /**
+   * Apply a patch to the controller
+   * @param {Object} patch - Patch object
+   * @returns {Promise<void>}
+   */
+  async setPatch(patch) {
+    if (!patch || !patch.channels) {
+      throw new Error("Invalid patch format")
+    }
+
+    // Apply CC values
+    for (const [channelStr, channelData] of Object.entries(patch.channels)) {
+      const channel = parseInt(channelStr, 10)
+
+      // Apply CC values
+      if (channelData.ccs) {
+        for (const [ccStr, value] of Object.entries(channelData.ccs)) {
+          const cc = parseInt(ccStr, 10)
+          this.sendCC(cc, value, channel)
+        }
+      }
+
+      // Apply note states if present
+      if (channelData.notes) {
+        for (const [noteStr, velocity] of Object.entries(channelData.notes)) {
+          const note = parseInt(noteStr, 10)
+          if (velocity > 0) {
+            this.sendNoteOn(note, velocity, channel)
+          } else {
+            this.sendNoteOff(note, channel)
+          }
+        }
+      }
+    }
+
+    // Apply settings to controls (if they exist)
+    if (patch.settings) {
+      for (const [bindingKey, setting] of Object.entries(patch.settings)) {
+        // Find controls by CC number and update their settings
+        for (const [element, binding] of this.bindings.entries()) {
+          if (binding.config.cc?.toString() === bindingKey.replace("cc", "")) {
+            // Update element attributes if they exist
+            if (element.min !== undefined && setting.min !== undefined) {
+              element.min = String(setting.min)
+            }
+            if (element.max !== undefined && setting.max !== undefined) {
+              element.max = String(setting.max)
+            }
+          }
+        }
+      }
+    }
+
+    // Update element values from channel data for all bound elements
+    for (const [element, binding] of this.bindings.entries()) {
+      const { config } = binding
+      if (config.cc !== undefined) {
+        const channel = config.channel || this.options.channel
+        const channelData = patch.channels[channel]
+        if (channelData?.ccs) {
+          const ccValue = channelData.ccs[config.cc]
+          if (ccValue !== undefined) {
+            // Convert MIDI value (0-127) back to element value
+            const min =
+              config.min !== undefined ? config.min : parseFloat(element.getAttribute?.("min")) || 0
+            const max =
+              config.max !== undefined
+                ? config.max
+                : parseFloat(element.getAttribute?.("max")) || 127
+            const invert = config.invert || false
+
+            let elementValue
+            if (invert) {
+              elementValue = max - (ccValue / 127) * (max - min)
+            } else {
+              elementValue = min + (ccValue / 127) * (max - min)
+            }
+
+            element.value = elementValue
+            // Dispatch input event to trigger any display updates
+            element.dispatchEvent(new Event("input", { bubbles: true }))
+          }
+        }
+      }
+    }
+
+    // Emit event
+    this.emit(MIDI_EVENTS.PATCH_LOADED, { patch })
+  }
+
+  /**
+   * Save a patch to localStorage
+   * @param {string} name - Patch name
+   * @param {Object} [patch] - Optional patch object (will use getPatch() if not provided)
+   * @returns {string} Storage key used
+   */
+  savePatch(name, patch = null) {
+    const patchToSave = patch || this.getPatch(name)
+    const key = `midiwire_patch_${name}`
+
+    try {
+      localStorage.setItem(key, JSON.stringify(patchToSave))
+      this.emit(MIDI_EVENTS.PATCH_SAVED, { name, patch: patchToSave })
+      return key
+    } catch (error) {
+      console.error("Failed to save patch:", error)
+      throw error
+    }
+  }
+
+  /**
+   * Load a patch from localStorage
+   * @param {string} name - Patch name
+   * @returns {Object|null} Patch object or null if not found
+   */
+  loadPatch(name) {
+    const key = `midiwire_patch_${name}`
+
+    try {
+      const stored = localStorage.getItem(key)
+      if (!stored) {
+        return null
+      }
+
+      const patch = JSON.parse(stored)
+      this.emit(MIDI_EVENTS.PATCH_LOADED, { name, patch })
+      return patch
+    } catch (error) {
+      console.error("Failed to load patch:", error)
+      return null
+    }
+  }
+
+  /**
+   * Delete a patch from localStorage
+   * @param {string} name - Patch name
+   * @returns {boolean} Success
+   */
+  deletePatch(name) {
+    const key = `midiwire_patch_${name}`
+
+    try {
+      localStorage.removeItem(key)
+      this.emit(MIDI_EVENTS.PATCH_DELETED, { name })
+      return true
+    } catch (error) {
+      console.error("Failed to delete patch:", error)
+      return false
+    }
+  }
+
+  /**
+   * List all saved patches
+   * @returns {Array<Object>} Array of { name, patch }
+   */
+  listPatches() {
+    const patches = []
+
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith("midiwire_patch_")) {
+          const name = key.replace("midiwire_patch_", "")
+          const patch = this.loadPatch(name)
+          if (patch) {
+            patches.push({ name, patch })
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to list patches:", error)
+    }
+
+    return patches.sort((a, b) => a.name.localeCompare(b.name))
   }
 }
