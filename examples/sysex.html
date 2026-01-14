@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SysEx Example - midiwire</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>🔧 SysEx Example</h1>
+
+  <div id="status" class="status">Initializing MIDI...</div>
+
+  <div class="section">
+    <h2>MIDI Configuration</h2>
+    <label>Output Device</label>
+    <select id="device-select">
+      <option value="">Select a device</option>
+    </select>
+
+    <label style="margin-top: 15px;">MIDI Input Device</label>
+    <select id="input-device-select">
+      <option value="">Select an input device</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <h2>Send SysEx Messages</h2>
+
+    <div class="button-row">
+      <button id="device-inquiry" class="button secondary">Device Inquiry</button>
+    </div>
+
+    <h3>Custom SysEx</h3>
+    <p class="label">Create custom SysEx messages using manufacturer ID and payload</p>
+
+    <label style="margin-top: 15px;">Manufacturer ID (hex)</label>
+    <input type="text" id="manufacturer-id" placeholder="e.g., 41 (Yamaha), 42 (Korg), 7D (Educational)" value="42">
+
+    <label style="margin-top: 15px;">Payload (hex values, space separated)</label>
+    <input type="text" id="payload" placeholder="e.g., 10 20 30 40" value="10 20 30">
+
+    <button id="send-custom" class="button primary">Send Custom SysEx</button>
+  </div>
+
+  <div class="section">
+    <h2>Received Messages</h2>
+    <div id="received-messages" class="message-log"></div>
+    <button id="clear-log" class="button small">Clear Log</button>
+  </div>
+
+  <script type="module">
+    import { createMIDIController, createSysEx, parseSysEx } from "../src/index.js";
+
+    let midi = null;
+    let currentOutputDevice = null;
+    let currentInputDevice = null;
+
+    function updateStatus(message, state = "") {
+      const status = document.getElementById("status");
+      status.textContent = message;
+      status.className = state ? `status ${state}` : "status";
+    }
+
+    function updateConnectionStatus() {
+      if (currentOutputDevice && midi) {
+        updateStatus(`Connected to ${currentOutputDevice.name}`, "connected");
+      }
+    }
+
+    // Message logging
+    function logMessage(message, type = "receive") {
+      const log = document.getElementById("received-messages");
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = document.createElement("div");
+      entry.className = `message-entry ${type}`;
+      entry.innerHTML = `
+        <span class="timestamp">${timestamp}</span>
+        <span class="message">${message}</span>
+      `;
+      // Add new messages at the top
+      log.insertBefore(entry, log.firstChild);
+    }
+
+    function hexString(data) {
+      return data.map(b => `0x${b.toString(16).padStart(2, "0").toUpperCase()}`).join(" ");
+    }
+
+    async function init() {
+      try {
+        // IMPORTANT: Initialize with sysex: true
+        midi = await createMIDIController({ autoConnect: false, sysex: true });
+        await refreshDeviceLists();
+
+        // Listen for SysEx messages
+        midi.on("sysex-recv", handleSysExReceived);
+        midi.on("sysex-send", handleSysExSent);
+      } catch (err) {
+        updateStatus(`Error: ${err.message}`, "error");
+      }
+    }
+
+    async function refreshDeviceLists() {
+      try {
+        const access = await navigator.requestMIDIAccess();
+        const outputs = Array.from(access.outputs.values());
+        const inputs = Array.from(access.inputs.values());
+
+        const outputSelect = document.getElementById("device-select");
+        const inputSelect = document.getElementById("input-device-select");
+
+        // Update output devices
+        if (outputs.length > 0) {
+          outputSelect.innerHTML = '<option value="">Select a device</option>' +
+            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
+          if (!currentOutputDevice) {
+            updateStatus("Select MIDI devices");
+          }
+        } else {
+          outputSelect.innerHTML = '<option value="">No MIDI devices found</option>';
+        }
+
+        // Update input devices
+        if (inputs.length > 0) {
+          inputSelect.innerHTML = '<option value="">Select an input device</option>' +
+            inputs.map((input, i) => `<option value="${i}">${input.name}</option>`).join("");
+        } else {
+          inputSelect.innerHTML = '<option value="">No input devices found</option>';
+        }
+      } catch (err) {
+        console.error("Failed to refresh device list:", err);
+      }
+    }
+
+    function handleSysExReceived(event) {
+      const data = event.data || event;
+      const parsed = parseSysEx(data);
+      if (parsed) {
+        logMessage(`[RECEIVE] SysEx - Manufacturer: 0x${parsed.manufacturerId.toString(16).toUpperCase()}, Length: ${parsed.payload.length}`, "receive");
+        logMessage(`[RECEIVE]   Raw: ${hexString(data)}`, "receive");
+        logMessage(`[RECEIVE]   Payload: ${hexString(parsed.payload)}`, "receive");
+      } else {
+        logMessage(`[RECEIVE] Non-SysEx: ${hexString(data)}`, "receive");
+      }
+    }
+
+    function handleSysExSent(event) {
+      if (event.includeWrapper) {
+        logMessage(`[SEND] ${hexString(event.data)}`, "send");
+      } else {
+        logMessage(`[SEND] ${hexString(createSysEx(event.data[0], event.data.slice(1)))}`, "send");
+      }
+    }
+
+    document.getElementById("device-inquiry").addEventListener("click", () => {
+      // Universal Device Inquiry
+      // F0 7E 7F 06 01 F7 (Identity Request)
+      midi.sendSysEx([0x7E, 0x7F, 0x06, 0x01]);
+      logMessage("[SEND] Universal Device Inquiry", "send");
+    });
+
+    document.getElementById("send-custom").addEventListener("click", () => {
+      const manufacturerId = parseInt(document.getElementById("manufacturer-id").value, 16);
+      const payload = document.getElementById("payload").value
+        .split(" ")
+        .filter(s => s)
+        .map(s => parseInt(s, 16));
+
+      if (isNaN(manufacturerId)) {
+        alert("Please enter a valid manufacturer ID in hex");
+        return;
+      }
+      if (payload.length === 0 || payload.some(p => isNaN(p))) {
+        alert("Please enter valid payload bytes in hex");
+        return;
+      }
+
+      midi.sendSysEx([manufacturerId, ...payload]);
+      logMessage(`[SEND] Custom SysEx (Manufacturer: 0x${manufacturerId.toString(16).toUpperCase()})`, "send");
+    });
+
+    document.getElementById("clear-log").addEventListener("click", () => {
+      document.getElementById("received-messages").innerHTML = "";
+    });
+
+    // Device selection
+    document.getElementById("device-select").addEventListener("change", async (e) => {
+      const deviceIndex = e.target.value;
+      if (!deviceIndex) {
+        if (currentOutputDevice) {
+          midi.destroy();
+          currentOutputDevice = null;
+          updateStatus("Disconnected");
+        }
+        return;
+      }
+
+      try {
+        if (!midi) {
+          await init();
+        }
+        await midi.setOutput(parseInt(deviceIndex));
+        currentOutputDevice = midi.getCurrentOutput();
+        updateConnectionStatus();
+        window.midi = midi;
+      } catch (err) {
+        updateStatus(`Connection failed: ${err.message}`, "error");
+      }
+    });
+
+    document.getElementById("input-device-select").addEventListener("change", async (e) => {
+      const deviceIndex = e.target.value;
+      if (!deviceIndex) {
+        if (currentInputDevice) {
+          if (midi.connection.input) {
+            midi.connection.input.onmidimessage = null;
+          }
+          currentInputDevice = null;
+        }
+        return;
+      }
+
+      try {
+        if (!midi) {
+          await init();
+        }
+        await midi.connectInput(parseInt(deviceIndex));
+        currentInputDevice = midi.getCurrentInput();
+        updateConnectionStatus();
+      } catch (err) {
+        console.error("Input connection failed:", err);
+      }
+    });
+
+    // Device change detection
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then((access) => {
+        access.onstatechange = (e) => {
+          refreshDeviceLists();
+        };
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

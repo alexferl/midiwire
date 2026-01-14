@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic Example - midiwire</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .button-grid button {
+      padding: 20px 10px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .sliders {
+      margin-top: 20px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .slider-row label {
+      margin: 0;
+      min-width: 30px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      background: var(--bg);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+
+    .slider-row span {
+      min-width: 30px;
+      text-align: right;
+      color: var(--text);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎛️ Basic MIDI Controller</h1>
+
+  <div id="status" class="status">Initializing MIDI...</div>
+
+  <div class="section">
+    <h2>MIDI Configuration</h2>
+    <label>Output Device</label>
+    <select id="device-select">
+      <option value="">Select a device</option>
+    </select>
+
+    <label style="margin-top: 15px;">MIDI Channel</label>
+    <select id="channel-select">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
+      <option value="13">13</option>
+      <option value="14">14</option>
+      <option value="15">15</option>
+      <option value="16">16</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <h2>Notes (Pad Controller)</h2>
+    <div class="button-grid">
+      <button data-midi-note="false" data-midi-number="60">C</button>
+      <button data-midi-note="false" data-midi-number="61">C#</button>
+      <button data-midi-note="false" data-midi-number="62">D</button>
+      <button data-midi-note="false" data-midi-number="63">D#</button>
+      <button data-midi-note="false" data-midi-number="64">E</button>
+      <button data-midi-note="false" data-midi-number="65">F</button>
+      <button data-midi-note="false" data-midi-number="66">F#</button>
+      <button data-midi-note="false" data-midi-number="67">G</button>
+      <button data-midi-note="false" data-midi-number="68">G#</button>
+      <button data-midi-note="false" data-midi-number="69">A</button>
+      <button data-midi-note="false" data-midi-number="70">A#</button>
+      <button data-midi-note="false" data-midi-number="71">B</button>
+      <button data-midi-note="false" data-midi-number="72">C5</button>
+      <button data-midi-note="false" data-midi-number="73">C#5</button>
+      <button data-midi-note="false" data-midi-number="74">D5</button>
+      <button data-midi-note="false" data-midi-number="75">D#5</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>CC Controls</h2>
+    <div class="sliders">
+      <div class="slider-row">
+        <label>CC1</label>
+        <input type="range" min="0" max="127" value="64" data-midi-cc="1">
+        <span data-display-cc="1">64</span>
+      </div>
+      <div class="slider-row">
+        <label>CC2</label>
+        <input type="range" min="0" max="127" value="64" data-midi-cc="2">
+        <span data-display-cc="2">64</span>
+      </div>
+      <div class="slider-row">
+        <label>CC7</label>
+        <input type="range" min="0" max="127" value="64" data-midi-cc="7">
+        <span data-display-cc="7">64</span>
+      </div>
+      <div class="slider-row">
+        <label>CC74</label>
+        <input type="range" min="0" max="127" value="64" data-midi-cc="74">
+        <span data-display-cc="74">64</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createMIDIController } from "../src/index.js";
+
+    let midi = null;
+    let currentDevice = null;
+
+    function updateStatus(message, state) {
+      const status = document.getElementById("status");
+      status.textContent = message;
+      status.className = state ? `status ${state}` : "status";
+    }
+
+    function updateConnectionStatus() {
+      if (currentDevice && midi) {
+        updateStatus(`Connected to ${currentDevice.name} (Channel ${midi.options.channel})`, "connected");
+      }
+    }
+
+    async function init() {
+      try {
+        midi = await createMIDIController({ autoConnect: false });
+        await refreshDeviceList();
+
+        // Set up CC display updates (independent of MIDI connection)
+        document.querySelectorAll("[data-midi-cc]").forEach(slider => {
+          // Initialize display with current value
+          const cc = slider.dataset.midiCc;
+          const display = document.querySelector(`[data-display-cc="${cc}"]`);
+          if (display) {
+            display.textContent = slider.value;
+          }
+
+          // Update display and log on input
+          slider.addEventListener("input", (e) => {
+            const cc = e.currentTarget.dataset.midiCc;
+            const value = e.currentTarget.value;
+            const display = document.querySelector(`[data-display-cc="${cc}"]`);
+            if (display) {
+              display.textContent = value;
+            }
+            // Log CC changes (these will be sent via the DataAttributeBinder)
+            console.log(`CC Change: CC${cc} = ${value}`);
+          });
+        });
+      } catch (err) {
+        updateStatus(`Error: ${err.message}`, "error");
+      }
+    }
+
+    async function refreshDeviceList() {
+      try {
+        const access = await navigator.requestMIDIAccess();
+        const outputs = Array.from(access.outputs.values());
+        const select = document.getElementById("device-select");
+
+        if (outputs.length > 0) {
+          select.innerHTML = '<option value="">Select a device</option>' +
+            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
+          if (!currentDevice) {
+            updateStatus("Select a MIDI device");
+          }
+        } else {
+          select.innerHTML = '<option value="">No MIDI devices found</option>';
+          updateStatus("No MIDI devices available", "error");
+        }
+      } catch (err) {
+        console.error("Failed to refresh device list:", err);
+      }
+    }
+
+    document.getElementById("device-select").addEventListener("change", async (e) => {
+      const deviceIndex = e.target.value;
+      if (!deviceIndex) {
+        if (currentDevice) {
+          midi.destroy();
+          currentDevice = null;
+          updateStatus("Disconnected");
+        }
+        return;
+      }
+
+      try {
+        if (!midi) {
+          await init();
+        }
+        await midi.setOutput(parseInt(deviceIndex));
+        currentDevice = midi.getCurrentOutput();
+        updateConnectionStatus();
+        window.midi = midi;
+
+        // Import the DataAttributeBinder to use CSS selector binding
+        const { DataAttributeBinder } = await import("../src/index.js");
+
+        // Bind CC sliders using the data attribute binder
+        const binder = new DataAttributeBinder(midi, "[data-midi-cc]");
+        binder.bindAll();
+
+        // Bind note buttons manually
+        document.querySelectorAll("[data-midi-number]").forEach(button => {
+          const note = parseInt(button.dataset.midiNumber);
+          const noteName = button.textContent;
+
+          button.addEventListener("mousedown", () => {
+            console.log(`Note ON: ${noteName} (note ${note}, velocity 100, channel ${midi.options.channel})`);
+            midi.sendNoteOn(note, 100);
+          });
+
+          button.addEventListener("mouseup", () => {
+            console.log(`Note OFF: ${noteName} (note ${note}, channel ${midi.options.channel})`);
+            midi.sendNoteOff(note);
+          });
+
+          button.addEventListener("mouseleave", () => {
+            console.log(`Note OFF: ${noteName} (note ${note}, channel ${midi.options.channel})`);
+            midi.sendNoteOff(note);
+          });
+        });
+      } catch (err) {
+        updateStatus(`Connection failed: ${err.message}`, "error");
+      }
+    });
+
+    document.getElementById("channel-select").addEventListener("change", (e) => {
+      if (midi) {
+        const channel = parseInt(e.target.value);
+        midi.options.channel = channel;
+        console.log(`Channel changed to: ${channel}`);
+        updateConnectionStatus();
+      }
+    });
+
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then((access) => {
+        access.onstatechange = (e) => {
+          if (e.port.type === "output") {
+            if (e.port.state === "connected") {
+              refreshDeviceList();
+            } else if (e.port.state === "disconnected") {
+              const select = document.getElementById("device-select");
+              const disconnectedName = e.port.name;
+
+              for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === disconnectedName) {
+                  select.options.remove(i);
+                  break;
+                }
+              }
+
+              if (currentDevice && disconnectedName === currentDevice.name) {
+                updateStatus("Device disconnected");
+                currentDevice = null;
+                select.value = "";
+              }
+
+              if (select.options.length === 1 && select.options[0].value === "") {
+                select.innerHTML = '<option value="">No MIDI devices found</option>';
+                updateStatus("No MIDI devices available", "error");
+              }
+            }
+          }
+        };
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

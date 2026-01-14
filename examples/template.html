@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template - midiwire</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>🎛️ MIDI Template</h1>
+
+  <div id="status" class="status">Initializing MIDI...</div>
+
+  <div class="section">
+    <h2>MIDI Configuration</h2>
+    <label>Output Device</label>
+    <select id="device-select">
+      <option value="">Select a device</option>
+    </select>
+
+    <label style="margin-top: 15px;">MIDI Channel</label>
+    <select id="channel-select">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
+      <option value="13">13</option>
+      <option value="14">14</option>
+      <option value="15">15</option>
+      <option value="16">16</option>
+    </select>
+  </div>
+
+  <script type="module">
+    import { createMIDIController } from "../src/index.js";
+
+    let midi = null;
+    let currentDevice = null;
+
+    function updateStatus(message, state = "") {
+      const status = document.getElementById("status");
+      status.textContent = message;
+      status.className = state ? `status ${state}` : "status";
+    }
+
+    function updateConnectionStatus() {
+      if (currentDevice && midi) {
+        updateStatus(`Connected to ${currentDevice.name} (Channel ${midi.options.channel})`, "connected");
+      }
+    }
+
+    async function init() {
+      try {
+        midi = await createMIDIController({ autoConnect: false });
+        await refreshDeviceList();
+      } catch (err) {
+        updateStatus(`Error: ${err.message}`, "error");
+      }
+    }
+
+    async function refreshDeviceList() {
+      // Request fresh MIDI access to get updated device list
+      try {
+        const access = await navigator.requestMIDIAccess();
+        const outputs = Array.from(access.outputs.values());
+        const select = document.getElementById("device-select");
+
+        if (outputs.length > 0) {
+          select.innerHTML = '<option value="">Select a device</option>' +
+            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
+          if (!currentDevice) {
+            updateStatus("Select a MIDI device");
+          }
+        } else {
+          select.innerHTML = '<option value="">No MIDI devices found</option>';
+          updateStatus("No MIDI devices available", "error");
+        }
+      } catch (err) {
+        console.error("Failed to refresh device list:", err);
+      }
+    }
+
+    // Auto-connect when device is selected
+    document.getElementById("device-select").addEventListener("change", async (e) => {
+      const deviceIndex = e.target.value;
+      if (!deviceIndex) {
+        if (currentDevice) {
+          // Disconnect if user selects empty option
+          midi.destroy();
+          currentDevice = null;
+          updateStatus("Disconnected");
+        }
+        return;
+      }
+
+      try {
+        if (!midi) {
+          // Reinitialize if destroyed
+          await init();
+        }
+        await midi.setOutput(parseInt(deviceIndex));
+        currentDevice = midi.getCurrentOutput();
+        updateConnectionStatus();
+        window.midi = midi; // Expose to console for debugging
+      } catch (err) {
+        updateStatus(`Connection failed: ${err.message}`, "error");
+      }
+    });
+
+    // Detect device connection/disconnection
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then((access) => {
+        access.onstatechange = (e) => {
+          if (e.port.type === "output") {
+            if (e.port.state === "connected") {
+              // Device connected - refresh the device list
+              refreshDeviceList();
+            } else if (e.port.state === "disconnected") {
+              // Device disconnected - remove from select list
+              const select = document.getElementById("device-select");
+              const disconnectedName = e.port.name;
+
+              // Remove disconnected device from select list
+              for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === disconnectedName) {
+                  select.options.remove(i);
+                  break;
+                }
+              }
+
+              // If the disconnected device was the current one, update status
+              if (currentDevice && disconnectedName === currentDevice.name) {
+                updateStatus("Device disconnected");
+                currentDevice = null;
+                select.value = "";
+              }
+
+              // If no devices left, show "No devices" message
+              if (select.options.length === 1 && select.options[0].value === "") {
+                select.innerHTML = '<option value="">No MIDI devices found</option>';
+                updateStatus("No MIDI devices available", "error");
+              }
+            }
+          }
+        };
+      });
+    }
+
+    document.getElementById("channel-select").addEventListener("change", (e) => {
+      if (midi) {
+        midi.options.channel = parseInt(e.target.value);
+        updateConnectionStatus();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
