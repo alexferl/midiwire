@@ -45,22 +45,27 @@ export function isSysEx(data) {
  */
 export function encode7Bit(data) {
   const result = []
-  let buffer = 0
-  let bitCount = 0
 
-  for (const byte of data) {
-    buffer |= (byte & 0x7f) << bitCount
-    bitCount += 7
+  // Process data in groups of 7 bytes
+  for (let i = 0; i < data.length; i += 7) {
+    const group = data.slice(i, i + 7)
+    let headerByte = 0
+    const dataBytes = []
 
-    if (bitCount >= 7) {
-      result.push(buffer & 0x7f)
-      buffer >>= 7
-      bitCount -= 7
+    // Process each byte in the group
+    for (let j = 0; j < group.length; j++) {
+      const byte = group[j]
+      // Check if MSB (bit 7) is set
+      if (byte & 0x80) {
+        headerByte |= 1 << j
+      }
+      // Add the lower 7 bits as a data byte
+      dataBytes.push(byte & 0x7f)
     }
-  }
 
-  if (bitCount > 0) {
-    result.push(buffer & 0x7f)
+    // Add header byte followed by the data bytes
+    // Note: result length may not be a multiple of 8
+    result.push(headerByte, ...dataBytes)
   }
 
   return result
@@ -73,17 +78,23 @@ export function encode7Bit(data) {
  */
 export function decode7Bit(data) {
   const result = []
-  let buffer = 0
-  let bitCount = 0
 
-  for (const byte of data) {
-    buffer |= (byte & 0x7f) << bitCount
-    bitCount += 7
+  // Process data in groups of 8 bytes (1 header + 7 data bytes)
+  for (let i = 0; i < data.length; i += 8) {
+    const headerByte = data[i]
+    // Calculate how many data bytes are in this group (1-7)
+    const groupSize = Math.min(7, data.length - i - 1)
 
-    while (bitCount >= 8) {
-      result.push(buffer & 0xff)
-      buffer >>= 8
-      bitCount -= 8
+    // Process the data bytes in this group
+    for (let j = 0; j < groupSize; j++) {
+      let byte = data[i + 1 + j]
+
+      // Reconstruct the 8-bit value using header bit
+      if (headerByte & (1 << j)) {
+        byte |= 0x80
+      }
+
+      result.push(byte)
     }
   }
 

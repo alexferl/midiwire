@@ -75,16 +75,17 @@ describe("EventEmitter", () => {
       emitter.once("test", handler2)
       emitter.emit("test", "data")
 
-      // Note: The current EventEmitter implementation has a bug
-      // where multiple once handlers don't all get called
-      // This test documents the current behavior
-      expect([handler1.mock.calls.length, handler2.mock.calls.length]).toContain(1)
+      // Both handlers should be called once each
+      expect(handler1).toHaveBeenCalledTimes(1)
+      expect(handler2).toHaveBeenCalledTimes(1)
+      expect(handler1).toHaveBeenCalledWith("data")
+      expect(handler2).toHaveBeenCalledWith("data")
 
       emitter.emit("test", "data2")
 
       // Neither should be called again
-      expect(handler1.mock.calls.length).toBeLessThanOrEqual(1)
-      expect(handler2.mock.calls.length).toBeLessThanOrEqual(1)
+      expect(handler1).toHaveBeenCalledTimes(1)
+      expect(handler2).toHaveBeenCalledTimes(1)
     })
 
     it("should allow mixing once and regular handlers", () => {
@@ -98,11 +99,30 @@ describe("EventEmitter", () => {
       emitter.emit("test", "data1")
       emitter.emit("test", "data2")
 
-      // Note: Due to a bug in EventEmitter, onceHandler might not be called
-      // when mixed with other handlers
-      // This test checks the basic functionality works
-      expect(regularHandler.mock.calls.length).toBeGreaterThanOrEqual(1)
-      expect(onceHandler.mock.calls.length).toBeLessThanOrEqual(1)
+      // onceHandler should be called once, regularHandler twice
+      expect(onceHandler).toHaveBeenCalledTimes(1)
+      expect(onceHandler).toHaveBeenCalledWith("data1")
+      expect(regularHandler).toHaveBeenCalledTimes(2)
+      expect(regularHandler).toHaveBeenNthCalledWith(1, "data1")
+      expect(regularHandler).toHaveBeenNthCalledWith(2, "data2")
+    })
+
+    it("should handle once handler removing itself during emit", () => {
+      const emitter = new EventEmitter()
+      const handler1 = vi.fn()
+      const handler2 = vi.fn()
+      const handler3 = vi.fn()
+
+      emitter.once("test", handler1)
+      emitter.once("test", handler2)
+      emitter.once("test", handler3)
+
+      emitter.emit("test", "data")
+
+      // All three handlers should be called despite self-removal
+      expect(handler1).toHaveBeenCalledTimes(1)
+      expect(handler2).toHaveBeenCalledTimes(1)
+      expect(handler3).toHaveBeenCalledTimes(1)
     })
   })
 

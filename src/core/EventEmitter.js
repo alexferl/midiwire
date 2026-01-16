@@ -62,7 +62,9 @@ export class EventEmitter {
   emit(event, data) {
     if (!this.events.has(event)) return
 
-    const handlers = this.events.get(event)
+    // Create a copy to avoid modification during iteration
+    const handlers = [...this.events.get(event)]
+
     handlers.forEach((handler) => {
       try {
         handler(data)

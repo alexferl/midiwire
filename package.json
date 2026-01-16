@@ -27,11 +27,14 @@
   "keywords": [
     "midiwire",
     "midi",
+    "webmidi",
     "wire",
     "controller",
+    "synth",
     "synthesizer",
     "cc",
     "control-change",
+    "sysex",
     "audio",
     "music"
   ],

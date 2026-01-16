@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MIDI_EVENTS, MIDIController } from "./MIDIController.js"
+import { CONTROLLER_EVENTS, MIDIController } from "./MIDIController.js"
 
 // Mock the dependencies
 const mockOutputs = [
@@ -7,12 +7,14 @@ const mockOutputs = [
     id: "output-1",
     name: "Test Output 1",
     manufacturer: "Test Manufacturer",
+    state: "connected",
     send: vi.fn(),
   },
   {
     id: "output-2",
     name: "Test Output 2",
     manufacturer: "Test Manufacturer",
+    state: "connected",
     send: vi.fn(),
   },
 ]
@@ -21,7 +23,14 @@ const mockInput = {
   id: "input-1",
   name: "Test Input",
   manufacturer: "Test Manufacturer",
-  onmidimessage: null,
+  state: "connected",
+  _onmidimessage: null,
+  set onmidimessage(handler) {
+    this._onmidimessage = handler
+  },
+  get onmidimessage() {
+    return this._onmidimessage
+  },
 }
 
 const createMockMIDIAccess = () => ({
@@ -128,6 +137,21 @@ describe("MIDIController", () => {
         manufacturer: "Test Manufacturer",
       })
     })
+
+    it("should handle incoming MIDI messages via callback", async () => {
+      await midiController.connectInput("Test Input")
+
+      // Simulate a CC message through the input's onmidimessage handler
+      const ccEvent = {
+        data: new Uint8Array([0xb0, 74, 100]), // CC 74 on channel 1, value 100
+      }
+
+      // Call the onmidimessage handler directly - this should call _handleMIDIMessage
+      mockInput.onmidimessage(ccEvent)
+
+      // Verify the CC value was stored (which happens in _handleMIDIMessage)
+      expect(midiController.getCC(74, 1)).toBe(100)
+    })
   })
 
   describe("sendCC", () => {
@@ -183,7 +207,7 @@ describe("MIDIController", () => {
 
     it("should emit cc-send event", async () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.CC_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.CC_SEND, spy)
 
       midiController.sendCC(74, 100, 2)
 
@@ -234,7 +258,7 @@ describe("MIDIController", () => {
 
     it("should emit sysex-send event", async () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.SYSEX_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.SYSEX_SEND, spy)
 
       midiController.sendSysEx([0x42, 0x30])
 
@@ -253,10 +277,11 @@ describe("MIDIController", () => {
 
     it("should not send if not initialized", async () => {
       const controller = new MIDIController()
-      await controller.initialize()
+      // Note: controller is NOT initialized
 
       controller.sendNoteOn(60, 100)
       // Should not throw, just return early
+      expect(controller.initialized).toBe(false)
     })
 
     it("should send note on with correct status", async () => {
@@ -281,7 +306,7 @@ describe("MIDIController", () => {
 
     it("should emit note-on-send event", async () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.NOTE_ON_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.NOTE_ON_SEND, spy)
 
       midiController.sendNoteOn(60, 100, 2)
 
@@ -301,10 +326,11 @@ describe("MIDIController", () => {
 
     it("should not send if not initialized", async () => {
       const controller = new MIDIController()
-      await controller.initialize()
+      // Note: controller is NOT initialized
 
       controller.sendNoteOff(60)
       // Should not throw, just return early
+      expect(controller.initialized).toBe(false)
     })
 
     it("should send note off with correct status", async () => {
@@ -321,7 +347,7 @@ describe("MIDIController", () => {
 
     it("should emit note-off-send event", async () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.NOTE_OFF_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_SEND, spy)
 
       midiController.sendNoteOff(60, 3, 40)
 
@@ -389,6 +415,26 @@ describe("MIDIController", () => {
       expect(() => midiController.unbind(mockElement)).not.toThrow()
     })
 
+    it("should not send initial value when binding if not initialized", async () => {
+      // Create controller but don't initialize
+      const controller = new MIDIController()
+      expect(controller.initialized).toBe(false)
+
+      const element = {
+        value: "64",
+        addEventListener: vi.fn(),
+        getAttribute: vi.fn(() => "0"),
+      }
+
+      controller.bind(element, {
+        cc: 74,
+        channel: 2,
+      })
+
+      // Initial value should NOT be sent since controller is not initialized
+      expect(mockOutputs[0].send).not.toHaveBeenCalled()
+    })
+
     describe("14-bit CC binding", () => {
       it("should bind 14-bit CC with handler that normalizes and sends MSB/LSB", async () => {
         await midiController.initialize()
@@ -452,6 +498,48 @@ describe("MIDIController", () => {
 
         // Should handle NaN gracefully (not throw)
         expect(() => handler({ target: element })).not.toThrow()
+      })
+
+      it("should handle NaN value in 7-bit binding", async () => {
+        await midiController.initialize()
+
+        const element = {
+          value: "invalid",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+        }
+
+        midiController._createBinding(element, {
+          cc: 74,
+          channel: 3,
+        })
+        const handler = element.addEventListener.mock.calls[0][1]
+
+        // Should handle NaN gracefully (not throw, just return early)
+        expect(() => handler({ target: element })).not.toThrow()
+      })
+
+      it("should send CC on default channel when not specified for 7-bit", async () => {
+        await midiController.initialize()
+        await midiController.connection.connect()
+
+        const element = {
+          value: "100",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+        }
+
+        midiController._createBinding(element, {
+          cc: 74,
+          // Note: channel is NOT specified
+        })
+        const handler = element.addEventListener.mock.calls[0][1]
+
+        element.value = "100"
+        handler({ target: element })
+
+        // Should use default channel (2)
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 74, 100]))
       })
 
       it("should handle inverted values for 14-bit CC", async () => {
@@ -533,6 +621,362 @@ describe("MIDIController", () => {
 
         expect(element.getAttribute).not.toHaveBeenCalled() // Should use config values, not element attributes
       })
+
+      it("should use default channel when not specified", async () => {
+        await midiController.initialize()
+        await midiController.connection.connect()
+
+        const element = {
+          value: "100",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+        }
+
+        const config = {
+          msb: 74,
+          lsb: 75,
+          is14Bit: true,
+          min: 0,
+          max: 127,
+          invert: false,
+          // Note: channel is NOT specified, should use this.options.channel (which is 2)
+        }
+
+        midiController._createBinding(element, config)
+        const handler = element.addEventListener.mock.calls[0][1]
+
+        // Trigger the handler
+        element.value = "100"
+        handler({ target: element })
+
+        // Should send CC messages on default channel (2) since no channel was specified
+        expect(mockOutputs[0].send).toHaveBeenCalled()
+      })
+    })
+
+    it("should call onInput callback when setPatch updates bound element", async () => {
+      await midiController.initialize()
+      await midiController.connection.connect()
+
+      const onInputCallback = vi.fn()
+      const element = {
+        value: "64",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      // Bind with onInput callback - specify channel to match patch
+      midiController.bind(element, {
+        cc: 74,
+        channel: 1,
+        min: 0,
+        max: 100,
+        onInput: onInputCallback,
+      })
+
+      // Apply a patch that should trigger onInput
+      const patch = {
+        name: "Test Patch",
+        device: "Test Output 1",
+        timestamp: new Date().toISOString(),
+        version: "1.0",
+        channels: {
+          1: {
+            ccs: {
+              74: 64, // This should call onInput with the converted value
+            },
+          },
+        },
+        settings: {},
+      }
+
+      await midiController.setPatch(patch)
+
+      // onInput should have been called with the converted value
+      expect(onInputCallback).toHaveBeenCalledTimes(1)
+      // Value should be converted from MIDI (0-127) to element range (0-100) = 50.39...
+      expect(onInputCallback).toHaveBeenCalledWith(expect.closeTo(50.39, 1))
+    })
+
+    it("should not call onInput callback when setPatch runs on element without callback", async () => {
+      await midiController.initialize()
+      await midiController.connection.connect()
+
+      const element = {
+        value: "64",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+        dispatchEvent: vi.fn(),
+      }
+
+      // Bind WITHOUT onInput callback - specify channel to match patch
+      const setValueSpy = vi.spyOn(element, "value", "set")
+      midiController.bind(element, {
+        cc: 75,
+        channel: 1,
+        min: 0,
+        max: 100,
+      })
+
+      // Apply a patch
+      const patch = {
+        name: "Test Patch",
+        device: "Test Output 1",
+        timestamp: new Date().toISOString(),
+        version: "1.0",
+        channels: {
+          1: {
+            ccs: {
+              75: 32,
+            },
+          },
+        },
+        settings: {},
+      }
+
+      await midiController.setPatch(patch)
+
+      // element.value should be set directly (no onInput callback)
+      expect(setValueSpy).toHaveBeenCalled()
+      // Value should be in element range (0-100) = 25.19...
+      expect(setValueSpy).toHaveBeenCalledWith(expect.closeTo(25.19, 1))
+    })
+  })
+
+  describe("debouncing", () => {
+    let _debounceElement
+
+    beforeEach(async () => {
+      await midiController.initialize()
+      await midiController.connection.connect()
+
+      _debounceElement = {
+        value: "0",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+    })
+
+    it("should debounce rapid input changes", async () => {
+      const element = {
+        value: "0",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      midiController.bind(element, { cc: 74 }, { debounce: 50 })
+
+      const handler = element.addEventListener.mock.calls[0][1]
+
+      // Clear the initial call
+      mockOutputs[0].send.mockClear()
+
+      // Rapid changes
+      element.value = "10"
+      handler({ target: element })
+      element.value = "20"
+      handler({ target: element })
+      element.value = "30"
+      handler({ target: element })
+
+      // Only last value should be sent after debounce period
+      await new Promise((resolve) => setTimeout(resolve, 60))
+
+      expect(mockOutputs[0].send).toHaveBeenCalledTimes(1)
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 74, 30]))
+    })
+
+    it("should clean up timeout on destroy", () => {
+      const element = {
+        value: "50",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      const unbind = midiController.bind(element, { cc: 74 }, { debounce: 100 })
+
+      const handler = element.addEventListener.mock.calls[0][1]
+      handler({ target: element }) // Trigger debounce
+
+      unbind() // Should clear pending timeout
+
+      // No error should occur
+      expect(element.removeEventListener).toHaveBeenCalled()
+    })
+
+    it("should work without debouncing (default behavior)", () => {
+      const element = {
+        value: "0",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      midiController.bind(element, { cc: 74 })
+
+      const handler = element.addEventListener.mock.calls[0][1]
+
+      // Multiple changes should all be sent immediately
+      element.value = "10"
+      handler({ target: element })
+      element.value = "20"
+      handler({ target: element })
+      element.value = "30"
+      handler({ target: element })
+
+      // All three should be sent immediately (no debouncing), plus the initial value
+      expect(mockOutputs[0].send).toHaveBeenCalledTimes(4)
+    })
+
+    it("should debounce 14-bit CC changes", async () => {
+      const element = {
+        value: "0",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      midiController.bind(
+        element,
+        {
+          msb: 74,
+          lsb: 75,
+          is14Bit: true,
+        },
+        { debounce: 50 },
+      )
+
+      const handler = element.addEventListener.mock.calls[0][1]
+
+      // Clear initial calls
+      mockOutputs[0].send.mockClear()
+
+      // Rapid changes
+      element.value = "100"
+      handler({ target: element })
+      element.value = "200"
+      handler({ target: element })
+
+      // Should send MSB+LSB for debounced final value only
+      await new Promise((resolve) => setTimeout(resolve, 60))
+
+      expect(mockOutputs[0].send).toHaveBeenCalledTimes(2)
+    })
+
+    it("should not debounce when debounce is 0", () => {
+      const element = {
+        value: "0",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getAttribute: vi.fn((attr) => {
+          if (attr === "min") return "0"
+          if (attr === "max") return "127"
+          return null
+        }),
+      }
+
+      midiController.bind(element, { cc: 74 }, { debounce: 0 })
+
+      const handler = element.addEventListener.mock.calls[0][1]
+
+      // Multiple changes
+      element.value = "10"
+      handler({ target: element })
+      element.value = "20"
+      handler({ target: element })
+
+      // Both should be sent immediately, plus the initial value
+      expect(mockOutputs[0].send).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  describe("getPatch with edge cases", () => {
+    beforeEach(async () => {
+      await midiController.initialize()
+      await midiController.connection.connect()
+    })
+
+    it("should collect settings from elements without getAttribute method", () => {
+      const element = {
+        value: "50",
+        id: "test-slider",
+        addEventListener: vi.fn(),
+        // Note: No getAttribute method - this tests the optional chaining
+      }
+
+      midiController.bind(element, {
+        cc: 74,
+        min: 0,
+        max: 127,
+        channel: 2,
+      })
+
+      // Should not throw even though element has no getAttribute
+      const patch = midiController.getPatch()
+      expect(patch.settings.cc74).toBeDefined()
+      expect(patch.settings.cc74.label).toBeNull()
+      expect(patch.settings.cc74.elementId).toBe("test-slider")
+    })
+
+    it("should include all CC values in state", () => {
+      // Send multiple CC messages on different channels
+      midiController.sendCC(74, 100, 1)
+      midiController.sendCC(75, 64, 2)
+      midiController.sendCC(76, 32, 3)
+
+      const patch = midiController.getPatch()
+
+      // Verify all CC values are collected
+      expect(patch.channels[1].ccs[74]).toBe(100)
+      expect(patch.channels[2].ccs[75]).toBe(64)
+      expect(patch.channels[3].ccs[76]).toBe(32)
+    })
+
+    it("should create channel objects as needed", () => {
+      // Only send CC on channel 5
+      midiController.sendCC(74, 100, 5)
+
+      const patch = midiController.getPatch()
+
+      // Should create channel 5 object
+      expect(patch.channels[5]).toBeDefined()
+      expect(patch.channels[5].ccs[74]).toBe(100)
+      // Other channels should be empty or not exist
+      expect(patch.channels[1]).toBeUndefined()
+      expect(patch.channels[2]).toBeUndefined()
     })
   })
 
@@ -699,7 +1143,7 @@ describe("MIDIController", () => {
 
     it("should handle SysEx messages", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.SYSEX_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.SYSEX_RECV, spy)
 
       const event = {
         data: new Uint8Array([0xf0, 0x42, 0x30, 0xf7]),
@@ -716,7 +1160,7 @@ describe("MIDIController", () => {
 
     it("should handle CC messages", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.CC_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.CC_RECV, spy)
 
       const event = {
         data: new Uint8Array([0xb1, 74, 100]),
@@ -734,7 +1178,7 @@ describe("MIDIController", () => {
 
     it("should handle Note On messages", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.NOTE_ON_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.NOTE_ON_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x91, 60, 100]),
@@ -751,7 +1195,7 @@ describe("MIDIController", () => {
 
     it("should handle Note Off messages (0x80)", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.NOTE_OFF_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x81, 60, 0]),
@@ -767,7 +1211,7 @@ describe("MIDIController", () => {
 
     it("should handle Note Off messages (0x90 with velocity 0)", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.NOTE_OFF_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x91, 60, 0]),
@@ -783,7 +1227,7 @@ describe("MIDIController", () => {
 
     it("should handle other MIDI messages", () => {
       const spy = vi.fn()
-      midiController.on(MIDI_EVENTS.MIDI_MSG, spy)
+      midiController.on(CONTROLLER_EVENTS.MIDI_MSG, spy)
 
       const event = {
         data: new Uint8Array([0xe1, 0x00, 0x40]),
@@ -928,7 +1372,7 @@ describe("MIDIController", () => {
 
       it("should emit PATCH_LOADED event", async () => {
         const spy = vi.fn()
-        midiController.on(MIDI_EVENTS.PATCH_LOADED, spy)
+        midiController.on(CONTROLLER_EVENTS.PATCH_LOADED, spy)
 
         const patch = {
           name: "Test Patch",
@@ -1162,6 +1606,101 @@ describe("MIDIController", () => {
         expect(element1.dispatchEvent).toHaveBeenCalled()
         expect(element2.dispatchEvent).toHaveBeenCalled()
       })
+
+      it("should handle elements without min/max attributes", async () => {
+        // Test case where config has no min/max, so it reads from element attributes
+        const element = {
+          value: "50",
+          // No min/max properties directly on element
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn((attr) => {
+            if (attr === "min") return "0"
+            if (attr === "max") return "127"
+            return null
+          }),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, channel: 2 })
+        // No min/max in config
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 100 } },
+          },
+          settings: {},
+        }
+
+        await midiController.setPatch(patch)
+
+        // Should have accessed element attributes
+        expect(element.getAttribute).toHaveBeenCalled()
+        expect(element.dispatchEvent).toHaveBeenCalled()
+      })
+
+      it("should handle elements without config.cc in settings", async () => {
+        // This tests line 535 where binding.config.cc matches bindingKey
+        // We need a case where settings has a cc that doesn't match any binding
+        const element = {
+          value: "50",
+          min: "0",
+          max: "127",
+          addEventListener: vi.fn(),
+          getAttribute: vi.fn(() => "0"),
+          dispatchEvent: vi.fn(),
+        }
+
+        midiController.bind(element, { cc: 74, channel: 2 })
+
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: { ccs: { 74: 100 } },
+          },
+          settings: {
+            cc75: { min: 10, max: 1000 }, // CC 75, not 74 - should not match
+          },
+        }
+
+        await midiController.setPatch(patch)
+
+        // CC 74 binding should not be affected by cc75 settings
+        expect(element.min).toBe("0") // Should remain unchanged
+        expect(element.max).toBe("127") // Should remain unchanged
+      })
+    })
+
+    describe("patch versioning", () => {
+      it("should apply v1.0 patches", async () => {
+        const patch = {
+          version: "1.0",
+          channels: { 1: { ccs: { 74: 100 } } },
+        }
+        await midiController.setPatch(patch)
+        expect(midiController.getCC(74, 1)).toBe(100)
+      })
+
+      it("should warn on unknown version", async () => {
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const patch = {
+          version: "99.0",
+          channels: { 1: { ccs: { 74: 100 } } },
+        }
+        await midiController.setPatch(patch)
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining("Unknown patch version: 99.0"),
+        )
+        consoleSpy.mockRestore()
+      })
+
+      it("should default to v1.0 for patches without version", async () => {
+        const patch = {
+          channels: { 1: { ccs: { 74: 100 } } },
+        }
+        await midiController.setPatch(patch)
+        expect(midiController.getCC(74, 1)).toBe(100)
+      })
     })
 
     describe("savePatch", () => {
@@ -1204,7 +1743,7 @@ describe("MIDIController", () => {
 
       it("should emit PATCH_SAVED event", () => {
         const spy = vi.fn()
-        midiController.on(MIDI_EVENTS.PATCH_SAVED, spy)
+        midiController.on(CONTROLLER_EVENTS.PATCH_SAVED, spy)
 
         midiController.savePatch("Test Patch")
 
@@ -1260,7 +1799,7 @@ describe("MIDIController", () => {
         localStorage.getItem = vi.fn().mockReturnValue(JSON.stringify(patch))
 
         const spy = vi.fn()
-        midiController.on(MIDI_EVENTS.PATCH_LOADED, spy)
+        midiController.on(CONTROLLER_EVENTS.PATCH_LOADED, spy)
 
         midiController.loadPatch("Test Patch")
 
@@ -1305,7 +1844,7 @@ describe("MIDIController", () => {
 
       it("should emit PATCH_DELETED event", () => {
         const spy = vi.fn()
-        midiController.on(MIDI_EVENTS.PATCH_DELETED, spy)
+        midiController.on(CONTROLLER_EVENTS.PATCH_DELETED, spy)
 
         midiController.deletePatch("Test Patch")
 
@@ -1387,6 +1926,24 @@ describe("MIDIController", () => {
 
         expect(patches[0].name).toBe("A")
         expect(patches[1].name).toBe("B")
+      })
+
+      it("should handle errors in listPatches gracefully", () => {
+        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+        // Make localStorage.length throw an error
+        Object.defineProperty(localStorage, "length", {
+          get: () => {
+            throw new Error("Storage access denied")
+          },
+        })
+
+        const patches = midiController.listPatches()
+
+        expect(consoleSpy).toHaveBeenCalledWith("Failed to list patches:", expect.any(Error))
+        expect(patches).toEqual([]) // Should return empty array on error
+
+        consoleSpy.mockRestore()
       })
     })
   })

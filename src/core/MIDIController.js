@@ -3,9 +3,36 @@ import { EventEmitter } from "./EventEmitter.js"
 import { MIDIConnection } from "./MIDIConnection.js"
 
 /**
- * MIDI event constants
+ * @typedef {Object} PatchData
+ * @property {string} name - Patch name
+ * @property {string|null} device - Output device name
+ * @property {string} timestamp - ISO timestamp
+ * @property {string} version - Patch format version
+ * @property {Object.<number, ChannelData>} channels - Channel data indexed by channel number
+ * @property {Object.<string, SettingData>} settings - Control settings indexed by setting key
  */
-export const MIDI_EVENTS = {
+
+/**
+ * @typedef {Object} ChannelData
+ * @property {Object.<number, number>} ccs - CC values indexed by CC number
+ * @property {Object.<number, number>} notes - Note velocities indexed by note number
+ */
+
+/**
+ * @typedef {Object} SettingData
+ * @property {number} min - Minimum value
+ * @property {number} max - Maximum value
+ * @property {boolean} invert - Invert flag
+ * @property {boolean} is14Bit - 14-bit CC flag
+ * @property {string|null} label - Optional label
+ * @property {string|null} elementId - Element ID if available
+ * @property {Function|null} onInput - Optional callback for value updates
+ */
+
+/**
+ * Controller event constants
+ */
+export const CONTROLLER_EVENTS = {
   READY: "ready",
   ERROR: "error",
   CC_SEND: "cc-send",
@@ -83,10 +110,10 @@ export class MIDIController extends EventEmitter {
       }
 
       this.initialized = true
-      this.emit(MIDI_EVENTS.READY, this)
+      this.emit(CONTROLLER_EVENTS.READY, this)
       this.options.onReady?.(this)
     } catch (error) {
-      this.emit(MIDI_EVENTS.ERROR, error)
+      this.emit(CONTROLLER_EVENTS.ERROR, error)
       this.options.onError?.(error)
       throw error
     }
@@ -101,7 +128,7 @@ export class MIDIController extends EventEmitter {
     await this.connection.connectInput(device, (event) => {
       this._handleMIDIMessage(event)
     })
-    this.emit(MIDI_EVENTS.INPUT_CONNECTED, this.connection.getCurrentInput())
+    this.emit(CONTROLLER_EVENTS.INPUT_CONNECTED, this.connection.getCurrentInput())
   }
 
   /**
@@ -128,7 +155,7 @@ export class MIDIController extends EventEmitter {
     const key = `${channel}:${cc}`
     this.state.set(key, value)
 
-    this.emit(MIDI_EVENTS.CC_SEND, { cc, value, channel })
+    this.emit(CONTROLLER_EVENTS.CC_SEND, { cc, value, channel })
   }
 
   /**
@@ -152,7 +179,7 @@ export class MIDIController extends EventEmitter {
     }
 
     this.connection.sendSysEx(data, includeWrapper)
-    this.emit(MIDI_EVENTS.SYSEX_SEND, { data, includeWrapper })
+    this.emit(CONTROLLER_EVENTS.SYSEX_SEND, { data, includeWrapper })
   }
 
   /**
@@ -171,7 +198,7 @@ export class MIDIController extends EventEmitter {
     const status = 0x90 + (channel - 1)
     this.connection.send([status, note, velocity])
 
-    this.emit(MIDI_EVENTS.NOTE_ON_SEND, { note, velocity, channel })
+    this.emit(CONTROLLER_EVENTS.NOTE_ON_SEND, { note, velocity, channel })
   }
 
   /**
@@ -191,7 +218,7 @@ export class MIDIController extends EventEmitter {
     const status = 0x90 + (channel - 1)
     this.connection.send([status, note, velocity])
 
-    this.emit(MIDI_EVENTS.NOTE_OFF_SEND, { note, channel, velocity })
+    this.emit(CONTROLLER_EVENTS.NOTE_OFF_SEND, { note, channel, velocity })
   }
 
   /**
@@ -203,15 +230,18 @@ export class MIDIController extends EventEmitter {
    * @param {number} [config.max=127] - Maximum input value
    * @param {number} [config.channel] - Override channel
    * @param {boolean} [config.invert=false] - Invert the value
+   * @param {Function} [config.onInput] - Optional callback for value updates (receives normalized element value)
+   * @param {Object} [options={}] - Additional options
+   * @param {number} [options.debounce=0] - Debounce delay in ms for high-frequency updates
    * @returns {Function} Unbind function
    */
-  bind(element, config) {
+  bind(element, config, options = {}) {
     if (!element) {
       console.warn("Cannot bind: element is null or undefined")
       return () => {}
     }
 
-    const binding = this._createBinding(element, config)
+    const binding = this._createBinding(element, config, options)
     this.bindings.set(element, binding)
 
     // Send initial value
@@ -268,7 +298,7 @@ export class MIDIController extends EventEmitter {
    */
   async setOutput(output) {
     await this.connection.connect(output)
-    this.emit(MIDI_EVENTS.OUTPUT_CHANGED, this.connection.getCurrentOutput())
+    this.emit(CONTROLLER_EVENTS.OUTPUT_CHANGED, this.connection.getCurrentOutput())
   }
 
   /**
@@ -298,7 +328,7 @@ export class MIDIController extends EventEmitter {
     this.state.clear()
     this.connection?.disconnect()
     this.initialized = false
-    this.emit(MIDI_EVENTS.DESTROYED)
+    this.emit(CONTROLLER_EVENTS.DESTROYED)
     this.removeAllListeners()
   }
 
@@ -313,7 +343,7 @@ export class MIDIController extends EventEmitter {
 
     // SysEx message
     if (status === 0xf0) {
-      this.emit(MIDI_EVENTS.SYSEX_RECV, {
+      this.emit(CONTROLLER_EVENTS.SYSEX_RECV, {
         data: Array.from(event.data),
         timestamp: event.midiwire,
       })
@@ -325,7 +355,7 @@ export class MIDIController extends EventEmitter {
       const key = `${channel}:${data1}`
       this.state.set(key, data2)
 
-      this.emit(MIDI_EVENTS.CC_RECV, {
+      this.emit(CONTROLLER_EVENTS.CC_RECV, {
         cc: data1,
         value: data2,
         channel,
@@ -335,7 +365,7 @@ export class MIDIController extends EventEmitter {
 
     // Note On
     if (messageType === 0x90 && data2 > 0) {
-      this.emit(MIDI_EVENTS.NOTE_ON_RECV, {
+      this.emit(CONTROLLER_EVENTS.NOTE_ON_RECV, {
         note: data1,
         velocity: data2,
         channel,
@@ -345,7 +375,7 @@ export class MIDIController extends EventEmitter {
 
     // Note Off (either 0x80 or 0x90 with velocity 0)
     if (messageType === 0x80 || (messageType === 0x90 && data2 === 0)) {
-      this.emit(MIDI_EVENTS.NOTE_OFF_RECV, {
+      this.emit(CONTROLLER_EVENTS.NOTE_OFF_RECV, {
         note: data1,
         channel,
       })
@@ -353,7 +383,7 @@ export class MIDIController extends EventEmitter {
     }
 
     // Other messages
-    this.emit(MIDI_EVENTS.MIDI_MSG, {
+    this.emit(CONTROLLER_EVENTS.MIDI_MSG, {
       status,
       data: [data1, data2],
       channel,
@@ -365,13 +395,15 @@ export class MIDIController extends EventEmitter {
    * Create a binding between an element and MIDI CC
    * @private
    */
-  _createBinding(element, config) {
+  _createBinding(element, config, options = {}) {
     const {
       min = parseFloat(element.getAttribute("min")) || 0,
       max = parseFloat(element.getAttribute("max")) || 127,
       channel,
       invert = false,
+      onInput = undefined,
     } = config
+    const { debounce = 0 } = options
 
     // Store resolved values back to config for patch saving
     // Don't store channel if not explicitly provided - use dynamic midi.options.channel
@@ -380,6 +412,7 @@ export class MIDIController extends EventEmitter {
       min,
       max,
       invert,
+      onInput,
     }
     if (channel !== undefined) {
       resolvedConfig.channel = channel
@@ -403,16 +436,30 @@ export class MIDIController extends EventEmitter {
         this.sendCC(lsb, lsbValue, channelToUse)
       }
 
-      element.addEventListener("input", handler)
-      element.addEventListener("change", handler)
+      // Add debouncing if specified
+      let timeoutId = null
+      const debouncedHandler =
+        debounce > 0
+          ? (event) => {
+              if (timeoutId) clearTimeout(timeoutId)
+              timeoutId = setTimeout(() => {
+                handler(event)
+                timeoutId = null
+              }, debounce)
+            }
+          : handler
+
+      element.addEventListener("input", debouncedHandler)
+      element.addEventListener("change", debouncedHandler)
 
       return {
         element,
         config: resolvedConfig,
         handler,
         destroy: () => {
-          element.removeEventListener("input", handler)
-          element.removeEventListener("change", handler)
+          if (timeoutId) clearTimeout(timeoutId)
+          element.removeEventListener("input", debouncedHandler)
+          element.removeEventListener("change", debouncedHandler)
         },
       }
     }
@@ -433,16 +480,30 @@ export class MIDIController extends EventEmitter {
       this.sendCC(cc, midiValue, channelToUse)
     }
 
-    element.addEventListener("input", handler)
-    element.addEventListener("change", handler)
+    // Add debouncing if specified
+    let timeoutId = null
+    const debouncedHandler =
+      debounce > 0
+        ? (event) => {
+            if (timeoutId) clearTimeout(timeoutId)
+            timeoutId = setTimeout(() => {
+              handler(event)
+              timeoutId = null
+            }, debounce)
+          }
+        : handler
+
+    element.addEventListener("input", debouncedHandler)
+    element.addEventListener("change", debouncedHandler)
 
     return {
       element,
       config: resolvedConfig,
       handler,
       destroy: () => {
-        element.removeEventListener("input", handler)
-        element.removeEventListener("change", handler)
+        if (timeoutId) clearTimeout(timeoutId)
+        element.removeEventListener("input", debouncedHandler)
+        element.removeEventListener("change", debouncedHandler)
       },
     }
   }
@@ -494,7 +555,7 @@ export class MIDIController extends EventEmitter {
 
   /**
    * Apply a patch to the controller
-   * @param {Object} patch - Patch object
+   * @param {PatchData} patch - Patch object
    * @returns {Promise<void>}
    */
   async setPatch(patch) {
@@ -502,6 +563,25 @@ export class MIDIController extends EventEmitter {
       throw new Error("Invalid patch format")
     }
 
+    // Handle different patch versions
+    const version = patch.version || "1.0"
+
+    if (version === "1.0") {
+      await this._applyPatchV1(patch)
+    } else {
+      console.warn(`Unknown patch version: ${version}. Attempting to apply as v1.0`)
+      await this._applyPatchV1(patch)
+    }
+
+    this.emit(CONTROLLER_EVENTS.PATCH_LOADED, { patch })
+  }
+
+  /**
+   * Apply v1.0 patch format
+   * @private
+   * @param {PatchData} patch
+   */
+  async _applyPatchV1(patch) {
     // Apply CC values
     for (const [channelStr, channelData] of Object.entries(patch.channels)) {
       const channel = parseInt(channelStr, 10)
@@ -570,16 +650,18 @@ export class MIDIController extends EventEmitter {
               elementValue = min + (ccValue / 127) * (max - min)
             }
 
-            element.value = elementValue
-            // Dispatch input event to trigger any display updates
-            element.dispatchEvent(new Event("input", { bubbles: true }))
+            // Use onInput callback if provided, otherwise fall back to direct element update
+            if (config.onInput && typeof config.onInput === "function") {
+              config.onInput(elementValue)
+            } else {
+              element.value = elementValue
+              // Dispatch input event to trigger any display updates
+              element.dispatchEvent(new Event("input", { bubbles: true }))
+            }
           }
         }
       }
     }
-
-    // Emit event
-    this.emit(MIDI_EVENTS.PATCH_LOADED, { patch })
   }
 
   /**
@@ -594,7 +676,7 @@ export class MIDIController extends EventEmitter {
 
     try {
       localStorage.setItem(key, JSON.stringify(patchToSave))
-      this.emit(MIDI_EVENTS.PATCH_SAVED, { name, patch: patchToSave })
+      this.emit(CONTROLLER_EVENTS.PATCH_SAVED, { name, patch: patchToSave })
       return key
     } catch (error) {
       console.error("Failed to save patch:", error)
@@ -617,7 +699,7 @@ export class MIDIController extends EventEmitter {
       }
 
       const patch = JSON.parse(stored)
-      this.emit(MIDI_EVENTS.PATCH_LOADED, { name, patch })
+      this.emit(CONTROLLER_EVENTS.PATCH_LOADED, { name, patch })
       return patch
     } catch (error) {
       console.error("Failed to load patch:", error)
@@ -635,7 +717,7 @@ export class MIDIController extends EventEmitter {
 
     try {
       localStorage.removeItem(key)
-      this.emit(MIDI_EVENTS.PATCH_DELETED, { name })
+      this.emit(CONTROLLER_EVENTS.PATCH_DELETED, { name })
       return true
     } catch (error) {
       console.error("Failed to delete patch:", error)

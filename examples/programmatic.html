@@ -83,6 +83,14 @@
     </select>
   </div>
 
+  <div id="connect-message" class="section">
+    <h2>Not Connected</h2>
+    <p style="color: var(--text-secondary); margin-top: 10px;">
+      Connect a MIDI device to use the programmatic API and experiment with knobs.
+    </p>
+  </div>
+
+  <div id="controls-container" style="display: none;">
   <div class="section">
     <h2>Manual Binding</h2>
     <button id="bind-cutoff">Bind Cutoff Knob (CC74)</button>
@@ -141,62 +149,93 @@
     <button id="random-cc">Randomize All CCs</button>
     <button id="panic">Panic! (All Notes Off)</button>
   </div>
+  </div>
 
   <div class="section">
     <h2>Console Access</h2>
     <pre>// The midi object is exposed to window for console access
-globalThis.midi.sendCC(74, 100);  // Send CC
-globalThis.midi.sendNoteOn(60, 100);  // Play note
-globalThis.midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
+midi.sendCC(74, 100);  // Send CC
+midi.sendNoteOn(60, 100);  // Play note
+midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
   </div>
 
   <script type="module">
-    import { createMIDIController } from "../src/index.js";
+    import { createMIDIDeviceManager } from "../src/index.js";
 
-    let midi = null;
-    let currentDevice = null;
-
-    function updateStatus(message, state) {
-      const status = document.getElementById("status");
-      status.textContent = message;
-      status.className = state ? `status ${state}` : "status";
-    }
-
-    function updateConnectionStatus() {
-      if (currentDevice && midi) {
-        updateStatus(`Connected to ${currentDevice.name} (Channel ${midi.options.channel})`, "connected");
-      }
-    }
+    let deviceManager = null;
 
     async function init() {
       try {
-        midi = await createMIDIController({ autoConnect: false });
-        await refreshDeviceList();
-        setupKnobs();
+        // Cache DOM elements
+        const status = document.getElementById("status");
+        const controlsContainer = document.getElementById("controls-container");
+        const connectMessage = document.getElementById("connect-message");
+
+        // Initialize MIDI manager with callbacks
+        deviceManager = await createMIDIDeviceManager({
+          onStatusUpdate: (message, state) => {
+            status.textContent = message;
+            status.className = state ? `status ${state}` : "status";
+          },
+          onConnectionUpdate: (device, midi) => {
+            if (device && midi) {
+              status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
+              status.className = "status connected";
+              controlsContainer.style.display = "block";
+              connectMessage.style.display = "none";
+              // Make midi globally available
+              window.midi = midi;
+            } else {
+              controlsContainer.style.display = "none";
+              connectMessage.style.display = "block";
+            }
+          },
+          onReady: (midi) => {
+            setupKnobs();
+            setupButtons();
+            // Make midi globally available
+            window.midi = midi;
+          }
+        });
+
+        // Set up device and channel selection
+        const deviceSelect = document.getElementById("device-select");
+        const channelSelect = document.getElementById("channel-select");
+
+        deviceManager.setupDeviceListeners(() => {
+          deviceManager.populateDeviceList(deviceSelect);
+        });
+
+        // Initial population
+        deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.connectDeviceSelection(deviceSelect);
+        deviceManager.connectChannelSelection(channelSelect);
       } catch (err) {
-        updateStatus(`Error: ${err.message}`, "error");
+        const status = document.getElementById("status");
+        status.textContent = `MIDI initialization failed: ${err.message}`;
+        status.className = "status error";
       }
     }
 
-    async function refreshDeviceList() {
-      try {
-        const access = await navigator.requestMIDIAccess();
-        const outputs = Array.from(access.outputs.values());
-        const select = document.getElementById("device-select");
+    // Knob update function that integrates with the MIDI library
+    function updateKnobValue(knobId, value) {
+      const element = document.getElementById(`${knobId}-knob`);
+      const indicator = document.getElementById(`${knobId}-indicator`);
+      const progress = document.getElementById(`${knobId}-progress`);
+      const valueDisplay = document.getElementById(`${knobId}-value`);
 
-        if (outputs.length > 0) {
-          select.innerHTML = '<option value="">Select a device</option>' +
-            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
-          if (!currentDevice) {
-            updateStatus("Select a MIDI device");
-          }
-        } else {
-          select.innerHTML = '<option value="">No MIDI devices found</option>';
-          updateStatus("No MIDI devices available", "error");
-        }
-      } catch (err) {
-        console.error("Failed to refresh device list:", err);
-      }
+      const clampedValue = Math.max(0, Math.min(127, value));
+      const rotation = (clampedValue / 127) * 270 - 135;
+
+      indicator.setAttribute("transform", `rotate(${rotation} 40 40)`);
+
+      const progressAmount = (clampedValue / 127) * 220;
+      progress.setAttribute("stroke-dashoffset", String(220 - progressAmount));
+
+      valueDisplay.textContent = clampedValue;
+
+      // Store current value for reference
+      element.dataset.value = clampedValue;
     }
 
     function setupKnobs() {
@@ -213,27 +252,17 @@ globalThis.midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
         let startY = 0;
         let startValue = 0;
 
-        function updateKnob(value) {
-          currentValue = Math.max(0, Math.min(127, value));
-          const rotation = (currentValue / 127) * 270 - 135;
-          const indicator = document.getElementById(`${knob.id}-indicator`);
-          const progress = document.getElementById(`${knob.id}-progress`);
-          const valueDisplay = document.getElementById(`${knob.id}-value`);
+        // Initialize knob display
+        updateKnobValue(knob.id, currentValue);
 
-          indicator.setAttribute("transform", `rotate(${rotation} 40 40)`);
-
-          const progressAmount = (currentValue / 127) * 220;
-          progress.setAttribute("stroke-dashoffset", String(220 - progressAmount));
-
-          valueDisplay.textContent = currentValue;
-        }
-
-        updateKnob(currentValue);
+        // Store knob data for the library integration
+        element.dataset.currentValue = currentValue;
+        element.dataset.cc = knob.cc;
 
         function startDrag(e) {
           isDragging = true;
           startY = e.clientY;
-          startValue = currentValue;
+          startValue = parseInt(element.dataset.currentValue || currentValue);
           element.style.cursor = "grabbing";
           e.preventDefault();
 
@@ -252,13 +281,15 @@ globalThis.midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
           value = Math.max(0, Math.min(127, value));
 
           const roundedValue = Math.round(value);
-          if (roundedValue !== currentValue) {
-            updateKnob(roundedValue);
+          const currentVal = parseInt(element.dataset.currentValue || 0);
 
-            // Send CC if connected
-            if (midi && currentDevice) {
-              console.log(`Knob ${knob.id}: CC${knob.cc} = ${roundedValue}`);
-              midi.sendCC(knob.cc, roundedValue);
+          if (roundedValue !== currentVal) {
+            updateKnobValue(knob.id, roundedValue);
+            element.dataset.currentValue = roundedValue;
+
+            // Let the library handle MIDI sending via onInput callback
+            if (element.onInput) {
+              element.onInput(roundedValue);
             }
           }
         }
@@ -276,96 +307,93 @@ globalThis.midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
       });
     }
 
-    document.getElementById("device-select").addEventListener("change", async (e) => {
-      const deviceIndex = e.target.value;
-      if (!deviceIndex) {
-        if (currentDevice) {
-          midi.destroy();
-          currentDevice = null;
-          updateStatus("Disconnected");
+    function setupButtons() {
+      // Manual binding buttons
+      document.getElementById("bind-cutoff").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
         }
-        return;
-      }
 
-      try {
-        if (!midi) {
-          await init();
-        }
-        await midi.setOutput(parseInt(deviceIndex));
-        currentDevice = midi.getCurrentOutput();
-        updateConnectionStatus();
-        globalThis.midi = midi;
-        console.log(`Connected to device: ${currentDevice.name} (Channel ${midi.options.channel})`);
-      } catch (err) {
-        updateStatus(`Connection failed: ${err.message}`, "error");
-      }
-    });
-
-    document.getElementById("channel-select").addEventListener("change", (e) => {
-      if (midi) {
-        const channel = parseInt(e.target.value);
-        midi.options.channel = channel;
-        console.log(`Channel changed to: ${channel}`);
-        updateConnectionStatus();
-      }
-    });
-
-    document.getElementById("bind-cutoff").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
-
-      const knob = document.getElementById("cutoff-knob");
-      const code = `// Manual binding example
+        const knob = document.getElementById("cutoff-knob");
+        const cc = 74;
+        const code = `// Custom knob binding with value sync
 const knob = document.getElementById("cutoff-knob");
 midi.bind(knob, {
-  cc: 74,
-  min: 0,
-  max: 127
-});`;
-
-      document.getElementById("binding-code").textContent = code;
-      midi.bind(knob, { cc: 74, min: 0, max: 127 });
-      console.log("Bound cutoff knob to CC74 via manual bind()");
-    });
-
-    document.getElementById("bind-resonance").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
-
-      const knob = document.getElementById("resonance-knob");
-      const code = `// Manual binding with config
-const knob = document.getElementById("resonance-knob");
-midi.bind(knob, {
-  cc: 71,
+  cc: ${cc},
   min: 0,
   max: 127,
-  channel: midi.options.channel // Use current channel
+  onInput: (value) => {
+    // Update the visual knob when library sets value
+    updateKnobValue("cutoff", value);
+    knob.dataset.currentValue = value;
+  }
 });`;
 
-      document.getElementById("binding-code").textContent = code;
-      midi.bind(knob, { cc: 71, min: 0, max: 127 });
-      console.log("Bound resonance knob to CC71 via manual bind()");
-    });
+        document.getElementById("binding-code").textContent = code;
+        window.midi.bind(knob, {
+          cc: cc,
+          min: 0,
+          max: 127,
+          onInput: (value) => {
+            updateKnobValue("cutoff", value);
+            knob.dataset.currentValue = value;
+          }
+        });
+        console.log("Bound cutoff knob to CC74 with value sync");
+      });
 
-    document.getElementById("bind-volume").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
+      document.getElementById("bind-resonance").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
 
-      const slider = document.createElement("input");
-      slider.type = "range";
-      slider.min = "0";
-      slider.max = "127";
-      slider.value = "100";
+        const knob = document.getElementById("resonance-knob");
+        const cc = 71;
+        const code = `// Custom knob binding with inverted behavior
+const knob = document.getElementById("resonance-knob");
+midi.bind(knob, {
+  cc: ${cc},
+  min: 0,
+  max: 127,
+  invert: true, // Inverted MIDI values
+  onInput: (value) => {
+    // Update visual state
+    updateKnobValue("resonance", value);
+    knob.dataset.currentValue = value;
+  }
+});`;
 
-      alert("Dynamic binding: Created a volume slider and bound it to CC7");
+        document.getElementById("binding-code").textContent = code;
+        window.midi.bind(knob, {
+          cc: cc,
+          min: 0,
+          max: 127,
+          invert: true,
+          onInput: (value) => {
+            updateKnobValue("resonance", value);
+            knob.dataset.currentValue = value;
+          }
+        });
+        console.log("Bound resonance knob to CC71 with inverted values");
+      });
 
-      const code = `// Dynamic element creation and binding
+      document.getElementById("bind-volume").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = "0";
+        slider.max = "127";
+        slider.value = "100";
+
+        alert("Dynamic binding: Created a volume slider and bound it to CC7");
+
+        const code = `// Dynamic element creation and binding
 const slider = document.createElement("input");
 slider.type = "range";
 slider.min = "0";
@@ -376,130 +404,97 @@ slider.value = "100";
 midi.bind(slider, { cc: 7 });
 document.body.appendChild(slider);`;
 
-      document.getElementById("binding-code").textContent = code;
-      midi.bind(slider, { cc: 7 });
-      console.log("Dynamically created and bound volume slider to CC7");
-    });
-
-    document.getElementById("chord-cmaj7").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
-
-      // Cmaj7: C, E, G, B
-      const chord = [60, 64, 67, 71];
-      const velocity = 100;
-      const channel = midi.options.channel;
-
-      console.log(`Playing Cmaj7 chord: notes ${chord.join(", ")}, velocity ${velocity}, channel ${channel}`);
-      chord.forEach(note => midi.sendNoteOn(note, velocity, channel));
-
-      setTimeout(() => {
-        console.log(`Releasing Cmaj7 chord: notes ${chord.join(", ")}, channel ${channel}`);
-        chord.forEach(note => midi.sendNoteOff(note, channel));
-      }, 1000);
-    });
-
-    document.getElementById("cc-sweep").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
-
-      const duration = 2000; // 2 seconds
-      const steps = 50;
-      const interval = duration / steps;
-      let step = 0;
-      const channel = midi.options.channel;
-
-      console.log(`Starting CC sweep: CC1 0→127 over ${duration}ms, ${steps} steps`);
-
-      const sweep = setInterval(() => {
-        const value = Math.floor((step / steps) * 127);
-        if (step % 5 === 0) { // Log every 5th step to avoid spam
-          console.log(`CC sweep: CC1 = ${value}`);
-        }
-        midi.sendCC(1, value, channel);
-        step++;
-
-        if (step > steps) {
-          clearInterval(sweep);
-          console.log("CC sweep complete");
-        }
-      }, interval);
-    });
-
-    document.getElementById("random-cc").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
-
-      const ccs = [1, 2, 7, 10, 71, 74, 91, 93];
-      const channel = midi.options.channel;
-
-      console.log("Randomizing CC values for:", ccs);
-      ccs.forEach(cc => {
-        const value = Math.floor(Math.random() * 128);
-        midi.sendCC(cc, value, channel);
+        document.getElementById("binding-code").textContent = code;
+        window.midi.bind(slider, { cc: 7 });
+        console.log("Dynamically created and bound volume slider to CC7");
       });
-      console.log("CC randomization complete");
-    });
 
-    document.getElementById("panic").addEventListener("click", () => {
-      if (!midi || !currentDevice) {
-        alert("Please connect to a MIDI device first");
-        return;
-      }
+      // Direct MIDI command buttons
+      document.getElementById("chord-cmaj7").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
 
-      console.log("PANIC: Sending All Notes Off on all channels and all notes off");
+        // Cmaj7: C, E, G, B
+        const chord = [60, 64, 67, 71];
+        const velocity = 100;
+        const channel = window.midi.options.channel;
 
-      // Send All Notes Off (CC 123) on all channels
-      for (let ch = 1; ch <= 16; ch++) {
-        midi.sendCC(123, 0, ch);
-      }
+        console.log(`Playing Cmaj7 chord: notes ${chord.join(", ")}, velocity ${velocity}, channel ${channel}`);
+        chord.forEach(note => window.midi.sendNoteOn(note, velocity, channel));
 
-      // Also send note off for all notes
-      for (let note = 0; note < 128; note++) {
-        midi.sendNoteOff(note);
-      }
+        setTimeout(() => {
+          console.log(`Releasing Cmaj7 chord: notes ${chord.join(", ")}, channel ${channel}`);
+          chord.forEach(note => window.midi.sendNoteOff(note, channel));
+        }, 1000);
+      });
 
-      console.log("Panic complete: All notes stopped");
-    });
+      document.getElementById("cc-sweep").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
 
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then((access) => {
-        access.onstatechange = (e) => {
-          if (e.port.type === "output") {
-            if (e.port.state === "connected") {
-              console.log(`Device connected: ${e.port.name}`);
-              refreshDeviceList();
-            } else if (e.port.state === "disconnected") {
-              console.log(`Device disconnected: ${e.port.name}`);
-              const select = document.getElementById("device-select");
-              const disconnectedName = e.port.name;
+        const duration = 2000; // 2 seconds
+        const steps = 50;
+        const interval = duration / steps;
+        let step = 0;
+        const channel = window.midi.options.channel;
 
-              for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === disconnectedName) {
-                  select.options.remove(i);
-                  break;
-                }
-              }
+        console.log(`Starting CC sweep: CC1 0→127 over ${duration}ms, ${steps} steps`);
 
-              if (currentDevice && disconnectedName === currentDevice.name) {
-                updateStatus("Device disconnected");
-                currentDevice = null;
-                select.value = "";
-              }
-
-              if (select.options.length === 1 && select.options[0].value === "") {
-                select.innerHTML = '<option value="">No MIDI devices found</option>';
-                updateStatus("No MIDI devices available", "error");
-              }
-            }
+        const sweep = setInterval(() => {
+          const value = Math.floor((step / steps) * 127);
+          if (step % 5 === 0) { // Log every 5th step to avoid spam
+            console.log(`CC sweep: CC1 = ${value}`);
           }
-        };
+          window.midi.sendCC(1, value, channel);
+          step++;
+
+          if (step > steps) {
+            clearInterval(sweep);
+            console.log("CC sweep complete");
+          }
+        }, interval);
+      });
+
+      document.getElementById("random-cc").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
+
+        const ccs = [1, 2, 7, 10, 71, 74, 91, 93];
+        const channel = window.midi.options.channel;
+
+        console.log("Randomizing CC values for:", ccs);
+        ccs.forEach(cc => {
+          const value = Math.floor(Math.random() * 128);
+          window.midi.sendCC(cc, value, channel);
+        });
+        console.log("CC randomization complete");
+      });
+
+      document.getElementById("panic").addEventListener("click", () => {
+        if (!window.midi) {
+          alert("Please connect to a MIDI device first");
+          return;
+        }
+
+        console.log("PANIC: Sending All Notes Off on all channels and all notes off");
+
+        // Send All Notes Off (CC 123) on all channels
+        for (let ch = 1; ch <= 16; ch++) {
+          window.midi.sendCC(123, 0, ch);
+        }
+
+        // Also send note off for all notes
+        for (let note = 0; note < 128; note++) {
+          window.midi.sendNoteOff(note);
+        }
+
+        console.log("Panic complete: All notes stopped");
       });
     }
 

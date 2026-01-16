@@ -49,6 +49,7 @@ export class DataAttributeBinder {
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
+        // Handle added nodes
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             // Check the node itself
@@ -71,6 +72,24 @@ export class DataAttributeBinder {
                     child.setAttribute("data-midi-bound", "true")
                   }
                 }
+              })
+            }
+          }
+        })
+
+        // Handle removed nodes
+        mutation.removedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Unbind removed elements
+            if (node.hasAttribute?.("data-midi-bound")) {
+              this.controller.unbind(node)
+            }
+
+            // Check children recursively
+            if (node.querySelectorAll) {
+              const boundChildren = node.querySelectorAll("[data-midi-bound]")
+              boundChildren.forEach((child) => {
+                this.controller.unbind(child)
               })
             }
           }
@@ -113,6 +132,15 @@ export class DataAttributeBinder {
       lsb >= 0 &&
       lsb <= 127
     ) {
+      // Check if 7-bit CC is also present
+      const cc = parseInt(element.dataset.midiCc, 10)
+      if (!Number.isNaN(cc) && cc >= 0 && cc <= 127) {
+        console.warn(
+          `Element has both 7-bit (data-midi-cc="${cc}") and 14-bit (data-midi-msb="${msb}" data-midi-lsb="${lsb}") CC attributes. 14-bit takes precedence.`,
+          element,
+        )
+      }
+
       // Valid 14-bit CC
       return {
         msb,
