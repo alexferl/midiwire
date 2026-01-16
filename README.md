@@ -481,30 +481,51 @@ midi.sendCC(74, 100);  // Send to synth
 import { CONTROLLER_EVENTS, CONNECTION_EVENTS } from "midiwire";
 
 // Controller events (from MIDIController):
-CONTROLLER_EVENTS.READY              // 'ready' - MIDI initialized
-CONTROLLER_EVENTS.ERROR              // 'error' - Error occurred
-CONTROLLER_EVENTS.CC_SEND            // 'cc-send' - CC sent
-CONTROLLER_EVENTS.CC_RECV            // 'cc-recv' - CC received
-CONTROLLER_EVENTS.NOTE_ON_SEND       // 'note-on-send' - Note On sent
-CONTROLLER_EVENTS.NOTE_ON_RECV       // 'note-on-recv' - Note On received
-CONTROLLER_EVENTS.NOTE_OFF_SEND      // 'note-off-send' - Note Off sent
-CONTROLLER_EVENTS.NOTE_OFF_RECV      // 'note-off-recv' - Note Off received
-CONTROLLER_EVENTS.SYSEX_SEND         // 'sysex-send' - SysEx sent
-CONTROLLER_EVENTS.SYSEX_RECV         // 'sysex-recv' - SysEx received
-CONTROLLER_EVENTS.OUTPUT_CHANGED     // 'output-changed' - Output device changed
-CONTROLLER_EVENTS.INPUT_CONNECTED    // 'input-connected' - Input device connected
-CONTROLLER_EVENTS.DESTROYED          // 'destroyed' - MIDI controller destroyed
-CONTROLLER_EVENTS.MIDI_MSG           // 'midi-msg' - Raw MIDI message
-CONTROLLER_EVENTS.PATCH_SAVED        // 'patch-saved' - Patch saved to storage
-CONTROLLER_EVENTS.PATCH_LOADED       // 'patch-loaded' - Patch loaded/applied
-CONTROLLER_EVENTS.PATCH_DELETED      // 'patch-deleted' - Patch deleted from storage
+CONTROLLER_EVENTS.READY              // "ready" - MIDI initialized
+CONTROLLER_EVENTS.ERROR              // "error" - Error occurred
+CONTROLLER_EVENTS.CC_SEND            // "cc-send" - CC sent
+CONTROLLER_EVENTS.CC_RECV            // "cc-recv" - CC received
+CONTROLLER_EVENTS.NOTE_ON_SEND       // "note-on-send" - Note On sent
+CONTROLLER_EVENTS.NOTE_ON_RECV       // "note-on-recv" - Note On received
+CONTROLLER_EVENTS.NOTE_OFF_SEND      // "note-off-send" - Note Off sent
+CONTROLLER_EVENTS.NOTE_OFF_RECV      // "note-off-recv" - Note Off received
+CONTROLLER_EVENTS.SYSEX_SEND         // "sysex-send" - SysEx sent
+CONTROLLER_EVENTS.SYSEX_RECV         // "sysex-recv" - SysEx received
+CONTROLLER_EVENTS.OUTPUT_CHANGED     // "output-changed" - Output device changed
+CONTROLLER_EVENTS.INPUT_CONNECTED    // "input-connected" - Input device connected
+CONTROLLER_EVENTS.DESTROYED          // "destroyed" - MIDI controller destroyed
+CONTROLLER_EVENTS.MIDI_MSG           // "midi-msg" - Raw MIDI message
+CONTROLLER_EVENTS.PATCH_SAVED        // "patch-saved" - Patch saved to storage
+CONTROLLER_EVENTS.PATCH_LOADED       // "patch-loaded" - Patch loaded/applied
+CONTROLLER_EVENTS.PATCH_DELETED      // "patch-deleted" - Patch deleted from storage
 
 // Connection events (from MIDIConnection):
-CONNECTION_EVENTS.DEVICE_CHANGE               // 'device-change' - Any device change
-CONNECTION_EVENTS.INPUT_DEVICE_CONNECTED      // 'input-device-connected'
-CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED   // 'input-device-disconnected'
-CONNECTION_EVENTS.OUTPUT_DEVICE_CONNECTED     // 'output-device-connected'
-CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED  // 'output-device-disconnected'
+CONNECTION_EVENTS.DEVICE_CHANGE               // "device-change" - Any device change
+CONNECTION_EVENTS.INPUT_DEVICE_CONNECTED      // "input-device-connected"
+CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED   // "input-device-disconnected"
+CONNECTION_EVENTS.OUTPUT_DEVICE_CONNECTED     // "output-device-connected"
+CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED  // "output-device-disconnected"
+```
+
+#### Shorthand Aliases (Optional)
+
+For cleaner code, use the shorthand aliases:
+
+```javascript
+import { CTRL, CONN } from "midiwire";
+
+// Same events, shorter names
+midi.on(CTRL.CC_SEND, handler);
+midi.connection.on(CONN.DEVICE_CHANGE, handler);
+
+// Real-world example
+midi.on(CTRL.ERROR, ({ message }) => {
+  console.error("MIDI Error:", message);
+});
+
+midi.on(CTRL.PATCH_LOADED, ({ patch }) => {
+  console.log(`Loaded patch: ${patch.name}`);
+});
 ```
 
 ## Use Cases

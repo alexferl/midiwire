@@ -1,5 +1,10 @@
 /**
- * Simple event emitter for MIDI events
+ * Lightweight browser-compatible event emitter.
+ * Provides publish/subscribe functionality for MIDI events
+ * without external dependencies. Implements standard event
+ * emitter pattern: register listeners with on(), emit events
+ * with emit(), remove listeners with off(). Listener cleanup
+ * is automatic via returned unsubscribe functions.
  */
 export class EventEmitter {
   constructor() {

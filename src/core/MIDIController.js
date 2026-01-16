@@ -53,7 +53,12 @@ export const CONTROLLER_EVENTS = {
 }
 
 /**
- * Main MIDI controller class
+ * Main controller for browser-based MIDI operations. Provides APIs for:
+ * - Device management (connect/disconnect, enumerate devices)
+ * - Control binding (DOM elements ↔ MIDI CC)
+ * - MIDI messaging (send/receive CC, Note, SysEx)
+ * - Patch management (save/load presets)
+ * - Event handling (MIDI messages, connection changes, errors)
  * @extends EventEmitter
  */
 export class MIDIController extends EventEmitter {

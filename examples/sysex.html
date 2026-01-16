@@ -62,7 +62,7 @@
   </div>
 </div>
 <script type="module">
-  import { CONTROLLER_EVENTS, createMIDIDeviceManager } from "../src/index.js";
+  import { CTRL, createMIDIDeviceManager } from "../src/index.js";
 
   let deviceManager = null;
   let midi = null;
@@ -98,7 +98,7 @@
     const log = document.getElementById("received-messages");
 
     // Remove empty state if exists
-    const emptyState = log.querySelector('.empty-state');
+    const emptyState = log.querySelector(".empty-state");
     if (emptyState) emptyState.remove();
 
     const timestamp = new Date().toLocaleTimeString();
@@ -186,8 +186,8 @@
           }
 
           // Listen for SysEx messages
-          midi.on(CONTROLLER_EVENTS.SYSEX_RECV, handleSysExReceived);
-          midi.on(CONTROLLER_EVENTS.SYSEX_SEND, handleSysExSent);
+          midi.on(CTRL.SYSEX_RECV, handleSysExReceived);
+          midi.on(CTRL.SYSEX_SEND, handleSysExSent);
 
           updateConnectionStatus();
         }

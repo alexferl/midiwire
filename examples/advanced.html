@@ -366,7 +366,7 @@
   </div>
 
   <script type="module">
-    import { createMIDIDeviceManager, DataAttributeBinder } from "../src/index.js";
+    import { createMIDIDeviceManager } from "../src/index.js";
 
     let deviceManager = null;
     let currentDevice = null;
@@ -376,13 +376,13 @@
     function setupValueDisplays() {
       // Simple controls (direct value)
       const simpleControls = [
-        { selector: '[data-midi-label="Cutoff"]', display: 'cutoff-value', format: parseInt },
-        { selector: '[data-midi-label="LFO Rate"]', display: 'lfo-value', format: (v) => parseFloat(v).toFixed(1) },
-        { selector: '[data-midi-label="Attack"]', display: 'attack-value', format: parseInt },
-        { selector: '[data-midi-label="Release"]', display: 'release-value', format: parseInt },
-        { selector: '[data-midi-label="Pan"]', display: 'pan-value', format: parseInt },
-        { selector: '[data-midi-label="Detune"]', display: 'detune-value', format: parseInt },
-        { selector: '[data-midi-label="Normal"]', display: 'normal-value', format: parseInt },
+        { selector: '[data-midi-label="Cutoff"]', display: "cutoff-value", format: parseInt },
+        { selector: '[data-midi-label="LFO Rate"]', display: "lfo-value", format: (v) => parseFloat(v).toFixed(1) },
+        { selector: '[data-midi-label="Attack"]', display: "attack-value", format: parseInt },
+        { selector: '[data-midi-label="Release"]', display: "release-value", format: parseInt },
+        { selector: '[data-midi-label="Pan"]', display: "pan-value", format: parseInt },
+        { selector: '[data-midi-label="Detune"]', display: "detune-value", format: parseInt },
+        { selector: '[data-midi-label="Normal"]', display: "normal-value", format: parseInt },
       ];
 
       simpleControls.forEach(({ selector, display, format }) => {
@@ -396,9 +396,9 @@
 
       // Inverted controls
       const invertedControls = [
-        { selector: '[data-midi-label="Resonance"]', display: 'resonance-value', max: 127 },
-        { selector: '[data-midi-label="Drive"]', display: 'drive-value', max: 100 },
-        { selector: '[data-midi-label="Inverted"]', display: 'inverted-value', max: 127 },
+        { selector: '[data-midi-label="Resonance"]', display: "resonance-value", max: 127 },
+        { selector: '[data-midi-label="Drive"]', display: "drive-value", max: 100 },
+        { selector: '[data-midi-label="Inverted"]', display: "inverted-value", max: 127 },
       ];
 
       invertedControls.forEach(({ selector, display, max }) => {
@@ -424,8 +424,8 @@
       try {
         // Cache DOM elements
         const status = document.getElementById("status");
-        const controlsContainer = document.getElementById('controls-container');
-        const connectMessage = document.getElementById('connect-message');
+        const controlsContainer = document.getElementById("controls-container");
+        const connectMessage = document.getElementById("connect-message");
 
         // Initialize with watchDOM enabled for dynamic binding
         deviceManager = await createMIDIDeviceManager({
@@ -438,12 +438,12 @@
             if (device && midi) {
               status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
               status.className = "status connected";
-              controlsContainer.style.display = 'block';
-              connectMessage.style.display = 'none';
+              controlsContainer.style.display = "block";
+              connectMessage.style.display = "none";
               currentDevice = device;
             } else {
-              controlsContainer.style.display = 'none';
-              connectMessage.style.display = 'block';
+              controlsContainer.style.display = "none";
+              connectMessage.style.display = "block";
               currentDevice = null;
             }
           },

@@ -1,10 +1,16 @@
-/**
- * MIDIDeviceManager - Device management utilities for midiwire
- * Handles device listing, connection, and status updates
- */
-
 import { CONNECTION_EVENTS } from "./MIDIConnection.js"
 
+/**
+ * High-level MIDI device manager for web UIs. Simplifies device
+ * management with helpers for:
+ * - Populating device select dropdowns
+ * - Handling device connections/disconnections
+ * - Tracking connection status
+ * - Updating UI on device changes
+ *
+ * NOTE: Typically used with createMIDIDeviceManager(). For direct
+ * MIDI I/O, use MIDIController instead.
+ */
 export class MIDIDeviceManager {
   /**
    * @param {Object} options

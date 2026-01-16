@@ -1,6 +1,14 @@
 /**
- * midiwire - Declarative MIDI CC controller library
+ * midiwire - Browser-based MIDI controller framework
+ *
+ * A lightweight, zero-dependency library for creating web-based MIDI controllers.
+ * Features declarative HTML binding via data attributes, programmatic APIs,
+ * bidirectional MIDI communication, SysEx support, patch management, and more.
+ *
+ * Works with the Web MIDI API in Chrome, Firefox, and Opera.
+ *
  * @module midiwire
+ * @see {@link https://github.com/alexferl/midiwire} for documentation
  */
 
 import { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
@@ -148,8 +156,16 @@ export async function createMIDIDeviceManager(options = {}) {
 
 export { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 export { EventEmitter } from "./core/EventEmitter.js"
-export { CONNECTION_EVENTS, MIDIConnection } from "./core/MIDIConnection.js"
-export { CONTROLLER_EVENTS, MIDIController } from "./core/MIDIController.js"
+export {
+  CONNECTION_EVENTS,
+  CONNECTION_EVENTS as CONN,
+  MIDIConnection,
+} from "./core/MIDIConnection.js"
+export {
+  CONTROLLER_EVENTS,
+  CONTROLLER_EVENTS as CTRL,
+  MIDIController,
+} from "./core/MIDIController.js"
 export { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
 
 export * from "./utils/midi.js"

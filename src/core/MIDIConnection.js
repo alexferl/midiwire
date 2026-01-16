@@ -12,7 +12,17 @@ export const CONNECTION_EVENTS = {
 }
 
 /**
- * Manages Web MIDI API connection and device management
+ * Low-level Web MIDI API connection handler. Manages:
+ * - MIDI device access/request
+ * - Device enumeration (inputs/outputs)
+ * - Device connection/disconnection
+ * - Hotplug detection and events
+ * - Raw MIDI message sending/receiving
+ * - SysEx message handling
+ * - Connection state tracking
+ *
+ * NOTE: Typically used internally by MIDIController. Most applications
+ * should use MIDIController instead for higher-level APIs.
  * @extends EventEmitter
  */
 export class MIDIConnection extends EventEmitter {
