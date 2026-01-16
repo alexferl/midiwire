@@ -1,5 +1,17 @@
 /**
- * Automatically bind controls using data attributes
+ * Declarative MIDI binding system using HTML data attributes.
+ * Features:
+ * - Auto-discovery: Scans DOM for data-midi-* attributes
+ * - 7-bit CC: data-midi-cc="74"
+ * - 14-bit CC: data-midi-msb="74" data-midi-lsb="75"
+ * - Custom ranges: min/max attributes or data-midi-min/max
+ * - Channel override: data-midi-channel="2"
+ * - Value inversion: data-midi-invert="true"
+ * - Debouncing: data-midi-debounce="100"
+ * - Auto-binding: Watch DOM for dynamically added elements
+ * - Labeling: data-midi-label="Filter Cutoff"
+ *
+ * Enables zero-JavaScript MIDI controller creation with pure HTML.
  */
 export class DataAttributeBinder {
   /**

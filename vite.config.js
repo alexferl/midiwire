@@ -22,16 +22,16 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      reportsDirectory: './coverage',
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
+      reportsDirectory: "./coverage",
       exclude: [
-        'tests/**',
-        'examples/**',
-        'docs/**',
-        '*.config.js',
-        '**/*.test.js',
-        'coverage/**',
+        "tests/**",
+        "examples/**",
+        "docs/**",
+        "*.config.js",
+        "**/*.test.js",
+        "coverage/**",
       ],
       // Set coverage thresholds (can be adjusted)
       thresholds: {

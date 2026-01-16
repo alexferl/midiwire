@@ -1,8 +1,4 @@
 /**
- * SysEx utility functions
- */
-
-/**
  * Parse a SysEx message
  * @param {Array<number>} data - Raw MIDI data
  * @returns {Object|null} Parsed SysEx data or null if not SysEx
