@@ -5,220 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Patch Management Example - midiwire</title>
   <link rel="stylesheet" href="styles.css">
-  <style>
-    .patch-section {
-      margin: 25px 0;
-      padding: 20px;
-      background: var(--bg-panel);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-
-    .patch-section h3 {
-      color: var(--primary);
-      margin: 0 0 15px 0;
-      font-size: 18px;
-    }
-
-    .patch-list {
-      max-height: 300px;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--bg);
-    }
-
-    .patch-item {
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .patch-item:last-child {
-      border-bottom: none;
-    }
-
-    .patch-item:hover {
-      background: rgba(6, 182, 212, 0.05);
-    }
-
-    .patch-info {
-      flex: 1;
-    }
-
-    .patch-name {
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-
-    .patch-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .patch-actions {
-      display: flex;
-      flex-direction: row; /* Horizontal layout */
-      gap: 8px; /* Space between buttons */
-      min-width: auto; /* Auto width for horizontal layout */
-    }
-
-    .patch-actions button {
-      padding: 6px 12px;
-      font-size: 12px;
-      height: 28px; /* Fixed height for consistency */
-      line-height: 1; /* Prevent line-height affecting size */
-      box-sizing: border-box;
-      width: auto; /* Natural width for horizontal layout */
-      white-space: nowrap; /* Prevent text wrapping */
-    }
-
-    .patch-json {
-      margin-top: 15px;
-    }
-
-    .json-display {
-      background: var(--bg);
-      padding: 15px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      font-family: "Courier New", monospace;
-      font-size: 12px;
-      color: var(--text-secondary);
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-
-    .patch-actions-row {
-      display: flex;
-      flex-direction: column; /* Stack vertically */
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-
-    .patch-action-group {
-      width: 100%; /* Full width when stacking */
-    }
-
-    .patch-action-group h4 {
-      margin: 0 0 10px 0;
-      font-size: 16px;
-      color: var(--primary);
-    }
-
-    .patch-form {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 0 !important; /* Remove margin within action groups */
-      align-items: stretch;
-    }
-
-    .file-upload {
-      position: relative;
-      display: flex;
-      gap: 10px;
-    }
-
-    .file-upload input[type="file"] {
-      position: absolute;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-
-    .file-upload button {
-      padding: 16px 32px; /* Match patch-form button size */
-      font-size: 14px;
-      white-space: nowrap;
-      width: 100%;
-    }
-
-    .patch-form input {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 14px;
-      margin: 0 !important; /* Force remove any inherited top/bottom margins */
-    }
-
-    .patch-form button {
-      padding: 16px 32px; /* Larger padding for bigger buttons */
-      border-radius: 6px;
-      font-size: 14px;
-      white-space: nowrap;
-      height: auto;
-      margin: 0 !important; /* Force remove any inherited margins */
-    }
-
-    h3 {
-      margin-top: 25px; /* Better spacing above headers */
-      margin-bottom: 15px; /* Better spacing below headers */
-    }
-
-    .control-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      margin: 15px 0;
-    }
-
-    .control-item {
-      padding: 15px;
-      background: var(--bg);
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-
-    .control-item label {
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    .slider-example {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .slider-example input[type="range"] {
-      flex: 1;
-      height: 6px;
-    }
-
-    .value-display {
-      min-width: 40px;
-      text-align: right;
-      font-weight: 600;
-      color: var(--primary);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .info-box {
-      background: rgba(6, 182, 212, 0.1);
-      border-left: 4px solid var(--primary);
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 6px;
-    }
-
-    .info-box p {
-      margin: 0;
-      font-size: 14px;
-    }
-
-    .info-box strong {
-      color: var(--primary);
-    }
-  </style>
 </head>
 <body>
   <h1>💾 Patch Management Example</h1>
@@ -397,12 +183,20 @@
               document.getElementById("release-value").textContent = parseInt(e.target.value);
             });
 
-            // Refresh patch list
-            refreshPatchList();
+            // Function to update UI when patch is loaded
+            window.updateControlDisplays = function() {
+              document.getElementById("cutoff-value").textContent = cutoff.value;
+              document.getElementById("resonance-value").textContent = 127 - resonance.value;
+              document.getElementById("attack-value").textContent = attack.value;
+              document.getElementById("release-value").textContent = release.value;
+            };
 
             // Make MIDI globally available for debugging
             midi = midiObj; // Assign to outer scope
             window.midi = midiObj;
+
+            // Refresh patch list after midi is assigned
+            refreshPatchList();
           }
         });
 
@@ -419,7 +213,8 @@
         deviceManager.connectDeviceSelection(deviceSelect, (midiObj) => {
           midi = midiObj; // Assign to outer scope
           window.midi = midiObj;
-          // Controls are already bound via data-midi-cc attributes
+          // Controls should be bound via data-midi-cc attributes
+          // The DataAttributeBinder is created in the MIDIController
         });
         deviceManager.connectChannelSelection(channelSelect);
       } catch (err) {
@@ -452,10 +247,55 @@
     window.loadPatch = function(name) {
       if (!midi) return;
 
+      // Show loading state
+      const statusEl = document.getElementById("status");
+      statusEl.textContent = `Loading patch "${name}"...`;
+      statusEl.className = "status";
+
       const patch = midi.loadPatch(name);
       if (patch) {
-        midi.setPatch(patch);
-        document.getElementById("status").textContent = `Patch "${name}" loaded!`;
+        const hasOutput = midi.connection && midi.connection.output;
+
+        if (hasOutput) {
+          // If we have an output, use setPatch to send MIDI and update UI
+          midi.setPatch(patch).then(() => {
+            // Update displays immediately after setPatch completes
+            if (window.updateControlDisplays) {
+              window.updateControlDisplays();
+            }
+            // Show success state
+            statusEl.textContent = `Patch "${name}" loaded!`;
+            statusEl.className = "status connected";
+          }).catch(err => {
+            // Show error state
+            statusEl.textContent = `Failed to load patch: ${err.message}`;
+            statusEl.className = "status error";
+          });
+        } else {
+          // If no output, manually update UI controls from patch data
+          const channel = midi.options.channel;
+          const channelData = patch.channels && patch.channels[channel];
+
+          if (channelData && channelData.ccs) {
+            // Update each control based on patch data
+            Object.entries(channelData.ccs).forEach(([cc, value]) => {
+              const ccNum = parseInt(cc, 10);
+              const slider = document.querySelector(`[data-midi-cc="${ccNum}"]`);
+              if (slider) {
+                slider.value = value;
+                // Trigger input event to update displays
+                slider.dispatchEvent(new Event("input"));
+              }
+            });
+          }
+          // Show success state
+          statusEl.textContent = `Patch "${name}" loaded!`;
+          statusEl.className = "status connected";
+        }
+      } else {
+        // Show error if patch not found
+        statusEl.textContent = `Patch "${name}" not found`;
+        statusEl.className = "status error";
       }
     };
 
@@ -527,6 +367,13 @@
         return;
       }
 
+      // Check file size (max 1MB for patch files)
+      if (file.size > 1024 * 1024) {
+        alert("File too large. Patch files should be under 1MB.");
+        fileInput.value = "";
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
@@ -546,7 +393,25 @@
             midi.savePatch(fileName, patch);
 
             // Apply the patch and update UI displays
-            midi.setPatch(patch);
+            const hasOutput = midi.connection && midi.connection.output;
+            if (hasOutput) {
+              midi.setPatch(patch);
+            } else {
+              // Manually update UI controls without sending MIDI
+              const channel = midi.options.channel;
+              const channelData = patch.channels && patch.channels[channel];
+
+              if (channelData && channelData.ccs) {
+                Object.entries(channelData.ccs).forEach(([cc, value]) => {
+                  const ccNum = parseInt(cc, 10);
+                  const slider = document.querySelector(`[data-midi-cc="${ccNum}"]`);
+                  if (slider) {
+                    slider.value = value;
+                    slider.dispatchEvent(new Event("input"));
+                  }
+                });
+              }
+            }
 
             refreshPatchList();
             document.getElementById("status").textContent = `Patch "${fileName}" loaded from file!`;
@@ -564,6 +429,13 @@
       };
       reader.readAsText(file);
     };
+
+    // HTML escape function to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
     function refreshPatchList() {
       if (!midi) return;
@@ -592,10 +464,12 @@
           ? ` • ${labels.join(", ")}${Object.keys(settings).length > 3 ? "..." : ""}`
           : "";
 
+        const safeName = escapeHtml(name);
+
         return `
-          <div class="patch-item">
+          <div class="patch-item" data-patch-name="${safeName}">
             <div class="patch-info">
-              <div class="patch-name">${name}</div>
+              <div class="patch-name">${safeName}</div>
               <div class="patch-meta">
                 ${patch.device || "Unknown device"} •
                 ${new Date(patch.timestamp).toLocaleDateString()} •
@@ -604,15 +478,40 @@
               </div>
             </div>
             <div class="patch-actions">
-              <button onclick="loadPatch('${name}')" class="button primary">Load</button>
-              <button onclick="previewPatch('${name}')" class="button secondary">JSON</button>
-              <button onclick="downloadPatch('${name}')" class="button secondary">Download</button>
-              <button onclick="deletePatch('${name}')" class="button secondary">Delete</button>
+              <button class="button primary" data-action="load">Load</button>
+              <button class="button secondary" data-action="preview">JSON</button>
+              <button class="button secondary" data-action="download">Download</button>
+              <button class="button secondary" data-action="delete">Delete</button>
             </div>
           </div>
         `;
       }).join("");
     }
+
+    // Event delegation for patch action buttons
+    document.getElementById("patch-list").addEventListener("click", (e) => {
+      const button = e.target.closest("button[data-action]");
+      if (!button) return;
+
+      const patchItem = button.closest(".patch-item");
+      const name = patchItem.dataset.patchName;
+      const action = button.dataset.action;
+
+      switch (action) {
+        case "load":
+          loadPatch(name);
+          break;
+        case "preview":
+          previewPatch(name);
+          break;
+        case "download":
+          downloadPatch(name);
+          break;
+        case "delete":
+          deletePatch(name);
+          break;
+      }
+    });
 
     init();
   </script>

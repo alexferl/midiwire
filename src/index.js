@@ -50,8 +50,10 @@ export async function createMIDIController(options = {}) {
   const controller = new MIDIController(options)
   await controller.initialize()
 
-  if (options.selector) {
-    const binder = new DataAttributeBinder(controller, options.selector)
+  // Default to [data-midi-cc] selector if not specified
+  const selector = options.selector || "[data-midi-cc]"
+  if (selector) {
+    const binder = new DataAttributeBinder(controller, selector)
     binder.bindAll()
 
     if (options.watchDOM) {
@@ -115,12 +117,15 @@ export async function createMIDIDeviceManager(options = {}) {
     ...otherOptions
   } = options
 
+  // Default to [data-midi-cc] selector if not specified
+  const selectorToUse = selector || "[data-midi-cc]"
+
   // Create MIDIController with specified options
   const midi = await createMIDIController({
     autoConnect: false,
     sysex,
     channel: channel || 1,
-    selector,
+    selector: selectorToUse,
     watchDOM,
     onError,
     ...otherOptions,
