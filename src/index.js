@@ -5,6 +5,7 @@
 
 import { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 import { MIDIController } from "./core/MIDIController.js"
+import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
 
 /**
  * @typedef {Object} MIDIControlsOptions
@@ -56,10 +57,100 @@ export async function createMIDIController(options = {}) {
   return controller
 }
 
+/**
+ * @typedef {Object} MIDIDeviceManagerOptions
+ * @property {Function} [onStatusUpdate] - Callback for status updates (message, state)
+ * @property {Function} [onConnectionUpdate] - Callback when connection status changes
+ * @property {number} [channel=1] - Default MIDI channel
+ * @property {string} [output] - MIDI output device name, ID, or index
+ * @property {boolean} [sysex=false] - Request SysEx access
+ * @property {Function} [onReady] - Callback when MIDI is ready (midi, deviceManager)
+ * @property {Function} [onError] - Error handler
+ * @property {string} [selector] - CSS selector for auto-binding controls
+ * @property {boolean} [watchDOM=false] - Automatically bind dynamically added elements
+ */
+
+/**
+ * Create a MIDIDeviceManager with an integrated MIDIController
+ * @param {MIDIDeviceManagerOptions} [options={}]
+ * @returns {Promise<MIDIDeviceManager>}
+ *
+ * @example
+ * // Basic usage
+ * const deviceManager = await createMIDIDeviceManager({
+ *   channel: 1,
+ *   onStatusUpdate: (message, state) => console.log(message)
+ * });
+ *
+ * // Access the MIDIController via deviceManager.midi
+ * const midi = deviceManager.midi;
+ *
+ * @example
+ * // Auto-connect to a specific device
+ * const deviceManager = await createMIDIDeviceManager({
+ *   output: "My Synth",
+ *   channel: 2,
+ *   onStatusUpdate: (message, state) => console.log(message)
+ * });
+ */
+export async function createMIDIDeviceManager(options = {}) {
+  const {
+    onStatusUpdate,
+    onConnectionUpdate,
+    channel,
+    output,
+    sysex,
+    onReady,
+    onError,
+    selector,
+    watchDOM,
+    ...otherOptions
+  } = options
+
+  // Create MIDIController with specified options
+  const midi = await createMIDIController({
+    autoConnect: false,
+    sysex,
+    channel: channel || 1,
+    selector,
+    watchDOM,
+    onError,
+    ...otherOptions,
+  })
+
+  // Create MIDIDeviceManager
+  const deviceManager = new MIDIDeviceManager({
+    midiController: midi,
+    onStatusUpdate: onStatusUpdate || (() => {}),
+    onConnectionUpdate: onConnectionUpdate || (() => {}),
+    channel: channel || 1,
+  })
+
+  // Auto-connect if device is specified
+  if (output) {
+    try {
+      await midi.setOutput(output)
+      deviceManager.currentDevice = midi.getCurrentOutput()
+      deviceManager.updateConnectionStatus()
+    } catch (err) {
+      if (onError) onError(err)
+      else console.error("Failed to connect to MIDI device:", err.message)
+    }
+  }
+
+  // Call onReady callback
+  if (onReady) {
+    onReady(midi, deviceManager)
+  }
+
+  return deviceManager
+}
+
 export { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 export { EventEmitter } from "./core/EventEmitter.js"
-export { MIDIConnection } from "./core/MIDIConnection.js"
-export { MIDI_EVENTS, MIDI_EVENTS as EVENTS, MIDIController } from "./core/MIDIController.js"
+export { CONNECTION_EVENTS, MIDIConnection } from "./core/MIDIConnection.js"
+export { CONTROLLER_EVENTS, MIDIController } from "./core/MIDIController.js"
+export { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
 
 export * from "./utils/midi.js"
 export * from "./utils/sysex.js"

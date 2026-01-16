@@ -253,6 +253,14 @@
     </select>
   </div>
 
+  <div id="connect-message" class="section">
+    <h2>Not Connected</h2>
+    <p style="color: var(--text-secondary); margin-top: 10px;">
+      Connect a MIDI device to use the patch management system and save/load synth patches.
+    </p>
+  </div>
+
+  <div id="controls-container" style="display: none;">
   <div class="section">
     <h2>Synth Controls</h2>
     <p class="label">Adjust these controls and save them as patches</p>
@@ -333,154 +341,92 @@
       <button onclick="copyPatchJSON()" class="button secondary">Copy JSON</button>
     </div>
   </div>
+  </div>
 
   <script type="module">
-    import { createMIDIController, MIDI_EVENTS } from "../src/index.js";
+    import { createMIDIDeviceManager } from "../src/index.js";
 
+    let deviceManager = null;
     let midi = null;
-    let currentDevice = null;
-
-    function updateStatus(message, state = "") {
-      const status = document.getElementById("status");
-      status.textContent = message;
-      status.className = state ? `status ${state}` : "status";
-    }
-
-    function updateConnectionStatus() {
-      if (currentDevice && midi) {
-        updateStatus(`Connected to ${currentDevice.name} (Channel ${midi.options.channel})`, "connected");
-      }
-    }
-
-    function updateValueDisplays() {
-      const cutoff = document.getElementById("cutoff");
-      const resonance = document.getElementById("resonance");
-      const attack = document.getElementById("attack");
-      const release = document.getElementById("release");
-
-      cutoff.addEventListener("input", (e) => {
-        document.getElementById("cutoff-value").textContent = parseInt(e.target.value);
-      });
-
-      resonance.addEventListener("input", (e) => {
-        const value = parseInt(e.target.value);
-        document.getElementById("resonance-value").textContent = 127 - value;
-      });
-
-      attack.addEventListener("input", (e) => {
-        document.getElementById("attack-value").textContent = parseInt(e.target.value);
-      });
-
-      release.addEventListener("input", (e) => {
-        document.getElementById("release-value").textContent = parseInt(e.target.value);
-      });
-    }
 
     async function init() {
       try {
-        midi = await createMIDIController({
-          autoConnect: false
-        });
+        // Cache DOM elements
+        const status = document.getElementById("status");
+        const controlsContainer = document.getElementById("controls-container");
+        const connectMessage = document.getElementById("connect-message");
 
-        await refreshDeviceList();
-        updateValueDisplays();
-        refreshPatchList();
-      } catch (err) {
-        updateStatus(`Error: ${err.message}`, "error");
-      }
-    }
-
-    async function refreshDeviceList() {
-      try {
-        const access = await navigator.requestMIDIAccess();
-        const outputs = Array.from(access.outputs.values());
-        const select = document.getElementById("device-select");
-
-        if (outputs.length > 0) {
-          select.innerHTML = '<option value="">Select a device</option>' +
-            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
-          if (!currentDevice) {
-            updateStatus("Select a MIDI device");
-          }
-        } else {
-          select.innerHTML = '<option value="">No MIDI devices found</option>';
-          updateStatus("No MIDI devices available", "error");
-        }
-      } catch (err) {
-        console.error("Failed to refresh device list:", err);
-      }
-    }
-
-    document.getElementById("device-select").addEventListener("change", async (e) => {
-      const deviceIndex = e.target.value;
-      if (!deviceIndex) {
-        if (currentDevice) {
-          midi.destroy();
-          currentDevice = null;
-          updateStatus("Disconnected");
-        }
-        return;
-      }
-
-      try {
-        await midi.setOutput(parseInt(deviceIndex));
-        currentDevice = midi.getCurrentOutput();
-
-        // Bind controls after connecting to device, using the current channel
-        midi.bind(document.getElementById("cutoff"), { cc: 74, min: 20, max: 20000 });
-        midi.bind(document.getElementById("resonance"), { cc: 71, invert: true });
-        midi.bind(document.getElementById("attack"), { cc: 73, min: 1, max: 10000 });
-        midi.bind(document.getElementById("release"), { cc: 72, min: 10, max: 50000 });
-
-        // Listen for patch loaded event to update UI
-        midi.on(MIDI_EVENTS.PATCH_LOADED, (event) => {
-          console.log("Patch loaded:", event.patch.name);
-        });
-
-        updateConnectionStatus();
-        window.midi = midi;
-      } catch (err) {
-        updateStatus(`Connection failed: ${err.message}`, "error");
-      }
-    });
-
-    document.getElementById("channel-select").addEventListener("change", (e) => {
-      if (midi) {
-        const channel = parseInt(e.target.value);
-        midi.options.channel = channel;
-        console.log(`Channel changed to: ${channel}, midi.options.channel = ${midi.options.channel}`);
-        updateStatus(`Channel ${channel} selected`, "connected");
-      }
-    });
-
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then((access) => {
-        access.onstatechange = (e) => {
-          if (e.port.type === "output") {
-            if (e.port.state === "connected") {
-              refreshDeviceList();
-            } else if (e.port.state === "disconnected") {
-              const select = document.getElementById("device-select");
-              const disconnectedName = e.port.name;
-              for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === disconnectedName) {
-                  select.options.remove(i);
-                  break;
-                }
-              }
-              if (currentDevice && disconnectedName === currentDevice.name) {
-                updateStatus("Device disconnected");
-                currentDevice = null;
-                select.value = "";
-              }
-              if (select.options.length === 1 && select.options[0].value === "") {
-                select.innerHTML = '<option value="">No MIDI devices found</option>';
-                updateStatus("No MIDI devices available", "error");
-              }
+        // Create a MIDIDeviceManager with integrated MIDIController
+        deviceManager = await createMIDIDeviceManager({
+          onStatusUpdate: (message, state) => {
+            status.textContent = message;
+            status.className = state ? `status ${state}` : "status";
+          },
+          onConnectionUpdate: (device, midi) => {
+            if (device && midi) {
+              status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
+              status.className = "status connected";
+              controlsContainer.style.display = "block";
+              connectMessage.style.display = "none";
+            } else {
+              controlsContainer.style.display = "none";
+              connectMessage.style.display = "block";
             }
+          },
+          onReady: (midiObj) => {
+            // Update value displays (these don't require MIDI connection)
+            const cutoff = document.getElementById("cutoff");
+            const resonance = document.getElementById("resonance");
+            const attack = document.getElementById("attack");
+            const release = document.getElementById("release");
+
+            cutoff.addEventListener("input", (e) => {
+              document.getElementById("cutoff-value").textContent = parseInt(e.target.value);
+            });
+
+            resonance.addEventListener("input", (e) => {
+              const value = parseInt(e.target.value);
+              document.getElementById("resonance-value").textContent = 127 - value;
+            });
+
+            attack.addEventListener("input", (e) => {
+              document.getElementById("attack-value").textContent = parseInt(e.target.value);
+            });
+
+            release.addEventListener("input", (e) => {
+              document.getElementById("release-value").textContent = parseInt(e.target.value);
+            });
+
+            // Refresh patch list
+            refreshPatchList();
+
+            // Make MIDI globally available for debugging
+            midi = midiObj; // Assign to outer scope
+            window.midi = midiObj;
           }
-        };
-      });
+        });
+
+        // Set up device and channel selection
+        const deviceSelect = document.getElementById("device-select");
+        const channelSelect = document.getElementById("channel-select");
+
+        deviceManager.setupDeviceListeners(() => {
+          deviceManager.populateDeviceList(deviceSelect);
+        });
+
+        // Initial population
+        deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.connectDeviceSelection(deviceSelect, (midiObj) => {
+          midi = midiObj; // Assign to outer scope
+          window.midi = midiObj;
+          // Controls are already bound via data-midi-cc attributes
+        });
+        deviceManager.connectChannelSelection(channelSelect);
+      } catch (err) {
+        const status = document.getElementById("status");
+        status.textContent = `MIDI initialization failed: ${err.message}`;
+        status.className = "status error";
+      }
     }
 
     // Patch management functions
@@ -497,7 +443,7 @@
         midi.savePatch(name);
         document.getElementById("patch-name").value = "";
         refreshPatchList();
-        updateStatus(`Patch "${name}" saved!`, "connected");
+        document.getElementById("status").textContent = `Patch "${name}" saved!`;
       } catch (err) {
         alert(`Failed to save patch: ${err.message}`);
       }
@@ -509,7 +455,7 @@
       const patch = midi.loadPatch(name);
       if (patch) {
         midi.setPatch(patch);
-        updateStatus(`Patch "${name}" loaded!`, "connected");
+        document.getElementById("status").textContent = `Patch "${name}" loaded!`;
       }
     };
 
@@ -518,7 +464,7 @@
 
       midi.deletePatch(name);
       refreshPatchList();
-      updateStatus(`Patch "${name}" deleted`, "connected");
+      document.getElementById("status").textContent = `Patch "${name}" deleted`;
     };
 
     window.previewPatch = function(name) {
@@ -538,7 +484,7 @@
     window.copyPatchJSON = function() {
       const jsonText = document.getElementById("patch-json").textContent;
       navigator.clipboard.writeText(jsonText).then(() => {
-        updateStatus("JSON copied to clipboard!", "connected");
+        document.getElementById("status").textContent = "JSON copied to clipboard!";
       });
     };
 
@@ -565,7 +511,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        updateStatus(`Patch "${name}" downloaded!`, "connected");
+        document.getElementById("status").textContent = `Patch "${name}" downloaded!`;
       }
     };
 
@@ -603,7 +549,7 @@
             midi.setPatch(patch);
 
             refreshPatchList();
-            updateStatus(`Patch "${fileName}" loaded from file!`, "connected");
+            document.getElementById("status").textContent = `Patch "${fileName}" loaded from file!`;
           }
         } catch (err) {
           alert(`Failed to load patch file: ${err.message}`);

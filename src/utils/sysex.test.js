@@ -70,96 +70,153 @@ describe("SysEx Utils", () => {
   })
 
   describe("encode7Bit", () => {
-    it("should encode 8-bit data to 7-bit format", () => {
-      const data = [0x7f, 0x7f] // Two max values
+    it("should encode 8-bit data to 7-bit MIDI format", () => {
+      // 7 bytes of 8-bit data should encode to 8 bytes of 7-bit data
+      const data = [0x80, 0x40, 0x20, 0x7f, 0xff, 0x00, 0x01]
       const result = encode7Bit(data)
-      // Each 7-bit byte contains 7 bits, so 14 bits takes 2 full bytes + 0 remaining
-      // But each input byte contributes at most 7 bits, so 2 bytes in should result in less than 4 bytes out
-      expect(result.length).toBeGreaterThanOrEqual(2)
-      expect(result.length).toBeLessThanOrEqual(4)
+
+      // Should be exactly 8 bytes (1 header + 7 data)
+      expect(result.length).toBe(8)
+
+      // All bytes should be 7-bit values (<= 0x7f)
+      expect(result.every((byte) => byte <= 0x7f)).toBe(true)
+
+      // First byte is header with packed MSBs: bytes 0 and 4 have MSB=1
+      // Bits: 0b0010001 = 0x11 (bits 0 and 4 set)
+      expect(result[0]).toBe(0x11)
+
+      // Remaining bytes are lower 7 bits of each input byte
+      expect(result.slice(1)).toEqual([0x00, 0x40, 0x20, 0x7f, 0x7f, 0x00, 0x01])
     })
 
     it("should handle single byte encoding", () => {
-      expect(encode7Bit([0x40])).toEqual([0x40])
-      expect(encode7Bit([0x7f])).toEqual([0x7f])
+      // Single byte should still work but creates a group
+      expect(encode7Bit([0x80])).toEqual([0x01, 0x00])
+      expect(encode7Bit([0x40])).toEqual([0x00, 0x40])
+      expect(encode7Bit([0x7f])).toEqual([0x00, 0x7f])
     })
 
     it("should handle empty data", () => {
       expect(encode7Bit([])).toEqual([])
     })
 
-    it("should handle byte boundaries correctly", () => {
-      // Test with known values
-      const data = [0x01, 0x02, 0x03]
+    it("should handle multiple groups", () => {
+      // 14 bytes should encode to 16 bytes (2 groups of 8)
+      const data = [
+        0x80, 0x40, 0x20, 0x7f, 0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      ]
       const result = encode7Bit(data)
-      // Should not exceed 7 bits per byte
+
+      expect(result.length).toBe(16)
       expect(result.every((byte) => byte <= 0x7f)).toBe(true)
+
+      // First group header (bytes 0 and 4 have MSB set)
+      expect(result[0]).toBe(0x11)
+      // First group data bytes
+      expect(result.slice(1, 8)).toEqual([0x00, 0x40, 0x20, 0x7f, 0x7f, 0x00, 0x01])
+
+      // Second group header (no bytes have MSB set)
+      expect(result[8]).toBe(0x00)
+      // Second group data bytes
+      expect(result.slice(9, 16)).toEqual([0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
     })
 
-    it("should handle large data sets", () => {
-      const data = new Array(100).fill(0x40)
+    it("should handle partial last group", () => {
+      // 5 bytes should encode to 6 bytes (header + 5 data)
+      const data = [0x80, 0x40, 0x20, 0x7f, 0xff]
       const result = encode7Bit(data)
-      // For 100 bytes of 0x40 (01000000), we expect about 115 output bytes
-      // Each 7 bytes of 8-bit input becomes 8 bytes of 7-bit output
-      expect(result.length).toBeGreaterThanOrEqual(100)
-      expect(result.length).toBeLessThan(120)
+
+      expect(result.length).toBe(6)
       expect(result.every((byte) => byte <= 0x7f)).toBe(true)
+      expect(result[0]).toBe(0x11) // Header: bytes 0 and 3 have MSB set
+    })
+
+    it("should handle all values from 0x00 to 0xff", () => {
+      // Test with values that have various bit patterns
+      const data = [0x00, 0x01, 0x7f, 0x80, 0xff]
+      const result = encode7Bit(data)
+
+      expect(result.length).toBe(6)
+      expect(result.every((byte) => byte <= 0x7f)).toBe(true)
+
+      // Check specific values
+      expect(result[0]).toBe(0x18) // Header: 0x80 and 0xff have MSB set
+      expect(result[1]).toBe(0x00) // 0x00 & 0x7f
+      expect(result[2]).toBe(0x01) // 0x01 & 0x7f
+      expect(result[3]).toBe(0x7f) // 0x7f & 0x7f
+      expect(result[4]).toBe(0x00) // 0x80 & 0x7f
+      expect(result[5]).toBe(0x7f) // 0xff & 0x7f
     })
   })
 
   describe("decode7Bit", () => {
     it("should decode 7-bit format to 8-bit data", () => {
-      // Test with simple value that round-trips correctly
-      // The encode7Bit and decode7Bit functions might have bugs,
-      // so we test with a specific encoded value
-      const encoded = [0x01, 0x02, 0x03] // These are already 7-bit values
+      // Decode the 8-byte encoded data back to original 7 bytes
+      const encoded = [0x11, 0x00, 0x40, 0x20, 0x7f, 0x7f, 0x00, 0x01]
       const decoded = decode7Bit(encoded)
-      // decode7Bit is supposed to reconstruct the original 8-bit values
-      // but the implementation might be incorrect
-      expect(decoded).toBeInstanceOf(Array)
+
+      // Should reconstruct the original 7 bytes
+      expect(decoded).toEqual([0x80, 0x40, 0x20, 0x7f, 0xff, 0x00, 0x01])
     })
 
     it("should handle single byte decoding", () => {
-      const result = decode7Bit([0x40])
-      expect(result).toBeInstanceOf(Array)
+      // Single byte encoded
+      const result = decode7Bit([0x01, 0x00])
+      expect(result).toEqual([0x80])
     })
 
     it("should handle empty data", () => {
       expect(decode7Bit([])).toEqual([])
     })
 
-    it("should round-trip correctly for simple 7-bit data", () => {
-      const testData = [0x00, 0x01, 0x7f] // Only 7-bit values
-      const encoded = encode7Bit(testData)
-      const decoded = decode7Bit(encoded)
-      // For simple 7-bit data, encode shouldn't change much
-      expect(decoded).toBeInstanceOf(Array)
-    })
-
-    it("should handle max values", () => {
-      const maxData = [0xff, 0xff, 0xff]
-      const encoded = encode7Bit(maxData)
-      expect(encoded).toBeInstanceOf(Array)
-      expect(encoded.every((b) => b <= 0x7f)).toBe(true)
-    })
-  })
-
-  describe("encode7Bit/decode7Bit round-trip", () => {
-    it("should work for various data patterns", () => {
-      // Test that encoding produces valid 7-bit data
-      const testCases = [
-        [0x00], // Zero
-        [0x7f], // Max 7-bit value
-        [0xff], // Max 8-bit value
-        [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07], // Sequential
+    it("should round-trip correctly", () => {
+      const testData = [
+        [0x00],
+        [0x00, 0x01, 0x7f],
+        [0x80, 0x40, 0x20, 0x7f, 0xff, 0x00, 0x01],
+        [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
+        new Array(14).fill(0x42),
+        [0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
       ]
 
-      testCases.forEach((original) => {
+      testData.forEach((original) => {
         const encoded = encode7Bit(original)
-        // Just verify encoding produces valid 7-bit data
-        expect(encoded).toBeInstanceOf(Array)
-        expect(encoded.every((b) => b <= 0x7f)).toBe(true)
+        const decoded = decode7Bit(encoded)
+        expect(decoded).toEqual(original)
       })
+    })
+
+    it("should handle multiple groups", () => {
+      // Two groups of 8 bytes each
+      const encoded = [
+        0x11,
+        0x00,
+        0x40,
+        0x20,
+        0x7f,
+        0x7f,
+        0x00,
+        0x01, // First group
+        0x00,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
+        0x08, // Second group
+      ]
+      const decoded = decode7Bit(encoded)
+      expect(decoded.length).toBe(14)
+      expect(decoded.slice(0, 7)).toEqual([0x80, 0x40, 0x20, 0x7f, 0xff, 0x00, 0x01])
+      expect(decoded.slice(7)).toEqual([0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+    })
+
+    it("should handle partial last group", () => {
+      // Partial group with 5 data bytes
+      const encoded = [0x11, 0x00, 0x40, 0x20, 0x7f, 0x7f]
+      const decoded = decode7Bit(encoded)
+      expect(decoded).toEqual([0x80, 0x40, 0x20, 0x7f, 0xff])
     })
   })
 })

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MIDIConnection } from "./MIDIConnection.js"
+import { CONNECTION_EVENTS, MIDIConnection } from "./MIDIConnection.js"
 
 describe("MIDIConnection", () => {
   let originalNavigator
@@ -16,6 +16,7 @@ describe("MIDIConnection", () => {
       id: "test-output-1",
       name: "Test Output Device",
       manufacturer: "Test Manufacturer",
+      state: "connected",
       send: vi.fn(),
     }
 
@@ -23,6 +24,7 @@ describe("MIDIConnection", () => {
       id: "test-input-1",
       name: "Test Input Device",
       manufacturer: "Test Manufacturer",
+      state: "connected",
       onmidimessage: null,
     }
 
@@ -36,6 +38,7 @@ describe("MIDIConnection", () => {
             id: "output-2",
             name: "Second Output",
             manufacturer: "Another Manufacturer",
+            state: "connected",
             send: vi.fn(),
           },
         ],
@@ -71,6 +74,14 @@ describe("MIDIConnection", () => {
   })
 
   describe("requestAccess", () => {
+    let connection
+
+    beforeEach(() => {
+      connection = new MIDIConnection({ sysex: true })
+      // Spy on emit method
+      vi.spyOn(connection, "emit")
+    })
+
     it("should request MIDI access successfully", async () => {
       const connection = new MIDIConnection({ sysex: true })
       await connection.requestAccess()
@@ -79,6 +90,168 @@ describe("MIDIConnection", () => {
         sysex: true,
       })
       expect(connection.midiAccess).toBe(mockMIDIAccess)
+    })
+
+    it("should emit devicechange event when input is connected", async () => {
+      await connection.requestAccess()
+
+      // Simulate device connection
+      const mockPort = {
+        id: "test-port-1",
+        type: "input",
+        name: "Test Input Device",
+        manufacturer: "Test Manufacturer",
+        state: "connected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        port: mockPort,
+        state: "connected",
+        type: "input",
+        device: {
+          id: "test-port-1",
+          name: "Test Input Device",
+          manufacturer: "Test Manufacturer",
+        },
+      })
+    })
+
+    it("should emit devicechange event when output is connected", async () => {
+      await connection.requestAccess()
+
+      // Simulate device connection
+      const mockPort = {
+        id: "test-port-2",
+        type: "output",
+        name: "Test Output Device",
+        manufacturer: "Test Manufacturer",
+        state: "connected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        port: mockPort,
+        state: "connected",
+        type: "output",
+        device: {
+          id: "test-port-2",
+          name: "Test Output Device",
+          manufacturer: "Test Manufacturer",
+        },
+      })
+    })
+
+    it("should emit inputdisconnect when current input is disconnected", async () => {
+      await connection.requestAccess()
+
+      // Connect an input first
+      await connection.connectInput(0, vi.fn())
+      expect(connection.input).toBe(mockInput)
+
+      // Clear the emit spy to track only the disconnect call
+      connection.emit.mockClear()
+
+      // Simulate device disconnection
+      const mockPort = {
+        id: "test-input-1",
+        type: "input",
+        name: "Test Input Device",
+        manufacturer: "Test Manufacturer",
+        state: "disconnected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      expect(connection.input).toBeNull()
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED, {
+        device: mockPort,
+      })
+    })
+
+    it("should emit outputdisconnect when current output is disconnected", async () => {
+      await connection.requestAccess()
+
+      // Connect an output first
+      await connection.connect()
+      expect(connection.output).toBe(mockOutput)
+
+      // Clear the emit spy to track only the disconnect call
+      connection.emit.mockClear()
+
+      // Simulate device disconnection
+      const mockPort = {
+        id: "test-output-1",
+        type: "output",
+        name: "Test Output Device",
+        manufacturer: "Test Manufacturer",
+        state: "disconnected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      expect(connection.output).toBeNull()
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, {
+        device: mockPort,
+      })
+    })
+
+    it("should not emit disconnect events for other devices", async () => {
+      await connection.requestAccess()
+      await connection.connect() // Connect to test-output-1
+
+      // Clear the emit spy
+      connection.emit.mockClear()
+
+      // Simulate a different device disconnecting
+      const mockPort = {
+        id: "different-output",
+        type: "output",
+        name: "Different Output",
+        manufacturer: "Test Manufacturer",
+        state: "disconnected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      // Should emit devicechange and outputdisconnect (code emits for ALL disconnects)
+      expect(connection.emit).toHaveBeenCalledWith(
+        CONNECTION_EVENTS.DEVICE_CHANGE,
+        expect.any(Object),
+      )
+      expect(connection.emit).toHaveBeenCalledWith(
+        CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED,
+        expect.any(Object),
+      )
+      expect(connection.output).not.toBeNull() // Still connected to original output
+    })
+
+    it("should handle manufacturer being undefined", async () => {
+      await connection.requestAccess()
+
+      // Simulate device connection without manufacturer
+      const mockPort = {
+        id: "test-port-3",
+        type: "input",
+        name: "Device without manufacturer",
+        manufacturer: undefined,
+        state: "connected",
+      }
+
+      connection.midiAccess.onstatechange({ port: mockPort })
+
+      expect(connection.emit).toHaveBeenCalledWith(
+        CONNECTION_EVENTS.DEVICE_CHANGE,
+        expect.objectContaining({
+          device: {
+            id: "test-port-3",
+            name: "Device without manufacturer",
+            manufacturer: "Unknown",
+          },
+        }),
+      )
     })
 
     it("should throw error if Web MIDI API not supported", async () => {
@@ -133,6 +306,7 @@ describe("MIDIConnection", () => {
       const outputWithoutManufacturer = {
         id: "output-no-manufacturer",
         name: "Device without manufacturer",
+        state: "connected",
         send: vi.fn(),
       }
 
@@ -171,6 +345,7 @@ describe("MIDIConnection", () => {
       const inputWithoutManufacturer = {
         id: "input-no-manufacturer",
         name: "Input without manufacturer",
+        state: "connected",
         onmidimessage: null,
       }
 
@@ -254,6 +429,19 @@ describe("MIDIConnection", () => {
   describe("connectInput", () => {
     const mockOnMessage = vi.fn()
 
+    it("should validate onMessage is a function", async () => {
+      const connection = new MIDIConnection()
+      await connection.requestAccess()
+
+      await expect(connection.connectInput(0, "not a function")).rejects.toThrow(TypeError)
+      await expect(connection.connectInput(0, "not a function")).rejects.toThrow(
+        "onMessage callback must be a function",
+      )
+      await expect(connection.connectInput(0, null)).rejects.toThrow(TypeError)
+      await expect(connection.connectInput(0, undefined)).rejects.toThrow(TypeError)
+      await expect(connection.connectInput(0, 123)).rejects.toThrow(TypeError)
+    })
+
     it("should connect to first available input by default", async () => {
       const connection = new MIDIConnection()
       await connection.requestAccess()
@@ -277,6 +465,7 @@ describe("MIDIConnection", () => {
         id: "input-2",
         name: "Second Input",
         manufacturer: "Test",
+        state: "connected",
         onmidimessage: null,
       })
 
@@ -533,6 +722,7 @@ describe("MIDIConnection", () => {
         id: "output-no-manufacturer",
         name: "Device without manufacturer",
         manufacturer: undefined,
+        state: "connected",
         send: vi.fn(),
       }
 
@@ -571,6 +761,7 @@ describe("MIDIConnection", () => {
         id: "input-no-manufacturer",
         name: "Input without manufacturer",
         manufacturer: undefined,
+        state: "connected",
         onmidimessage: null,
       }
 

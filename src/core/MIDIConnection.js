@@ -1,12 +1,27 @@
+import { EventEmitter } from "./EventEmitter.js"
+
+/**
+ * Connection event constants
+ */
+export const CONNECTION_EVENTS = {
+  DEVICE_CHANGE: "device-change",
+  INPUT_DEVICE_CONNECTED: "input-device-connected",
+  INPUT_DEVICE_DISCONNECTED: "input-device-disconnected",
+  OUTPUT_DEVICE_CONNECTED: "output-device-connected",
+  OUTPUT_DEVICE_DISCONNECTED: "output-device-disconnected",
+}
+
 /**
  * Manages Web MIDI API connection and device management
+ * @extends EventEmitter
  */
-export class MIDIConnection {
+export class MIDIConnection extends EventEmitter {
   /**
    * @param {Object} options
    * @param {boolean} [options.sysex=false] - Request SysEx access
    */
   constructor(options = {}) {
+    super()
     this.options = {
       sysex: false,
       ...options,
@@ -31,6 +46,48 @@ export class MIDIConnection {
       this.midiAccess = await navigator.requestMIDIAccess({
         sysex: this.options.sysex,
       })
+
+      // Set up device state change listener for hotplugged devices
+      this.midiAccess.onstatechange = (event) => {
+        const port = event.port
+        const state = event.port.state
+
+        // Emit device state change event
+        this.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+          port,
+          state,
+          type: port.type,
+          device: {
+            id: port.id,
+            name: port.name,
+            manufacturer: port.manufacturer || "Unknown",
+          },
+        })
+
+        // Check if current devices were disconnected
+        if (state === "disconnected") {
+          // Emit events for ALL device disconnects, not just current ones
+          if (port.type === "input") {
+            this.emit(CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED, { device: port })
+            // Clear current input if it was this device
+            if (this.input && this.input.id === port.id) {
+              this.input = null
+            }
+          } else if (port.type === "output") {
+            this.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, { device: port })
+            // Clear current output if it was this device
+            if (this.output && this.output.id === port.id) {
+              this.output = null
+            }
+          }
+        } else if (state === "connected") {
+          if (port.type === "input") {
+            this.emit(CONNECTION_EVENTS.INPUT_DEVICE_CONNECTED, { device: port })
+          } else if (port.type === "output") {
+            this.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_CONNECTED, { device: port })
+          }
+        }
+      }
     } catch (error) {
       if (error.name === "SecurityError") {
         throw new Error("MIDI access denied. SysEx requires user permission.")
@@ -48,12 +105,16 @@ export class MIDIConnection {
 
     const outputs = []
     this.midiAccess.outputs.forEach((output) => {
-      outputs.push({
-        id: output.id,
-        name: output.name,
-        manufacturer: output.manufacturer || "Unknown",
-      })
+      // Only include connected devices
+      if (output.state === "connected") {
+        outputs.push({
+          id: output.id,
+          name: output.name,
+          manufacturer: output.manufacturer || "Unknown",
+        })
+      }
     })
+
     return outputs
   }
 
@@ -66,12 +127,15 @@ export class MIDIConnection {
 
     const inputs = []
     this.midiAccess.inputs.forEach((input) => {
-      inputs.push({
-        id: input.id,
-        name: input.name,
-        manufacturer: input.manufacturer || "Unknown",
-      })
+      if (input.state === "connected") {
+        inputs.push({
+          id: input.id,
+          name: input.name,
+          manufacturer: input.manufacturer || "Unknown",
+        })
+      }
     })
+
     return inputs
   }
 
@@ -125,6 +189,11 @@ export class MIDIConnection {
   async connectInput(device, onMessage) {
     if (!this.midiAccess) {
       throw new Error("MIDI access not initialized. Call requestAccess() first.")
+    }
+
+    // Validate onMessage is a function
+    if (typeof onMessage !== "function") {
+      throw new TypeError("onMessage callback must be a function")
     }
 
     const inputs = Array.from(this.midiAccess.inputs.values())

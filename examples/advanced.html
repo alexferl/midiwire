@@ -169,6 +169,14 @@
     </select>
   </div>
 
+  <div id="connect-message" class="section">
+    <h2>Not Connected</h2>
+    <p style="color: var(--text-secondary); margin-top: 10px;">
+      Connect a MIDI device to see the advanced control demonstrations.
+    </p>
+  </div>
+
+  <div id="controls-container" style="display: none;">
   <!-- Custom Ranges Section -->
   <div class="section">
     <h2>Custom Value Ranges</h2>
@@ -264,7 +272,7 @@
           <div class="slider-example">
             <input type="range" min="0" max="127" value="0" step="1"
                    data-midi-cc="71" data-midi-invert="true" data-midi-label="Resonance">
-            <span class="value-display" id="resonance-value">0</span>
+            <span class="value-display" id="resonance-value">127</span>
           </div>
         </div>
         <div class="control-item">
@@ -272,7 +280,7 @@
           <div class="slider-example">
             <input type="range" min="0" max="100" value="0" step="1"
                    data-midi-cc="65" data-midi-invert="true" data-midi-label="Drive">
-            <span class="value-display" id="drive-value">0</span>
+            <span class="value-display" id="drive-value">100</span>
           </div>
         </div>
       </div>
@@ -323,7 +331,7 @@
       </div>
 
       <div class="code-block">
-        // Example of what"s happening:<br>
+        // Example of what's happening:<br>
         const newControl = document.createElement("input");<br>
         newControl.setAttribute("data-midi-cc", "42");<br>
         newControl.setAttribute("type", "range");<br>
@@ -358,187 +366,113 @@
   </div>
 
   <script type="module">
-    import { createMIDIController } from "../src/index.js";
+    import { createMIDIDeviceManager, DataAttributeBinder } from "../src/index.js";
 
-    let midi = null;
+    let deviceManager = null;
     let currentDevice = null;
     let controlCounter = 0;
 
-    function updateStatus(message, state = "") {
-      const status = document.getElementById("status");
-      status.textContent = message;
-      status.className = state ? `status ${state}` : "status";
-    }
+    // Helper function to set up value display updates
+    function setupValueDisplays() {
+      // Simple controls (direct value)
+      const simpleControls = [
+        { selector: '[data-midi-label="Cutoff"]', display: 'cutoff-value', format: parseInt },
+        { selector: '[data-midi-label="LFO Rate"]', display: 'lfo-value', format: (v) => parseFloat(v).toFixed(1) },
+        { selector: '[data-midi-label="Attack"]', display: 'attack-value', format: parseInt },
+        { selector: '[data-midi-label="Release"]', display: 'release-value', format: parseInt },
+        { selector: '[data-midi-label="Pan"]', display: 'pan-value', format: parseInt },
+        { selector: '[data-midi-label="Detune"]', display: 'detune-value', format: parseInt },
+        { selector: '[data-midi-label="Normal"]', display: 'normal-value', format: parseInt },
+      ];
 
-    function updateConnectionStatus() {
-      if (currentDevice && midi) {
-        updateStatus(`Connected to ${currentDevice.name} (Channel ${midi.options.channel})`, "connected");
-      }
-    }
+      simpleControls.forEach(({ selector, display, format }) => {
+        const control = document.querySelector(selector);
+        if (control) {
+          control.addEventListener("input", (e) => {
+            document.getElementById(display).textContent = format(e.target.value);
+          });
+        }
+      });
 
-    function updateValueDisplay() {
-      // Update custom range displays
-      const cutoff = document.querySelector('[data-midi-label="Cutoff"]');
-      const lfo = document.querySelector('[data-midi-label="LFO Rate"]');
-      const attack = document.querySelector('[data-midi-label="Attack"]');
-      const release = document.querySelector('[data-midi-label="Release"]');
-      const pan = document.querySelector('[data-midi-label="Pan"]');
-      const detune = document.querySelector('[data-midi-label="Detune"]');
-      const resonance = document.querySelector('[data-midi-label="Resonance"]');
-      const drive = document.querySelector('[data-midi-label="Drive"]');
-      const normal = document.querySelector('[data-midi-label="Normal"]');
-      const inverted = document.querySelector('[data-midi-label="Inverted"]');
+      // Inverted controls
+      const invertedControls = [
+        { selector: '[data-midi-label="Resonance"]', display: 'resonance-value', max: 127 },
+        { selector: '[data-midi-label="Drive"]', display: 'drive-value', max: 100 },
+        { selector: '[data-midi-label="Inverted"]', display: 'inverted-value', max: 127 },
+      ];
 
-      if (cutoff) {
-        cutoff.addEventListener("input", (e) => {
-          document.getElementById("cutoff-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (lfo) {
-        lfo.addEventListener("input", (e) => {
-          document.getElementById("lfo-value").textContent = parseFloat(e.target.value).toFixed(1);
-        });
-      }
-      if (attack) {
-        attack.addEventListener("input", (e) => {
-          document.getElementById("attack-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (release) {
-        release.addEventListener("input", (e) => {
-          document.getElementById("release-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (pan) {
-        pan.addEventListener("input", (e) => {
-          document.getElementById("pan-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (detune) {
-        detune.addEventListener("input", (e) => {
-          document.getElementById("detune-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (resonance) {
-        resonance.addEventListener("input", (e) => {
-          document.getElementById("resonance-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (drive) {
-        drive.addEventListener("input", (e) => {
-          document.getElementById("drive-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (normal) {
-        normal.addEventListener("input", (e) => {
-          document.getElementById("normal-value").textContent = parseInt(e.target.value);
-        });
-      }
-      if (inverted) {
-        inverted.addEventListener("input", (e) => {
-          const value = parseInt(e.target.value);
-          document.getElementById("inverted-value").textContent = 127 - value;
+      invertedControls.forEach(({ selector, display, max }) => {
+        const control = document.querySelector(selector);
+        if (control) {
+          control.addEventListener("input", (e) => {
+            const value = parseInt(e.target.value);
+            document.getElementById(display).textContent = max - value;
+          });
+        }
+      });
+
+      // Counter slider
+      const counterSlider = document.getElementById("counter-slider");
+      if (counterSlider) {
+        counterSlider.addEventListener("input", (e) => {
+          document.getElementById("counter-value").textContent = e.target.value;
         });
       }
     }
 
     async function init() {
       try {
+        // Cache DOM elements
+        const status = document.getElementById("status");
+        const controlsContainer = document.getElementById('controls-container');
+        const connectMessage = document.getElementById('connect-message');
+
         // Initialize with watchDOM enabled for dynamic binding
-        midi = await createMIDIController({
-          autoConnect: false,
-          watchDOM: true
-        });
-        await refreshDeviceList();
-        updateValueDisplay();
-      } catch (err) {
-        updateStatus(`Error: ${err.message}`, "error");
-      }
-    }
-
-    async function refreshDeviceList() {
-      try {
-        const access = await navigator.requestMIDIAccess();
-        const outputs = Array.from(access.outputs.values());
-        const select = document.getElementById("device-select");
-
-        if (outputs.length > 0) {
-          select.innerHTML = '<option value="">Select a device</option>' +
-            outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
-          if (!currentDevice) {
-            updateStatus("Select a MIDI device");
-          }
-        } else {
-          select.innerHTML = '<option value="">No MIDI devices found</option>';
-          updateStatus("No MIDI devices available", "error");
-        }
-      } catch (err) {
-        console.error("Failed to refresh device list:", err);
-      }
-    }
-
-    document.getElementById("device-select").addEventListener("change", async (e) => {
-      const deviceIndex = e.target.value;
-      if (!deviceIndex) {
-        if (currentDevice) {
-          midi.destroy();
-          currentDevice = null;
-          updateStatus("Disconnected");
-        }
-        return;
-      }
-
-      try {
-        if (!midi) {
-          await init();
-        }
-        await midi.setOutput(parseInt(deviceIndex));
-        currentDevice = midi.getCurrentOutput();
-        updateConnectionStatus();
-        window.midi = midi;
-      } catch (err) {
-        updateStatus(`Connection failed: ${err.message}`, "error");
-      }
-    });
-
-    document.getElementById("channel-select").addEventListener("change", (e) => {
-      if (midi) {
-        midi.options.channel = parseInt(e.target.value);
-        updateConnectionStatus();
-      }
-    });
-
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then((access) => {
-        access.onstatechange = (e) => {
-          if (e.port.type === "output") {
-            if (e.port.state === "connected") {
-              refreshDeviceList();
-            } else if (e.port.state === "disconnected") {
-              const select = document.getElementById("device-select");
-              const disconnectedName = e.port.name;
-
-              for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === disconnectedName) {
-                  select.options.remove(i);
-                  break;
-                }
-              }
-
-              if (currentDevice && disconnectedName === currentDevice.name) {
-                updateStatus("Device disconnected");
-                currentDevice = null;
-                select.value = "";
-              }
-
-              if (select.options.length === 1 && select.options[0].value === "") {
-                select.innerHTML = '<option value="">No MIDI devices found</option>';
-                updateStatus("No MIDI devices available", "error");
-              }
+        deviceManager = await createMIDIDeviceManager({
+          watchDOM: true,
+          onStatusUpdate: (message, state) => {
+            status.textContent = message;
+            status.className = state ? `status ${state}` : "status";
+          },
+          onConnectionUpdate: (device, midi) => {
+            if (device && midi) {
+              status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
+              status.className = "status connected";
+              controlsContainer.style.display = 'block';
+              connectMessage.style.display = 'none';
+              currentDevice = device;
+            } else {
+              controlsContainer.style.display = 'none';
+              connectMessage.style.display = 'block';
+              currentDevice = null;
             }
+          },
+          onReady: (midi) => {
+            // Set up value display updates
+            setupValueDisplays();
+            window.midi = midi;
           }
-        };
-      });
+        });
+
+        // Set up device and channel selection
+        const deviceSelect = document.getElementById("device-select");
+        const channelSelect = document.getElementById("channel-select");
+
+        deviceManager.setupDeviceListeners(() => {
+          deviceManager.populateDeviceList(deviceSelect);
+        });
+
+        // Initial population
+        deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.connectDeviceSelection(deviceSelect, (midi) => {
+          window.midi = midi;
+        });
+        deviceManager.connectChannelSelection(channelSelect);
+      } catch (err) {
+        const status = document.getElementById("status");
+        status.textContent = `MIDI initialization failed: ${err.message}`;
+        status.className = "status error";
+      }
     }
 
     // Dynamic control functions
@@ -638,8 +572,8 @@
 
     window.addAndBindManually = function() {
       const container = document.getElementById("manual-controls");
-      const controlId = Date.now();
-      const ccNumber = 80 + Math.floor(Math.random() * 20);
+      const controlId = ++controlCounter;
+      const ccNumber = 80 + (controlId % 20);
 
       const controlDiv = document.createElement("div");
       controlDiv.className = "slider-example";
@@ -655,8 +589,8 @@
       const display = controlDiv.querySelector(".value-display");
 
       // Manually bind the control
-      if (midi) {
-        midi.bind(slider, { cc: ccNumber, label: `Manual-${controlId}` });
+      if (deviceManager.midi) {
+        deviceManager.midi.bind(slider, { cc: ccNumber, label: `Manual-${controlId}` });
       }
 
       slider.addEventListener("input", (e) => {
@@ -674,12 +608,8 @@
       document.getElementById("counter-value").textContent = count;
     }
 
-    // Counter slider listener
-    document.getElementById("counter-slider").addEventListener("input", (e) => {
-      document.getElementById("counter-value").textContent = e.target.value;
-    });
-
     init();
   </script>
+  </div>
 </body>
 </html>

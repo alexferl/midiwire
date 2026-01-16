@@ -297,6 +297,33 @@ describe("DataAttributeBinder", () => {
       observeSpy.mockRestore()
     })
 
+    it("should use custom selector in auto-binding", async () => {
+      binder = new DataAttributeBinder(mockController, ".custom-midi")
+      binder.enableAutoBinding()
+
+      // Add element with default selector (should not bind)
+      const defaultElement = document.createElement("input")
+      defaultElement.setAttribute("data-midi-cc", "74")
+      document.body.appendChild(defaultElement)
+
+      // Add element with custom selector (should bind)
+      const customElement = document.createElement("input")
+      customElement.setAttribute("data-midi-cc", "75")
+      customElement.className = "custom-midi"
+      document.body.appendChild(customElement)
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Only the custom element should be bound
+      expect(mockController.boundElements.size).toBe(1)
+      expect(mockController.boundElements.has(customElement)).toBe(true)
+      expect(mockController.boundElements.has(defaultElement)).toBe(false)
+
+      // Cleanup
+      document.body.removeChild(defaultElement)
+      document.body.removeChild(customElement)
+    })
+
     it("should not create multiple observers", () => {
       const observeSpy = vi.spyOn(MutationObserver.prototype, "observe")
       binder.enableAutoBinding()
@@ -317,6 +344,110 @@ describe("DataAttributeBinder", () => {
       // Should not throw
       document.body.appendChild(element)
       return new Promise((resolve) => setTimeout(resolve, 100))
+    })
+
+    it("should bind child elements when parent is added", async () => {
+      binder = new DataAttributeBinder(mockController)
+      binder.enableAutoBinding()
+
+      // Create a container with child elements
+      const container = document.createElement("div")
+      container.innerHTML = `
+        <input type="range" data-midi-cc="74">
+        <input type="range" data-midi-cc="75">
+        <input type="range" data-midi-cc="76">
+      `
+
+      // Initial state - no bindings
+      expect(mockController.boundElements.size).toBe(0)
+
+      // Add the container to DOM (this triggers MutationObserver)
+      document.body.appendChild(container)
+
+      // Wait for MutationObserver to process
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Verify all child elements were bound
+      expect(mockController.boundElements.size).toBe(3)
+
+      // Verify each child has data-midi-bound attribute
+      const inputs = container.querySelectorAll("input")
+      inputs.forEach((input) => {
+        expect(input.hasAttribute("data-midi-bound")).toBe(true)
+      })
+
+      // Cleanup
+      document.body.removeChild(container)
+    })
+
+    it("should not re-bind child elements that are already bound", async () => {
+      binder = new DataAttributeBinder(mockController)
+      binder.enableAutoBinding()
+
+      // Create a container with one pre-bound child
+      const container = document.createElement("div")
+      container.innerHTML = `
+        <input type="range" data-midi-cc="74">
+        <input type="range" data-midi-cc="75" data-midi-bound="true">
+      `
+
+      document.body.appendChild(container)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Only the unbound child should be bound
+      expect(mockController.boundElements.size).toBe(1)
+
+      const boundElement = document.querySelector('[data-midi-cc="74"]')
+      expect(boundElement.hasAttribute("data-midi-bound")).toBe(true)
+
+      // The pre-bound element should still have the attribute
+      const preBoundElement = document.querySelector('[data-midi-cc="75"]')
+      expect(preBoundElement.getAttribute("data-midi-bound")).toBe("true")
+
+      // Cleanup
+      document.body.removeChild(container)
+    })
+
+    it("should handle invalid child elements gracefully", async () => {
+      binder = new DataAttributeBinder(mockController)
+      binder.enableAutoBinding()
+
+      // Create a container with mixed valid/invalid children
+      const container = document.createElement("div")
+      container.innerHTML = `
+        <input type="range" data-midi-cc="74">
+        <input type="range" data-midi-cc="invalid">
+        <input type="range" data-midi-cc="200">
+        <input type="range" data-midi-cc="75">
+      `
+
+      document.body.appendChild(container)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Only valid children should be bound
+      expect(mockController.boundElements.size).toBe(2)
+
+      // Cleanup
+      document.body.removeChild(container)
+    })
+
+    it("should handle element that matches but has invalid config", async () => {
+      binder = new DataAttributeBinder(mockController)
+      binder.enableAutoBinding()
+
+      // Add element with invalid CC (matches selector but config is null)
+      const element = document.createElement("input")
+      element.setAttribute("data-midi-cc", "invalid")
+      document.body.appendChild(element)
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Should not bind due to invalid config
+      expect(mockController.boundElements.size).toBe(0)
+      expect(element.hasAttribute("data-midi-bound")).toBe(false)
+
+      // Cleanup
+      document.body.removeChild(element)
     })
   })
 
@@ -511,6 +642,95 @@ describe("DataAttributeBinder", () => {
 
         expect(config.min).toBe(0)
         expect(config.max).toBe(127)
+      })
+
+      it("should warn when both 7-bit and 14-bit CC attributes are present", () => {
+        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        document.body.innerHTML = `
+					<input type="range" data-midi-cc="74" data-midi-msb="74" data-midi-lsb="75" min="0" max="127" value="64">
+				`
+
+        binder.bindAll()
+
+        const element = document.querySelector("input")
+        const config = mockController.boundElements.get(element)
+
+        // Should use 14-bit configuration (msb/lsb takes precedence)
+        expect(config).toBeDefined()
+        expect(config.is14Bit).toBe(true)
+        expect(config.msb).toBe(74)
+        expect(config.lsb).toBe(75)
+
+        // Should warn about the conflict
+        expect(consoleWarnSpy).toHaveBeenCalledOnce()
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringMatching(/both 7-bit.*14-bit/),
+          element,
+        )
+
+        consoleWarnSpy.mockRestore()
+      })
+    })
+
+    describe("memory leak prevention", () => {
+      it("should unbind elements when they are removed from DOM", async () => {
+        binder = new DataAttributeBinder(mockController)
+        binder.enableAutoBinding()
+
+        const container = document.createElement("div")
+        container.innerHTML = `
+					<input type="range" data-midi-cc="74" min="0" max="127" value="64">
+				`
+        document.body.appendChild(container)
+
+        // Wait for mutation observer to process
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        const element = container.querySelector("input")
+        expect(mockController.boundElements.has(element)).toBe(true)
+
+        // Remove the container
+        container.remove()
+
+        // Wait for mutation observer to process removal
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // Element should be unbound
+        expect(mockController.boundElements.has(element)).toBe(false)
+      })
+
+      it("should recursively unbind child elements when parent is removed", async () => {
+        binder = new DataAttributeBinder(mockController)
+        binder.enableAutoBinding()
+
+        const container = document.createElement("div")
+        container.innerHTML = `
+					<div>
+						<input type="range" data-midi-cc="74" min="0" max="127" value="0">
+						<input type="range" data-midi-msb="75" data-midi-lsb="76" min="0" max="16383" value="0">
+					</div>
+				`
+        document.body.appendChild(container)
+
+        // Wait for mutation observer to process
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        const elements = container.querySelectorAll("input")
+        elements.forEach((el) => {
+          expect(mockController.boundElements.has(el)).toBe(true)
+        })
+
+        // Remove the container
+        container.remove()
+
+        // Wait for mutation observer to process removal
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // All elements should be unbound
+        elements.forEach((el) => {
+          expect(mockController.boundElements.has(el)).toBe(false)
+        })
       })
     })
 
