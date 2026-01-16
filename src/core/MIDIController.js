@@ -250,7 +250,7 @@ export class MIDIController extends EventEmitter {
     this.bindings.set(element, binding)
 
     // Send initial value
-    if (this.initialized) {
+    if (this.initialized && this.connection?.isConnected()) {
       binding.handler({ target: element })
     }
 
