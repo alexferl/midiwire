@@ -12,6 +12,7 @@ A modern, declarative JavaScript library for creating browser-based MIDI control
 - ⏱️ **Debouncing** - Prevent MIDI device overload with configurable debouncing
 - 🔌 **Hotplug support** - Detect and handle device connections/disconnections
 - 💾 **Patch management** - Save/load patches with automatic element sync and versioning
+- 🎹 **DX7 Cartridge support** - Load and create Yamaha DX7 patch cartridges (.syx files)
 - 📦 **Zero dependencies** - Lightweight and fast
 - 🔧 **Flexible API** - Works with data attributes or programmatically
 - 🎨 **Framework agnostic** - Use with vanilla JS, React, Vue, or anything else
@@ -408,6 +409,62 @@ const bassPatch = midi.loadPatch("Bass Patch");
 await midi.setPatch(bassPatch); // Slider shows frequency, not 0-127
 ```
 
+### DX7 Cartridge Support
+
+Load, create, and manipulate Yamaha DX7 patch cartridges (.syx files):
+
+```javascript
+import { DX7Cartridge, DX7Patch } from "midiwire";
+
+// Load a cartridge from a file
+const cartridge = await DX7Cartridge.fromFile(fileInput.files[0]);
+
+// Get all patches
+const patches = cartridge.getPatches();
+console.log(`Loaded ${patches.length} patches`);
+
+// Get a specific patch
+const patch = cartridge.getPatch(0);
+console.log("Patch name:", patch.name);
+
+// Read parameters (0-127 range)
+const algorithm = patch.getParameter(134); // Algorithm 1-32
+const feedback = patch.getParameter(135);  // Feedback 0-7
+const lfoSpeed = patch.getParameter(137);  // LFO speed
+
+// Create a new patch
+const newPatch = DX7Patch.createDefault();
+newPatch.setParameter(0, 50);   // EG Rate 1
+newPatch.setParameter(134, 5);  // Algorithm 6
+
+// Set patch name (10 characters max)
+const name = "SUPER BASS";
+for (let i = 0; i < name.length; i++) {
+  newPatch.setParameter(118 + i, name.charCodeAt(i));
+}
+
+// Replace patch in cartridge
+cartridge.replacePatch(0, newPatch);
+
+// Find patches by name
+const bassPatch = cartridge.findPatchByName("BASS");
+if (bassPatch) {
+  console.log(`Found "${bassPatch.name}" at index ${bassPatch.index}`);
+}
+
+// Export to SYX format
+const sysexData = cartridge.toSysex();
+const blob = new Blob([sysexData], { type: "application/octet-stream" });
+
+// Unpack to 155-byte format (for detailed parameter access)
+const unpacked = patch.unpack();
+// unpacked[0] = OP1 EG Rate 1
+// unpacked[4] = OP1 EG Level 1
+// ... full DX7 parameter set
+```
+
+See [`examples/dx7-cartridge.html`](examples/dx7.html) for a working demo with file upload, patch visualization, and export.
+
 ### Device Change Events
 
 midiwire detects when MIDI devices are connected or disconnected:
@@ -556,6 +613,7 @@ Check out the [`examples/`](examples) folder for working demos:
 - [`programmatic.html`](examples/programmatic.html) - Manual binding and custom SVG/canvas controls
 - [`patches.html`](examples/patches.html) - Complete patch management system with localStorage
 - [`sysex.html`](examples/sysex.html) - SysEx communication and device inquiry
+- [`dx7-cartridge.html`](examples/dx7.html) - Load and create Yamaha DX7 patch cartridges
 
 ## Development
 

@@ -172,7 +172,7 @@ export {
   MIDIController,
 } from "./core/MIDIController.js"
 export { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
-
+export { DX7Cartridge, DX7Patch } from "./utils/DX7Cartridge.js"
 export * from "./utils/midi.js"
 export * from "./utils/sysex.js"
 export * from "./utils/validators.js"
