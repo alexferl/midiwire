@@ -542,7 +542,7 @@ export class MIDIController extends EventEmitter {
       const { config } = binding
       if (config.cc) {
         const settingKey = `cc${config.cc}`
-        const setting = {
+        patch.settings[settingKey] = {
           min: config.min,
           max: config.max,
           invert: config.invert || false,
@@ -550,8 +550,6 @@ export class MIDIController extends EventEmitter {
           label: element.getAttribute?.("data-midi-label") || null,
           elementId: element.id || null,
         }
-
-        patch.settings[settingKey] = setting
       }
     }
 

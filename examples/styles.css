@@ -9,7 +9,11 @@
   --border: #374151;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -219,7 +223,7 @@ input:focus {
   padding: 15px;
   max-height: 300px;
   overflow-y: auto;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
 }
 
@@ -464,7 +468,7 @@ input:focus {
 .patch-form {
   display: flex;
   gap: 10px;
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
   align-items: stretch;
 }
 
@@ -476,7 +480,7 @@ input:focus {
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
-  margin: 0 !important;
+  margin: 0;
 }
 
 .patch-form button {
@@ -485,7 +489,7 @@ input:focus {
   font-size: 14px;
   white-space: nowrap;
   height: auto;
-  margin: 0 !important;
+  margin: 0;
 }
 
 .file-upload {
@@ -537,7 +541,7 @@ input:focus {
   color: var(--text-secondary);
 }
 
-/* JSON Display for patches */
+/* JSON Display for patchs */
 .json-display {
   margin-top: 15px;
   background: var(--bg);

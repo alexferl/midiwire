@@ -64,7 +64,7 @@
 <script type="module">
   import { CTRL, createMIDIDeviceManager } from "../src/index.js";
 
-  let deviceManager = null;
+  let _deviceManager = null;
   let midi = null;
 
   function updateConnectionStatus() {
@@ -132,7 +132,7 @@
       const status = document.getElementById("status");
 
       // IMPORTANT: Initialize with sysex: true
-      deviceManager = await createMIDIDeviceManager({
+      _deviceManager = await createMIDIDeviceManager({
         sysex: true,
         onStatusUpdate: (message, state) => {
           status.textContent = message;
@@ -207,7 +207,7 @@
     }
     // Universal Device Inquiry
     // F0 7E 7F 06 01 F7 (Identity Request)
-    window.midi.sendSysEx([0x7E, 0x7F, 0x06, 0x01]);
+    window.midi.sendSysEx([0x7E, 0x7F, 0x06, 0x01], true);
     logMessage("[SEND] Universal Device Inquiry", "send");
   });
 
@@ -223,11 +223,11 @@
       .filter(s => s)
       .map(s => parseInt(s, 16));
 
-    if (isNaN(manufacturerId)) {
+    if (Number.isNaN(manufacturerId)) {
       alert("Please enter a valid manufacturer ID in hex");
       return;
     }
-    if (payload.length === 0 || payload.some(p => isNaN(p))) {
+    if (payload.length === 0 || payload.some(p => Number.isNaN(p))) {
       alert("Please enter valid payload bytes in hex");
       return;
     }

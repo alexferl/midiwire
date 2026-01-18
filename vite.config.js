@@ -1,5 +1,5 @@
-import { defineConfig } from "vite";
-import { resolve } from "path";
+import { resolve } from "node:path"
+import { defineConfig } from "vite"
 
 export default defineConfig({
   build: {
@@ -7,17 +7,16 @@ export default defineConfig({
       entry: resolve(__dirname, "src/index.js"),
       name: "MIDIControls",
       fileName: (format) => `midiwire.${format}.js`,
-      formats: ["es", "umd"]
+      formats: ["es", "umd"],
     },
     rollupOptions: {
-      // No external dependencies to declare
       output: {
-        exports: "named"
-      }
-    }
+        exports: "named",
+      },
+    },
   },
   server: {
-    open: "/examples/basic.html"
+    open: "/examples/basic.html",
   },
   test: {
     environment: "jsdom",
@@ -25,15 +24,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
       reportsDirectory: "./coverage",
-      exclude: [
-        "tests/**",
-        "examples/**",
-        "docs/**",
-        "*.config.js",
-        "**/*.test.js",
-        "coverage/**",
-      ],
-      // Set coverage thresholds (can be adjusted)
+      exclude: ["tests/**", "examples/**", "docs/**", "*.config.js", "**/*.test.js", "coverage/**"],
       thresholds: {
         statements: 70,
         branches: 70,
@@ -41,5 +32,5 @@ export default defineConfig({
         lines: 70,
       },
     },
-  }
-});
+  },
+})

@@ -42,14 +42,14 @@
   <div id="connect-message" class="section">
     <h2>Not Connected</h2>
     <p style="color: var(--text-secondary); margin-top: 10px;">
-      Connect a MIDI device to use the patch management system and save/load synth patches.
+      Connect a MIDI device to use the patch management system and save/load synth patchs.
     </p>
   </div>
 
   <div id="controls-container" style="display: none;">
   <div class="section">
     <h2>Synth Controls</h2>
-    <p class="label">Adjust these controls and save them as patches</p>
+    <p class="label">Adjust these controls and save them as patchs</p>
 
     <div class="control-grid">
       <div class="control-item">
@@ -114,7 +114,7 @@
     <h3>Saved Patches</h3>
     <div id="patch-list" class="patch-list">
       <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
-        No patches saved yet. Create your first patch above!
+        No patchs saved yet. Create your first patch above!
       </div>
     </div>
   </div>
@@ -167,24 +167,24 @@
             const release = document.getElementById("release");
 
             cutoff.addEventListener("input", (e) => {
-              document.getElementById("cutoff-value").textContent = parseInt(e.target.value);
+              document.getElementById("cutoff-value").textContent = parseInt(e.target.value, 10);
             });
 
             resonance.addEventListener("input", (e) => {
-              const value = parseInt(e.target.value);
+              const value = parseInt(e.target.value, 10);
               document.getElementById("resonance-value").textContent = 127 - value;
             });
 
             attack.addEventListener("input", (e) => {
-              document.getElementById("attack-value").textContent = parseInt(e.target.value);
+              document.getElementById("attack-value").textContent = parseInt(e.target.value, 10);
             });
 
             release.addEventListener("input", (e) => {
-              document.getElementById("release-value").textContent = parseInt(e.target.value);
+              document.getElementById("release-value").textContent = parseInt(e.target.value, 10);
             });
 
             // Function to update UI when patch is loaded
-            window.updateControlDisplays = function() {
+            window.updateControlDisplays = () => {
               document.getElementById("cutoff-value").textContent = cutoff.value;
               document.getElementById("resonance-value").textContent = 127 - resonance.value;
               document.getElementById("attack-value").textContent = attack.value;
@@ -225,7 +225,7 @@
     }
 
     // Patch management functions
-    window.createPatch = function() {
+    window.createPatch = () => {
       if (!midi) return;
 
       const name = document.getElementById("patch-name").value.trim();
@@ -244,7 +244,7 @@
       }
     };
 
-    window.loadPatch = function(name) {
+    window.loadPatch = (name) => {
       if (!midi) return;
 
       // Show loading state
@@ -254,7 +254,7 @@
 
       const patch = midi.loadPatch(name);
       if (patch) {
-        const hasOutput = midi.connection && midi.connection.output;
+        const hasOutput = midi.connection?.output;
 
         if (hasOutput) {
           // If we have an output, use setPatch to send MIDI and update UI
@@ -274,9 +274,9 @@
         } else {
           // If no output, manually update UI controls from patch data
           const channel = midi.options.channel;
-          const channelData = patch.channels && patch.channels[channel];
+          const channelData = patch.channels?.[channel];
 
-          if (channelData && channelData.ccs) {
+          if (channelData?.ccs) {
             // Update each control based on patch data
             Object.entries(channelData.ccs).forEach(([cc, value]) => {
               const ccNum = parseInt(cc, 10);
@@ -299,7 +299,7 @@
       }
     };
 
-    window.deletePatch = function(name) {
+    window.deletePatch = (name) => {
       if (!midi || !confirm(`Delete patch "${name}"?`)) return;
 
       midi.deletePatch(name);
@@ -307,7 +307,7 @@
       document.getElementById("status").textContent = `Patch "${name}" deleted`;
     };
 
-    window.previewPatch = function(name) {
+    window.previewPatch = (name) => {
       if (!midi) return;
 
       const patch = midi.loadPatch(name);
@@ -317,18 +317,18 @@
       }
     };
 
-    window.closePreview = function() {
+    window.closePreview = () => {
       document.getElementById("patch-json-section").style.display = "none";
     };
 
-    window.copyPatchJSON = function() {
+    window.copyPatchJSON = () => {
       const jsonText = document.getElementById("patch-json").textContent;
       navigator.clipboard.writeText(jsonText).then(() => {
         document.getElementById("status").textContent = "JSON copied to clipboard!";
       });
     };
 
-    window.downloadPatch = function(name) {
+    window.downloadPatch = (name) => {
       if (!midi) return;
 
       const patch = midi.loadPatch(name);
@@ -355,7 +355,7 @@
       }
     };
 
-    window.loadPatchFromFile = function() {
+    window.loadPatchFromFile = () => {
       const fileInput = document.getElementById("patch-file");
       const file = fileInput.files[0];
 
@@ -375,7 +375,7 @@
       }
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = (e) => {
         try {
           const patch = JSON.parse(e.target.result);
 
@@ -393,15 +393,15 @@
             midi.savePatch(fileName, patch);
 
             // Apply the patch and update UI displays
-            const hasOutput = midi.connection && midi.connection.output;
+            const hasOutput = midi.connection?.output;
             if (hasOutput) {
               midi.setPatch(patch);
             } else {
               // Manually update UI controls without sending MIDI
               const channel = midi.options.channel;
-              const channelData = patch.channels && patch.channels[channel];
+              const channelData = patch.channels?.[channel];
 
-              if (channelData && channelData.ccs) {
+              if (channelData?.ccs) {
                 Object.entries(channelData.ccs).forEach(([cc, value]) => {
                   const ccNum = parseInt(cc, 10);
                   const slider = document.querySelector(`[data-midi-cc="${ccNum}"]`);
@@ -423,7 +423,7 @@
           fileInput.value = ""; // Reset file input
         }
       };
-      reader.onerror = function() {
+      reader.onerror = () => {
         alert("Failed to read file");
         fileInput.value = "";
       };
@@ -440,19 +440,19 @@
     function refreshPatchList() {
       if (!midi) return;
 
-      const patches = midi.listPatches();
+      const patchs = midi.listPatches();
       const listEl = document.getElementById("patch-list");
 
-      if (patches.length === 0) {
+      if (patchs.length === 0) {
         listEl.innerHTML = `
           <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
-            No patches saved yet. Create your first patch!
+            No patchs saved yet. Create your first patch!
           </div>
         `;
         return;
       }
 
-      listEl.innerHTML = patches.map(({ name, patch }) => {
+      listEl.innerHTML = patchs.map(({ name, patch }) => {
         // Extract control labels for better readability
         const settings = patch.settings || {};
         const labels = Object.values(settings)

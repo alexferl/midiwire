@@ -203,7 +203,7 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
 
       knobs.forEach(knob => {
         const element = document.getElementById(`${knob.id}-knob`);
-        let currentValue = knob.value;
+        const currentValue = knob.value;
         let isDragging = false;
         let startY = 0;
         let startValue = 0;
@@ -218,7 +218,7 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
         function startDrag(e) {
           isDragging = true;
           startY = e.clientY;
-          startValue = parseInt(element.dataset.currentValue || currentValue);
+          startValue = parseInt(element.dataset.currentValue || currentValue, 10);
           element.style.cursor = "grabbing";
           e.preventDefault();
 
@@ -237,7 +237,7 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
           value = Math.max(0, Math.min(127, value));
 
           const roundedValue = Math.round(value);
-          const currentVal = parseInt(element.dataset.currentValue || 0);
+          const currentVal = parseInt(element.dataset.currentValue || 0, 10);
 
           if (roundedValue !== currentVal) {
             updateKnobValue(knob.id, roundedValue);

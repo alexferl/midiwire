@@ -12,7 +12,7 @@ A modern, declarative JavaScript library for creating browser-based MIDI control
 - ⏱️ **Debouncing** - Prevent MIDI device overload with configurable debouncing
 - 🔌 **Hotplug support** - Detect and handle device connections/disconnections
 - 💾 **Patch management** - Save/load patches with automatic element sync and versioning
-- 🎹 **DX7 Cartridge support** - Load and create Yamaha DX7 patch cartridges (.syx files)
+- 🎹 **DX7 support** - Load and create Yamaha DX7 voice (patch) banks (.syx files)
 - 📦 **Zero dependencies** - Lightweight and fast
 - 🔧 **Flexible API** - Works with data attributes or programmatically
 - 🎨 **Framework agnostic** - Use with vanilla JS, React, Vue, or anything else
@@ -349,7 +349,7 @@ if (loaded) {
 
 // Or apply a patch you created
 await midi.setPatch({
-  name: "Manual Patch",
+  name: "Manual Voice",
   channels: {
     "1": {
       ccs: {
@@ -402,68 +402,68 @@ midi.bind(filterSlider, {
 });
 
 // Save the complete configuration
-midi.savePatch("Bass Patch");
+midi.savePatch("Bass Voice");
 
 // Later: load and everything is restored correctly
-const bassPatch = midi.loadPatch("Bass Patch");
+const bassPatch = midi.loadPatch("Bass Voice");
 await midi.setPatch(bassPatch); // Slider shows frequency, not 0-127
 ```
 
-### DX7 Cartridge Support
+### DX7 Bank Support
 
-Load, create, and manipulate Yamaha DX7 patch cartridges (.syx files):
+Load, create, and manipulate Yamaha DX7 voice (patch) banks (.syx files):
 
 ```javascript
-import { DX7Cartridge, DX7Patch } from "midiwire";
+import { DX7Bank, DX7Voice } from "midiwire";
 
-// Load a cartridge from a file
-const cartridge = await DX7Cartridge.fromFile(fileInput.files[0]);
+// Load a bank from a file
+const bank = await DX7Bank.fromFile(fileInput.files[0]);
 
-// Get all patches
-const patches = cartridge.getPatches();
-console.log(`Loaded ${patches.length} patches`);
+// Get all voices
+const voices = bank.getVoices();
+console.log(`Loaded ${voices.length} voices`);
 
-// Get a specific patch
-const patch = cartridge.getPatch(0);
-console.log("Patch name:", patch.name);
+// Get a specific voice
+const voice = bank.getVoice(0);
+console.log("Voice name:", voice.name);
 
 // Read parameters (0-127 range)
-const algorithm = patch.getParameter(134); // Algorithm 1-32
-const feedback = patch.getParameter(135);  // Feedback 0-7
-const lfoSpeed = patch.getParameter(137);  // LFO speed
+const algorithm = voice.getParameter(134); // Algorithm 1-32
+const feedback = voice.getParameter(135);  // Feedback 0-7
+const lfoSpeed = voice.getParameter(137);  // LFO speed
 
-// Create a new patch
-const newPatch = DX7Patch.createDefault();
+// Create a new voice
+const newPatch = DX7Voice.createDefault();
 newPatch.setParameter(0, 50);   // EG Rate 1
 newPatch.setParameter(134, 5);  // Algorithm 6
 
-// Set patch name (10 characters max)
+// Set voice name (10 characters max)
 const name = "SUPER BASS";
 for (let i = 0; i < name.length; i++) {
   newPatch.setParameter(118 + i, name.charCodeAt(i));
 }
 
-// Replace patch in cartridge
-cartridge.replacePatch(0, newPatch);
+// Replace voice in bank
+bank.replaceVoice(0, newPatch);
 
-// Find patches by name
-const bassPatch = cartridge.findPatchByName("BASS");
+// Find voices by name
+const bassPatch = bank.findVoiceByName("BASS");
 if (bassPatch) {
   console.log(`Found "${bassPatch.name}" at index ${bassPatch.index}`);
 }
 
 // Export to SYX format
-const sysexData = cartridge.toSysex();
+const sysexData = bank.toSysex();
 const blob = new Blob([sysexData], { type: "application/octet-stream" });
 
 // Unpack to 155-byte format (for detailed parameter access)
-const unpacked = patch.unpack();
+const unpacked = voice.unpack();
 // unpacked[0] = OP1 EG Rate 1
 // unpacked[4] = OP1 EG Level 1
 // ... full DX7 parameter set
 ```
 
-See [`examples/dx7-cartridge.html`](examples/dx7.html) for a working demo with file upload, patch visualization, and export.
+See [`examples/dx7.html`](examples/dx7.html) for a working demo with file upload, voice visualization, and export.
 
 ### Device Change Events
 
@@ -613,7 +613,7 @@ Check out the [`examples/`](examples) folder for working demos:
 - [`programmatic.html`](examples/programmatic.html) - Manual binding and custom SVG/canvas controls
 - [`patches.html`](examples/patches.html) - Complete patch management system with localStorage
 - [`sysex.html`](examples/sysex.html) - SysEx communication and device inquiry
-- [`dx7-cartridge.html`](examples/dx7.html) - Load and create Yamaha DX7 patch cartridges
+- [`dx7.html`](examples/dx7.html) - Load and create Yamaha DX7 voice banks
 
 ## Development
 

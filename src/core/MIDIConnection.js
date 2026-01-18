@@ -269,7 +269,7 @@ export class MIDIConnection extends EventEmitter {
 
   /**
    * Send a SysEx message
-   * @param {Array<number>} data - SysEx data (without 0xF0 and 0xF7)
+   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
    * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
    */
   sendSysEx(data, includeWrapper = false) {
@@ -280,10 +280,10 @@ export class MIDIConnection extends EventEmitter {
 
     let message
     if (includeWrapper) {
-      message = data
-    } else {
       // Add SysEx wrapper bytes
       message = [0xf0, ...data, 0xf7]
+    } else {
+      message = data
     }
 
     this.send(message)

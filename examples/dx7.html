@@ -3,67 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DX7 Cartridge Manager - midiwire</title>
+  <title>DX7 Voice Manager - midiwire</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .patch-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-
-    .patch-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 15px;
-      transition: all 0.2s ease;
-    }
-
-    .patch-card:hover {
-      border-color: var(--accent-color);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .patch-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .patch-index {
-      background: var(--accent-color);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.85em;
-      font-weight: bold;
-    }
-
-    .patch-name {
-      font-size: 1.1em;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .patch-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .patch-actions button {
-      padding: 6px 12px;
-      font-size: 0.85em;
-      flex: 1;
-    }
-
     .file-input-wrapper {
-      margin: 20px 0;
+      margin-bottom: 0;
     }
 
     .file-input-wrapper input[type="file"] {
@@ -72,90 +16,180 @@
 
     .file-input-label {
       display: inline-block;
-      padding: 10px 20px;
-      background: var(--accent-color);
-      color: white;
+      padding: 12px 24px;
+      background: var(--primary);
+      color: var(--bg);
       border-radius: 6px;
       cursor: pointer;
-      transition: background 0.2s;
+      font-weight: 600;
+      transition: opacity 0.2s;
     }
 
     .file-input-label:hover {
-      background: var(--accent-hover);
+      opacity: 0.9;
     }
 
-    .cartridge-info {
-      background: var(--bg-secondary);
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-      border: 1px solid var(--border-color);
-    }
-
-    .cartridge-info h3 {
-      margin-top: 0;
-      color: var(--text-primary);
-    }
-
-    .cartridge-actions {
+    .loaded-bank {
       display: flex;
-      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
       margin-top: 15px;
     }
 
-    .export-all-btn {
-      background: var(--success-color);
+    .bank-details h3 {
+      margin: 0 0 5px 0;
+      color: var(--text);
+      font-size: 16px;
     }
 
-    .export-all-btn:hover {
-      background: var(--success-hover);
+    .bank-details p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 14px;
     }
 
-    .load-rom-btn {
-      background: var(--info-color);
+    .voice-count {
+      background: var(--primary);
+      color: var(--bg);
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
     }
 
-    .load-rom-btn:hover {
-      background: var(--info-hover);
+    .voice-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
     }
 
-    :root {
-      --info-color: #17a2b8;
-      --info-hover: #138496;
-      --success-color: #28a745;
-      --success-hover: #218838;
+    .voice-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .voice-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .voice-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .voice-number {
+      background: var(--primary);
+      color: var(--bg);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .voice-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .voice-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .voice-actions button {
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .voice-actions .button-primary {
+      background: var(--primary);
+      color: var(--bg);
+    }
+
+    .voice-actions .button-secondary {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .voice-actions .button-primary.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      position: relative;
+    }
+
+    .voice-actions .button-primary.disabled:hover {
+      opacity: 1 !important;
+      background: rgba(6, 182, 212, 0.5) !important;
+    }
+
+    .voice-actions .button-primary.disabled[data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000000 !important;
+      color: #ffffff !important;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-bottom: 8px;
+      z-index: 1000;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.8) !important;
+      border: 1px solid #06b6d4 !important;
+      opacity: 1 !important;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--bg);
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .button-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 </head>
 <body>
-  <h1>🎹 DX7 Cartridge Manager</h1>
+  <h1>🎹 DX7 Voice Manager</h1>
 
   <div id="status" class="status">Initializing MIDI...</div>
-
-  <div class="section">
-    <h2>Cartridge Management</h2>
-
-    <div class="file-input-wrapper">
-      <label for="cartridge-file" class="file-input-label">
-        📁 Load SYX File
-      </label>
-      <input type="file" id="cartridge-file" accept=".syx">
-    </div>
-
-    <div class="cartridge-actions">
-      <button id="load-rom-btn" class="button load-rom-btn">
-        🎹 Load DX7 ROM
-      </button>
-      <button id="export-all-btn" class="button export-all-btn" style="display: none;">
-        💾 Export All as ZIP
-      </button>
-    </div>
-
-    <div id="cartridge-info" class="cartridge-info" style="display: none;">
-      <h3 id="cartridge-name">Cartridge</h3>
-      <p id="cartridge-stats"></p>
-    </div>
-  </div>
 
   <div class="section">
     <h2>MIDI Configuration</h2>
@@ -185,36 +219,49 @@
     </select>
   </div>
 
-  <div id="patch-section" class="section" style="display: none;">
-    <h2>Patches (<span id="patch-count">0</span>)</h2>
-    <div id="patch-list" class="patch-list"></div>
+  <div class="section">
+    <h2>Voice Library</h2>
+
+    <p style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
+      Supports DX7 bank files (32 voices) and single voices (VCED format)
+    </p>
+
+    <div class="file-input-wrapper">
+      <label for="bank-file" class="file-input-label">
+        📁 Load SYX File
+      </label>
+      <input type="file" id="bank-file" accept=".syx">
+    </div>
+
+    <div id="loaded-bank" class="loaded-bank" style="display: none;">
+      <div class="bank-details">
+        <h3 id="bank-name-display">No bank loaded</h3>
+        <p id="bank-stats-display">Select a SYX file to begin</p>
+      </div>
+      <div class="voice-count" id="voice-count-display">0 voices</div>
+    </div>
+  </div>
+
+  <div id="voice-section" class="section" style="display: none;">
+    <h2>Patches</h2>
+    <div id="voice-list" class="voice-list"></div>
   </div>
 
   <script type="module">
-    import { createMIDIDeviceManager } from "../src/index.js";
-    import { DX7Cartridge } from "../src/utils/DX7Cartridge.js";
+    import { createMIDIDeviceManager, DX7Bank, DX7Voice } from "../src/index.js";
 
-    // Global state
-    let cartridge = null;
+    let bank = null;
     let deviceManager = null;
 
-    // DOM elements
     const status = document.getElementById("status");
-    const fileInput = document.getElementById("cartridge-file");
-    const loadRomBtn = document.getElementById("load-rom-btn");
-    const exportAllBtn = document.getElementById("export-all-btn");
-    const cartridgeInfo = document.getElementById("cartridge-info");
-    const cartridgeName = document.getElementById("cartridge-name");
-    const cartridgeStats = document.getElementById("cartridge-stats");
-    const patchSection = document.getElementById("patch-section");
-    const patchList = document.getElementById("patch-list");
-    const patchCount = document.getElementById("patch-count");
+    const fileInput = document.getElementById("bank-file");
+    const voiceSection = document.getElementById("voice-section");
+    const voiceList = document.getElementById("voice-list");
 
-    // Initialize MIDI
     async function initMIDI() {
       try {
         deviceManager = await createMIDIDeviceManager({
-          sysex: true, // Enable SysEx for DX7 patch dumps
+          sysex: true, // Enable SysEx for DX7 voice dumps
           onStatusUpdate: (message, state) => {
             status.textContent = message;
             status.className = state ? `status ${state}` : "status";
@@ -224,9 +271,10 @@
               status.textContent = `Connected to ${device.name}`;
               status.className = "status connected";
             }
+            updateSendButtons();
           },
-          onReady: (midiInstance) => {
-            // MIDI is ready
+          onReady: (_midiInstance) => {
+            updateSendButtons();
           }
         });
 
@@ -246,14 +294,36 @@
       }
     }
 
-    // Load cartridge from file
-    async function loadCartridgeFile(file) {
+    async function loadBankFile(file) {
       try {
         status.textContent = `Loading ${file.name}...`;
-        cartridge = await DX7Cartridge.fromFile(file);
-        displayCartridge();
-        status.textContent = `Loaded ${file.name}`;
-        status.className = "status success";
+
+        try {
+          // Try to load as a bank first
+          bank = await DX7Bank.fromFile(file);
+          displayBank();
+          status.textContent = `Loaded bank: ${file.name}`;
+          status.className = "status success";
+        } catch (err) {
+          // If it's a single voice file, DX7Bank.fromFile will throw an error
+          if (err.message?.includes("Use DX7Voice.fromFile")) {
+            // Load as single voice instead
+            const voice = await DX7Voice.fromFile(file);
+
+            // Create a bank with the single voice
+            bank = new DX7Bank();
+            bank.voices.fill(DX7Voice.createDefault());
+            bank.voices[0] = voice;
+            bank.name = file.name;
+
+            displayBank();
+            status.textContent = `Loaded single voice: ${voice.name}`;
+            status.className = "status success";
+          } else {
+            // Re-throw if it's a different error
+            throw err;
+          }
+        }
       } catch (err) {
         status.textContent = `Error loading file: ${err.message}`;
         status.className = "status error";
@@ -261,184 +331,227 @@
       }
     }
 
-    // Load built-in ROM
-    async function loadROM() {
-      try {
-        status.textContent = "Loading DX7 ROM...";
-        const response = await fetch("../fixtures/ROM1A.syx");
-        const data = await response.arrayBuffer();
-        cartridge = new DX7Cartridge(data, "DX7 ROM1A");
-        displayCartridge();
-        status.textContent = "Loaded DX7 ROM1A";
-        status.className = "status success";
-      } catch (err) {
-        status.textContent = `Error loading ROM: ${err.message}`;
-        status.className = "status error";
-        console.error(err);
-      }
+    // Update the state of Send to DX7 buttons based on MIDI connection
+    function updateSendButtons() {
+      const sendButtons = document.querySelectorAll(".voice-actions .button-primary");
+      const isConnected = deviceManager?.midi?.connection?.output;
+
+      sendButtons.forEach(button => {
+        button.style.opacity = isConnected ? "1" : "0.5";
+        button.style.cursor = isConnected ? "pointer" : "not-allowed";
+
+        if (isConnected) {
+          button.classList.remove("disabled");
+          button.removeAttribute("data-tooltip");
+        } else {
+          button.classList.add("disabled");
+          button.setAttribute("data-tooltip", "Connect to a MIDI device first");
+        }
+      });
     }
 
-    // Display cartridge patches
-    function displayCartridge() {
-      if (!cartridge) return;
+    function displayBank() {
+      if (!bank) return;
 
-      // Show cartridge info
-      cartridgeInfo.style.display = "block";
-      cartridgeName.textContent = cartridge.name || "Unnamed Cartridge";
-      cartridgeStats.textContent = `${cartridge.patches.length} patches`;
+      const loadedBank = document.getElementById("loaded-bank");
+      const bankNameDisplay = document.getElementById("bank-name-display");
+      const bankStatsDisplay = document.getElementById("bank-stats-display");
+      const voiceCountDisplay = document.getElementById("voice-count-display");
 
-      // Show export button
-      exportAllBtn.style.display = "inline-block";
+      loadedBank.style.display = "flex";
+      bankNameDisplay.textContent = bank.name || "Unnamed Bank";
 
-      // Show patches section
-      patchSection.style.display = "block";
-      patchCount.textContent = cartridge.patches.length;
+      // Detect if this is a single voice file
+      const actualVoices = bank.voices.filter(v => v.name && v.name !== "Init Voice" && v.name !== "");
+      const isSingleVoice = actualVoices.length === 1;
 
-      // Clear and populate patch list
-      patchList.innerHTML = "";
+      if (isSingleVoice) {
+        bankStatsDisplay.textContent = "DX7 Single Voice";
+        voiceCountDisplay.textContent = "1 voice";
+      } else {
+        bankStatsDisplay.textContent = "DX7 Bank File";
+        voiceCountDisplay.textContent = `${bank.voices.length} voices`;
+      }
 
-      cartridge.patches.forEach((patch, index) => {
+      voiceSection.style.display = "block";
+
+      voiceList.innerHTML = "";
+
+      // Only display actual voices (not default filler voices for single voice files)
+      const voicesToDisplay = isSingleVoice ? actualVoices : bank.voices;
+      const voiceIndices = isSingleVoice ? [bank.voices.indexOf(actualVoices[0])] : bank.voices.map((_, i) => i);
+
+      voicesToDisplay.forEach((voice, displayIndex) => {
         const card = document.createElement("div");
-        card.className = "patch-card";
+        card.className = "voice-card";
 
-        const patchName = patch.name || "(Empty)";
-        const safeName = patchName.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "patch";
+        const voiceName = voice.name || "(Empty)";
+        const originalIndex = isSingleVoice ? voiceIndices[0] : displayIndex;
+
+        const isConnected = deviceManager?.midi?.connection?.output;
+
+        const sendButtonClass = isConnected ? "button button-primary" : "button button-primary disabled";
 
         card.innerHTML = `
-          <div class="patch-header">
-            <span class="patch-index">${String(index + 1).padStart(2, "0")}</span>
-            <h3 class="patch-name">${patchName}</h3>
+          <div class="voice-header">
+            <span class="voice-number">${originalIndex + 1}</span>
+            <h3 class="voice-name" title="${voiceName}">${voiceName}</h3>
           </div>
-          <div class="patch-actions">
-            <button class="button" onclick="sendPatch(${index})">
-              📤 Send to DX7
+          <div class="voice-actions">
+            <button class="${sendButtonClass}" ${!isConnected ? 'data-tooltip="Connect to a MIDI device first"' : ''} onclick="sendPatch(${originalIndex}, this)">
+              <span class="button-content">
+                <span class="spinner" style="display: none;"></span>
+                <span class="button-text">Send to DX7</span>
+              </span>
             </button>
-            <button class="button" onclick="exportPatch(${index})">
-              💾 Export SYX
+            <button class="button button-secondary" onclick="exportPatch(${originalIndex})">
+              Export SYX
+            </button>
+            <button class="button button-secondary" onclick="exportPatchJSON(${originalIndex})">
+              Export JSON
             </button>
           </div>
         `;
 
-        patchList.appendChild(card);
+        voiceList.appendChild(card);
       });
+
+      updateSendButtons();
     }
 
-    // Send patch to DX7
-    window.sendPatch = function(index) {
-      if (!cartridge || !deviceManager || !deviceManager.midi) {
-        status.textContent = "Error: No cartridge loaded or MIDI not connected";
+    window.sendPatch = (index, button) => {
+      if (!bank || !deviceManager?.midi?.connection?.output) {
+        status.textContent = "Error: No bank loaded or MIDI not connected";
         status.className = "status error";
         return;
       }
 
-      try {
-        const patch = cartridge.getPatch(index);
-        const sysex = patch.toSysEx();
+      const spinner = button.querySelector('.spinner');
+      const buttonText = button.querySelector('.button-text');
+      spinner.style.display = 'inline-block';
+      buttonText.textContent = 'Sending...';
+      button.disabled = true;
 
-        // Send SysEx data using the MIDIController's sendSysEx method
+      try {
+        const voice = bank.voices[index];
+        const sysex = voice.toSysEx();
+
+        // Note: toSysEx() already includes the 0xF0/0xF7 wrapper
         deviceManager.midi.sendSysEx(sysex);
 
-        status.textContent = `Sent "${patch.name}" to DX7`;
+        status.textContent = `Sent "${voice.name}" to DX7`;
         status.className = "status success";
       } catch (err) {
-        status.textContent = `Error sending patch: ${err.message}`;
+        status.textContent = `Error sending voice: ${err.message}`;
         status.className = "status error";
         console.error(err);
+      } finally {
+        setTimeout(() => {
+          spinner.style.display = 'none';
+          buttonText.textContent = 'Send to DX7';
+          button.disabled = false;
+        }, 500);
       }
     };
 
-    // Export patch to file
-    window.exportPatch = function(index) {
-      if (!cartridge) {
-        status.textContent = "Error: No cartridge loaded";
+    window.exportPatch = (index) => {
+      if (!bank) {
+        status.textContent = "Error: No bank loaded";
         status.className = "status error";
         return;
       }
 
       try {
-        const patch = cartridge.getPatch(index);
-        const sysex = patch.toSysEx();
-        const patchName = patch.name || "patch";
-        const safeName = patchName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+        const voice = bank.voices[index];
+        const sysex = voice.toSysEx();
 
-        // Create blob and download
+        // Check if this is a single voice file by counting non-default voices
+        const nonDefaultVoices = bank.voices.filter(v => v.name && v.name !== "Init Voice" && v.name !== "").length;
+        const isSingleVoiceFile = nonDefaultVoices === 1;
+
+        let fileName;
+        if (isSingleVoiceFile) {
+          // For single voice files, use the original filename
+          fileName = bank.name;
+        } else {
+          // For bank files, append the voice name
+          const voiceName = voice.name || "voice";
+          const safeName = voiceName.replace(/[^a-zA-Z0-9]/g, "_");
+          const bankFileName = bank.name ? bank.name.replace(/\.[^/.]+$/, "") : "";
+          const safeBankName = bankFileName.replace(/[^a-zA-Z0-9]/g, "_");
+          fileName = safeBankName ? `${safeBankName}_${safeName}.syx` : `${safeName}.syx`;
+        }
+
         const blob = new Blob([sysex], { type: "application/octet-stream" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${String(index + 1).padStart(2, "0")}_${safeName}.syx`;
+        a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
 
-        status.textContent = `Exported "${patch.name}"`;
+        status.textContent = `Exported "${voice.name}"`;
         status.className = "status success";
       } catch (err) {
-        status.textContent = `Error exporting patch: ${err.message}`;
+        status.textContent = `Error exporting voice: ${err.message}`;
         status.className = "status error";
         console.error(err);
       }
     };
 
-    // Export all patches as ZIP
-    exportAllBtn.addEventListener("click", async () => {
-      if (!cartridge) return;
+    window.exportPatchJSON = (index) => {
+      if (!bank) {
+        status.textContent = "Error: No bank loaded";
+        status.className = "status error";
+        return;
+      }
 
       try {
-        status.textContent = "Creating ZIP archive...";
+        const voice = bank.voices[index];
+        const jsonData = voice.toJSON();
 
-        // Use CDN for JSZip to avoid build step
-        if (!window.JSZip) {
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
+        // Check if this is a single voice file (bank.name is the original filename)
+        // or a bank file (bank.name doesn't end with .syx)
+        const isSingleVoiceFile = bank.name?.toLowerCase().endsWith(".syx");
+
+        let fileName;
+        if (isSingleVoiceFile) {
+          // For single voice files, use the original filename without the patch name
+          fileName = `${bank.name.replace(/\.[^/.]+$/, "")}.json`;
+        } else {
+          // For bank files, append the voice name
+          const voiceName = voice.name || "voice";
+          const safeName = voiceName.replace(/[^a-zA-Z0-9]/g, "_");
+          const bankFileName = bank.name ? bank.name.replace(/\.[^/.]+$/, "") : "";
+          const safeBankName = bankFileName.replace(/[^a-zA-Z0-9]/g, "_");
+          fileName = safeBankName ? `${safeBankName}_${safeName}.json` : `${safeName}.json`;
         }
 
-        const JSZip = window.JSZip;
-        const zip = new JSZip();
-        const folder = zip.folder(cartridge.name || "DX7_Cartridge");
-
-        // Add all patches to ZIP
-        cartridge.patches.forEach((patch, index) => {
-          const sysex = patch.toSysEx();
-          const patchName = patch.name || "patch";
-          const safeName = patchName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-          const filename = `${String(index + 1).padStart(2, "0")}_${safeName}.syx`;
-          folder.file(filename, sysex);
-        });
-
-        // Generate and download ZIP
-        const content = await zip.generateAsync({ type: "blob" });
-        const url = URL.createObjectURL(content);
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${cartridge.name || "DX7_Cartridge"}.zip`;
+        a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
 
-        status.textContent = `Exported ${cartridge.patches.length} patches as ZIP`;
+        status.textContent = `Exported "${voice.name}" as JSON`;
         status.className = "status success";
       } catch (err) {
-        status.textContent = `Error creating ZIP: ${err.message}`;
+        status.textContent = `Error exporting voice JSON: ${err.message}`;
         status.className = "status error";
         console.error(err);
       }
-    });
+    };
 
-    // Event listeners
     fileInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) {
-        loadCartridgeFile(file);
+        loadBankFile(file);
       }
     });
 
-    loadRomBtn.addEventListener("click", loadROM);
-
-    // Initialize on load
     initMIDI();
   </script>
 </body>
