@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { DX7Bank, DX7Voice } from "./dx7.js"
 
 describe("DX7Voice", () => {
@@ -14,12 +14,8 @@ describe("DX7Voice", () => {
 
     it("should throw error for invalid data length", () => {
       expect(() => new DX7Voice([1, 2, 3])).toThrow("Invalid voice data length")
-      expect(() => new DX7Voice(new Array(DX7Voice.PACKED_SIZE - 1).fill(0))).toThrow(
-        "Invalid voice data length",
-      )
-      expect(() => new DX7Voice(new Array(DX7Voice.PACKED_SIZE + 1).fill(0))).toThrow(
-        "Invalid voice data length",
-      )
+      expect(() => new DX7Voice(new Array(DX7Voice.PACKED_SIZE - 1).fill(0))).toThrow("Invalid voice data length")
+      expect(() => new DX7Voice(new Array(DX7Voice.PACKED_SIZE + 1).fill(0))).toThrow("Invalid voice data length")
     })
 
     it("should extract voice name correctly", () => {
@@ -75,6 +71,28 @@ describe("DX7Voice", () => {
       voice.setParameter(DX7Voice.PACKED_NAME_START + 2, "C".charCodeAt(0))
 
       expect(voice.name).toBe("ABC")
+    })
+  })
+
+  describe("unpacked parameter caching", () => {
+    it("should cache unpacked data and invalidate on setParameter", () => {
+      const voice = DX7Voice.createDefault()
+
+      // First call populates cache
+      voice.getUnpackedParameter(0)
+      const cached1 = voice._unpackedCache
+
+      // Second call reuses cache
+      voice.getUnpackedParameter(0)
+      expect(voice._unpackedCache).toBe(cached1)
+
+      // setParameter invalidates cache
+      voice.setParameter(85, 50)
+      expect(voice._unpackedCache).toBeNull()
+
+      // Next call repopulates
+      voice.getUnpackedParameter(0)
+      expect(voice._unpackedCache).not.toBeNull()
     })
   })
 
@@ -220,11 +238,7 @@ describe("DX7Bank", () => {
         data[i] = byte
       })
       // Fill with valid voice data
-      for (
-        let i = DX7Bank.SYSEX_HEADER_SIZE;
-        i < DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE;
-        i++
-      ) {
+      for (let i = DX7Bank.SYSEX_HEADER_SIZE; i < DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE; i++) {
         data[i] = 0
       }
       data[DX7Bank.SYSEX_SIZE - 1] = DX7Bank.MASK_7BIT
@@ -444,11 +458,7 @@ describe("DX7Bank", () => {
         data[i] = byte
       })
       // Fill with valid voice data
-      for (
-        let i = DX7Bank.SYSEX_HEADER_SIZE;
-        i < DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE;
-        i++
-      ) {
+      for (let i = DX7Bank.SYSEX_HEADER_SIZE; i < DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE; i++) {
         data[i] = 0
       }
       data[DX7Bank.SYSEX_SIZE - 1] = DX7Voice.MASK_7BIT
@@ -664,10 +674,7 @@ describe("Real DX7 ROM Bank (ROM1A.syx)", () => {
       // Set a unique name (pad with spaces like DX7 does)
       const testName = "TESTPATCH"
       for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
-        newPatch.setParameter(
-          118 + i,
-          i < testName.length ? testName.charCodeAt(i) : DX7Voice.CHAR_SPACE,
-        )
+        newPatch.setParameter(118 + i, i < testName.length ? testName.charCodeAt(i) : DX7Voice.CHAR_SPACE)
       }
 
       bank.replaceVoice(5, newPatch)
@@ -925,9 +932,7 @@ describe("Real DX7 ROM Bank (ROM1A.syx)", () => {
 
       // Voice name: 10 bytes at offset 151-160
       const nameBytes = sysex.slice(151, 161)
-      const extractedName = String.fromCharCode(
-        ...nameBytes.map((b) => b & DX7Voice.MASK_7BIT),
-      ).trim()
+      const extractedName = String.fromCharCode(...nameBytes.map((b) => b & DX7Voice.MASK_7BIT)).trim()
       expect(extractedName).toBe("BASS    1")
 
       // Verify checksum (byte 161)
@@ -944,8 +949,7 @@ describe("Real DX7 ROM Bank (ROM1A.syx)", () => {
       for (let i = 6; i < 161; i++) {
         sum += sysex[i]
       }
-      const expectedChecksum =
-        (DX7Bank.CHECKSUM_MODULO - (sum % DX7Bank.CHECKSUM_MODULO)) & DX7Voice.MASK_7BIT
+      const expectedChecksum = (DX7Bank.CHECKSUM_MODULO - (sum % DX7Bank.CHECKSUM_MODULO)) & DX7Voice.MASK_7BIT
       expect(checksum).toBe(expectedChecksum)
     })
 
@@ -1085,8 +1089,7 @@ describe("Real DX7 Single Voice File (ROM1A_BASS____1.syx)", () => {
       for (let i = 6; i < 161; i++) {
         sum += sysex[i]
       }
-      const expectedChecksum =
-        (DX7Bank.CHECKSUM_MODULO - (sum % DX7Bank.CHECKSUM_MODULO)) & DX7Voice.MASK_7BIT
+      const expectedChecksum = (DX7Bank.CHECKSUM_MODULO - (sum % DX7Bank.CHECKSUM_MODULO)) & DX7Voice.MASK_7BIT
 
       expect(checksum).toBe(expectedChecksum)
     })
@@ -1203,6 +1206,784 @@ describe("Real DX7 Single Voice File (ROM1A_BASS____1.syx)", () => {
 
       // Name should match
       expect(singleVoiceJson.name).toBe(bankJson.name)
+    })
+  })
+})
+
+describe("DX7Voice Helper Methods", () => {
+  let voice
+
+  beforeEach(() => {
+    voice = DX7Voice.createDefault()
+  })
+
+  describe("_unpackOperatorEG", () => {
+    it("should correctly unpack operator EG rates", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Set specific EG rates for OP1 (at packed offset 85-88)
+      packed[85] = 99 // EG Rate 1
+      packed[86] = 75 // EG Rate 2
+      packed[87] = 50 // EG Rate 3
+      packed[88] = 25 // EG Rate 4
+
+      voice._unpackOperatorEG(packed, unpacked, 85, 0)
+
+      expect(unpacked[0]).toBe(99)
+      expect(unpacked[1]).toBe(75)
+      expect(unpacked[2]).toBe(50)
+      expect(unpacked[3]).toBe(25)
+    })
+
+    it("should correctly unpack operator EG levels", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Set specific EG levels for OP1
+      packed[89] = 99 // EG Level 1
+      packed[90] = 80 // EG Level 2
+      packed[91] = 40 // EG Level 3
+      packed[92] = 0 // EG Level 4
+
+      voice._unpackOperatorEG(packed, unpacked, 85, 0)
+
+      expect(unpacked[4]).toBe(99)
+      expect(unpacked[5]).toBe(80)
+      expect(unpacked[6]).toBe(40)
+      expect(unpacked[7]).toBe(0)
+    })
+
+    it("should handle maximum EG values (99)", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Set all to max
+      for (let i = 0; i < 8; i++) {
+        packed[85 + i] = 99
+      }
+
+      voice._unpackOperatorEG(packed, unpacked, 85, 0)
+
+      for (let i = 0; i < 8; i++) {
+        expect(unpacked[i]).toBe(99)
+      }
+    })
+
+    it("should handle minimum EG values (0)", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // All zeros (default)
+      voice._unpackOperatorEG(packed, unpacked, 85, 0)
+
+      for (let i = 0; i < 8; i++) {
+        expect(unpacked[i]).toBe(0)
+      }
+    })
+
+    it("should apply 7-bit mask to EG values", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Set values with bit 7 set (should be masked off)
+      packed[85] = 0xff // Should become 0x7F (127)
+      packed[86] = 0x80 // Should become 0x00 (0)
+
+      voice._unpackOperatorEG(packed, unpacked, 85, 0)
+
+      expect(unpacked[0]).toBe(127)
+      expect(unpacked[1]).toBe(0)
+    })
+  })
+
+  describe("_unpackOperatorScaling", () => {
+    it("should correctly unpack break point", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[93] = 60 // Break point at C3 (MIDI note 60)
+
+      voice._unpackOperatorScaling(packed, unpacked, 85, 0)
+
+      expect(unpacked[8]).toBe(60)
+    })
+
+    it("should correctly unpack scaling depths", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[94] = 50 // Left scale depth
+      packed[95] = 75 // Right scale depth
+
+      voice._unpackOperatorScaling(packed, unpacked, 85, 0)
+
+      expect(unpacked[9]).toBe(50)
+      expect(unpacked[10]).toBe(75)
+    })
+
+    it("should handle full range of break points (0-127)", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[93] = 0
+      voice._unpackOperatorScaling(packed, unpacked, 85, 0)
+      expect(unpacked[8]).toBe(0)
+
+      packed[93] = 127
+      voice._unpackOperatorScaling(packed, unpacked, 85, 0)
+      expect(unpacked[8]).toBe(127)
+    })
+  })
+
+  describe("_unpackOperatorPackedParams", () => {
+    it("should correctly unpack left and right curves", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Curves byte: bits 0-1 = LC, bits 2-3 = RC
+      packed[96] = 0b00001011 // LC=3 (11), RC=2 (10)
+
+      voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+
+      expect(unpacked[11]).toBe(3) // Left curve
+      expect(unpacked[12]).toBe(2) // Right curve
+    })
+
+    it("should handle all curve combinations", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      const testCases = [
+        { lc: 0, rc: 0, byte: 0b00000000 },
+        { lc: 1, rc: 1, byte: 0b00000101 },
+        { lc: 2, rc: 2, byte: 0b00001010 },
+        { lc: 3, rc: 3, byte: 0b00001111 },
+      ]
+
+      testCases.forEach((tc) => {
+        packed[96] = tc.byte
+        voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+        expect(unpacked[11]).toBe(tc.lc)
+        expect(unpacked[12]).toBe(tc.rc)
+      })
+    })
+
+    it("should correctly extract rate scaling and detune", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Rate scaling byte: bits 0-2 = RS, bits 3-6 = DET
+      packed[97] = 0b01011101 // RS=5 (101), DET=11 (1011)
+
+      voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+
+      expect(unpacked[13]).toBe(5) // Rate scaling (3 bits)
+      expect(unpacked[14]).toBe(11) // Detune (4 bits)
+    })
+
+    it("should handle maximum rate scaling and detune", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Max RS=7 (111), Max DET=15 (1111)
+      packed[97] = 0b01111111
+
+      voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+
+      expect(unpacked[13]).toBe(7) // Rate scaling max (3 bits)
+      expect(unpacked[14]).toBe(15) // Detune max (4 bits)
+    })
+
+    it("should correctly extract amp mod and key velocity sensitivity", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Mod sens byte: bits 0-1 = AMS, bits 2-4 = KVS
+      packed[98] = 0b00011011 // AMS=3 (11), KVS=6 (110)
+
+      voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+
+      expect(unpacked[15]).toBe(3) // Amp mod sens (2 bits)
+      expect(unpacked[18]).toBe(6) // Key velocity sens (3 bits)
+    })
+
+    it("should correctly unpack output level", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[99] = 99 // Output level
+
+      voice._unpackOperatorPackedParams(packed, unpacked, 85, 0)
+
+      expect(unpacked[16]).toBe(99)
+    })
+  })
+
+  describe("_unpackOperatorFrequency", () => {
+    it("should correctly unpack frequency mode (ratio vs fixed)", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Test ratio mode
+      packed[100] = 0b00001010 // Mode=0 (ratio), Coarse=5
+      voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
+      expect(unpacked[17]).toBe(0) // Ratio mode
+      expect(unpacked[19]).toBe(5) // Coarse freq
+
+      // Test fixed mode
+      packed[100] = 0b00001011 // Mode=1 (fixed), Coarse=5
+      voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
+      expect(unpacked[17]).toBe(1) // Fixed mode
+      expect(unpacked[19]).toBe(5) // Coarse freq
+    })
+
+    it("should handle maximum frequency coarse value (31)", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Max coarse = 31 (5 bits)
+      packed[100] = 0b00111111 // Mode=1, Coarse=31
+
+      voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
+
+      expect(unpacked[19]).toBe(31) // Coarse max (5 bits)
+    })
+
+    it("should correctly unpack OSC detune and frequency fine", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Detune/Fine byte: bits 0-2 = OSC DET, bits 3-6 = FREQ FINE
+      packed[101] = 0b01011101 // Detune=5 (101), Fine=11 (1011)
+
+      voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
+
+      expect(unpacked[20]).toBe(5) // OSC Detune (3 bits)
+      expect(unpacked[21]).toBe(11) // Fine freq (4 bits)
+    })
+
+    it("should handle maximum detune and fine frequency", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Max Detune=7 (111), Max Fine=15 (1111)
+      packed[101] = 0b01111111
+
+      voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
+
+      expect(unpacked[20]).toBe(7) // OSC Detune max (3 bits)
+      expect(unpacked[21]).toBe(15) // Fine freq max (4 bits)
+    })
+  })
+
+  describe("_unpackOperator", () => {
+    it("should call all sub-helpers in correct order", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Set test values in all sections
+      packed[85] = 99 // EG Rate 1
+      packed[93] = 60 // Break point
+      packed[96] = 0b1111 // Curves
+      packed[100] = 0b11111 // Freq
+
+      voice._unpackOperator(packed, unpacked, 85, 0)
+
+      // Verify each section was unpacked
+      expect(unpacked[0]).toBe(99) // EG
+      expect(unpacked[8]).toBe(60) // Scaling
+      expect(unpacked[11]).toBe(3) // Curves
+      expect(unpacked[17]).toBe(1) // Mode
+    })
+  })
+
+  describe("_unpackOperators", () => {
+    it("should correctly reverse operator order", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Mark each operator with unique value at EG Rate 1
+      for (let op = 0; op < 6; op++) {
+        const offset = op * 17
+        packed[offset] = (op + 1) * 10 // OP6=10, OP5=20, ..., OP1=60
+      }
+
+      voice._unpackOperators(packed, unpacked)
+
+      // Verify reversal: unpacked OP1 should have value from packed OP6 position
+      expect(unpacked[0]).toBe(60) // OP1 (from packed[85])
+      expect(unpacked[23]).toBe(50) // OP2 (from packed[68])
+      expect(unpacked[46]).toBe(40) // OP3 (from packed[51])
+      expect(unpacked[69]).toBe(30) // OP4 (from packed[34])
+      expect(unpacked[92]).toBe(20) // OP5 (from packed[17])
+      expect(unpacked[115]).toBe(10) // OP6 (from packed[0])
+    })
+
+    it("should unpack all 6 operators completely", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Fill with test data
+      for (let i = 0; i < 102; i++) {
+        packed[i] = i % 128
+      }
+
+      voice._unpackOperators(packed, unpacked)
+
+      // Verify all operator sections have data
+      for (let op = 0; op < 6; op++) {
+        const offset = op * DX7Voice.UNPACKED_OP_SIZE
+        // Check that at least one value was unpacked (not all zeros)
+        let hasData = false
+        for (let i = 0; i < DX7Voice.UNPACKED_OP_SIZE; i++) {
+          if (unpacked[offset + i] !== 0) {
+            hasData = true
+            break
+          }
+        }
+        expect(hasData).toBe(true)
+      }
+    })
+  })
+
+  describe("_unpackPitchEG", () => {
+    it("should correctly unpack pitch EG rates", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[102] = 95 // Rate 1
+      packed[103] = 67 // Rate 2
+      packed[104] = 95 // Rate 3
+      packed[105] = 60 // Rate 4
+
+      voice._unpackPitchEG(packed, unpacked)
+
+      expect(unpacked[138]).toBe(95)
+      expect(unpacked[139]).toBe(67)
+      expect(unpacked[140]).toBe(95)
+      expect(unpacked[141]).toBe(60)
+    })
+
+    it("should correctly unpack pitch EG levels", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[106] = 50 // Level 1
+      packed[107] = 50 // Level 2
+      packed[108] = 50 // Level 3
+      packed[109] = 50 // Level 4
+
+      voice._unpackPitchEG(packed, unpacked)
+
+      expect(unpacked[142]).toBe(50)
+      expect(unpacked[143]).toBe(50)
+      expect(unpacked[144]).toBe(50)
+      expect(unpacked[145]).toBe(50)
+    })
+
+    it("should handle maximum pitch EG values", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      for (let i = 102; i <= 109; i++) {
+        packed[i] = 99
+      }
+
+      voice._unpackPitchEG(packed, unpacked)
+
+      for (let i = 138; i <= 145; i++) {
+        expect(unpacked[i]).toBe(99)
+      }
+    })
+  })
+
+  describe("_unpackGlobalParams", () => {
+    it("should correctly unpack algorithm", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[110] = 16 // Algorithm 17 (0-indexed)
+
+      voice._unpackGlobalParams(packed, unpacked)
+
+      expect(unpacked[146]).toBe(16)
+    })
+
+    it("should correctly unpack feedback and OSC sync", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // Feedback byte: bits 0-2 = Feedback, bit 3 = OSC Sync
+      packed[111] = 0b00001111 // Feedback=7, OSC Sync=1
+
+      voice._unpackGlobalParams(packed, unpacked)
+
+      expect(unpacked[147]).toBe(7) // Feedback
+      expect(unpacked[148]).toBe(1) // OSC Sync
+    })
+
+    it("should correctly unpack LFO parameters", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[112] = 35 // LFO Speed
+      packed[113] = 10 // LFO Delay
+      packed[114] = 5 // LFO PM Depth
+      packed[115] = 3 // LFO AM Depth
+
+      voice._unpackGlobalParams(packed, unpacked)
+
+      expect(unpacked[149]).toBe(35)
+      expect(unpacked[150]).toBe(10)
+      expect(unpacked[151]).toBe(5)
+      expect(unpacked[152]).toBe(3)
+    })
+
+    it("should correctly unpack LFO sync, wave, and PM sens", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      // LFO params byte: bit 0 = Key Sync, bits 1-3 = Wave, bits 4-6 = PM Sens
+      packed[116] = 0b00110101 // Key Sync=1, Wave=2 (010), PM Sens=3 (011)
+
+      voice._unpackGlobalParams(packed, unpacked)
+
+      expect(unpacked[153]).toBe(1) // LFO Key Sync
+      expect(unpacked[154]).toBe(2) // LFO Wave
+      expect(unpacked[155]).toBe(3) // LFO PM Sens
+    })
+
+    it("should correctly unpack transpose", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      packed[117] = 12 // Transpose = C0 - 12 semitones
+
+      voice._unpackGlobalParams(packed, unpacked)
+
+      expect(unpacked[157]).toBe(12)
+    })
+  })
+
+  describe("_unpackName", () => {
+    it("should correctly copy voice name", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      const name = "TEST VOICE"
+      for (let i = 0; i < name.length; i++) {
+        packed[118 + i] = name.charCodeAt(i)
+      }
+
+      voice._unpackName(packed, unpacked)
+
+      for (let i = 0; i < name.length; i++) {
+        expect(unpacked[159 + i]).toBe(name.charCodeAt(i))
+      }
+    })
+
+    it("should handle full 10-character names", () => {
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+      const name = "BRASS     " // 10 chars
+      for (let i = 0; i < 10; i++) {
+        packed[118 + i] = name.charCodeAt(i)
+      }
+
+      voice._unpackName(packed, unpacked)
+
+      for (let i = 0; i < 10; i++) {
+        expect(unpacked[159 + i]).toBe(name.charCodeAt(i))
+      }
+    })
+  })
+
+  describe("_packOperatorEG", () => {
+    it("should correctly pack operator EG rates", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[0] = 99
+      unpacked[1] = 75
+      unpacked[2] = 50
+      unpacked[3] = 25
+
+      DX7Voice._packOperatorEG(unpacked, packed, 0, 85)
+
+      expect(packed[85]).toBe(99)
+      expect(packed[86]).toBe(75)
+      expect(packed[87]).toBe(50)
+      expect(packed[88]).toBe(25)
+    })
+
+    it("should correctly pack operator EG levels", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[4] = 99
+      unpacked[5] = 80
+      unpacked[6] = 40
+      unpacked[7] = 0
+
+      DX7Voice._packOperatorEG(unpacked, packed, 0, 85)
+
+      expect(packed[89]).toBe(99)
+      expect(packed[90]).toBe(80)
+      expect(packed[91]).toBe(40)
+      expect(packed[92]).toBe(0)
+    })
+  })
+
+  describe("_packOperatorScaling", () => {
+    it("should correctly pack keyboard scaling parameters", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[8] = 60 // Break point
+      unpacked[9] = 50 // Left scale depth
+      unpacked[10] = 75 // Right scale depth
+
+      DX7Voice._packOperatorScaling(unpacked, packed, 0, 85)
+
+      expect(packed[93]).toBe(60)
+      expect(packed[94]).toBe(50)
+      expect(packed[95]).toBe(75)
+    })
+  })
+
+  describe("_packOperatorPackedParams", () => {
+    it("should correctly combine left and right curves", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[11] = 3 // Left curve
+      unpacked[12] = 2 // Right curve
+
+      DX7Voice._packOperatorPackedParams(unpacked, packed, 0, 85)
+
+      expect(packed[96]).toBe(0b00001011) // LC=3, RC=2
+    })
+
+    it("should correctly combine rate scaling and detune", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[13] = 5 // Rate scaling
+      unpacked[14] = 11 // Detune
+
+      DX7Voice._packOperatorPackedParams(unpacked, packed, 0, 85)
+
+      expect(packed[97]).toBe(0b01011101) // RS=5, DET=11
+    })
+
+    it("should correctly combine amp mod and key velocity sens", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[15] = 3 // Amp mod sens
+      unpacked[18] = 6 // Key velocity sens
+
+      DX7Voice._packOperatorPackedParams(unpacked, packed, 0, 85)
+
+      expect(packed[98]).toBe(0b00011011) // AMS=3, KVS=6
+    })
+
+    it("should apply bit masks correctly", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      // Set values beyond their bit ranges
+      unpacked[11] = 0xff // LC should be masked to 2 bits (3)
+      unpacked[12] = 0xff // RC should be masked to 2 bits (3)
+
+      DX7Voice._packOperatorPackedParams(unpacked, packed, 0, 85)
+
+      expect(packed[96]).toBe(0b00001111) // Both maxed at 3
+    })
+  })
+
+  describe("_packOperatorFrequency", () => {
+    it("should correctly combine mode and frequency coarse", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[17] = 1 // Mode (fixed)
+      unpacked[19] = 5 // Coarse
+
+      DX7Voice._packOperatorFrequency(unpacked, packed, 0, 85)
+
+      expect(packed[100]).toBe(0b00001011) // Mode=1, Coarse=5
+    })
+
+    it("should correctly combine OSC detune and fine frequency", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[20] = 5 // OSC Detune
+      unpacked[21] = 11 // Fine freq
+
+      DX7Voice._packOperatorFrequency(unpacked, packed, 0, 85)
+
+      expect(packed[101]).toBe(0b01011101) // Detune=5, Fine=11
+    })
+  })
+
+  describe("_packOperators", () => {
+    it("should correctly reverse operator order when packing", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      // Mark each operator with unique value at EG Rate 1
+      for (let op = 0; op < 6; op++) {
+        const offset = op * DX7Voice.UNPACKED_OP_SIZE // 23 bytes per operator
+        unpacked[offset] = (op + 1) * 10 // OP1=10, OP2=20, OP3=30, OP4=40, OP5=50, OP6=60
+      }
+
+      DX7Voice._packOperators(unpacked, packed)
+
+      // Verify reversal: DX7 packed format has operators reversed
+      expect(packed[85]).toBe(10) // OP1 data -> packed[85]
+      expect(packed[68]).toBe(20) // OP2 data -> packed[68]
+      expect(packed[51]).toBe(30) // OP3 data -> packed[51]
+      expect(packed[34]).toBe(40) // OP4 data -> packed[34]
+      expect(packed[17]).toBe(50) // OP5 data -> packed[17]
+      expect(packed[0]).toBe(60) // OP6 data -> packed[0]
+    })
+  })
+
+  describe("_packPitchEG", () => {
+    it("should correctly pack pitch EG rates and levels", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[138] = 95
+      unpacked[139] = 67
+      unpacked[140] = 95
+      unpacked[141] = 60
+      unpacked[142] = 50
+      unpacked[143] = 50
+      unpacked[144] = 50
+      unpacked[145] = 50
+
+      DX7Voice._packPitchEG(unpacked, packed)
+
+      expect(packed[102]).toBe(95)
+      expect(packed[103]).toBe(67)
+      expect(packed[104]).toBe(95)
+      expect(packed[105]).toBe(60)
+      expect(packed[106]).toBe(50)
+      expect(packed[107]).toBe(50)
+      expect(packed[108]).toBe(50)
+      expect(packed[109]).toBe(50)
+    })
+  })
+
+  describe("_packGlobalParams", () => {
+    it("should correctly pack algorithm", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[146] = 16
+
+      DX7Voice._packGlobalParams(unpacked, packed)
+
+      expect(packed[110]).toBe(16)
+    })
+
+    it("should correctly combine feedback and OSC sync", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[147] = 7 // Feedback
+      unpacked[148] = 1 // OSC Sync
+
+      DX7Voice._packGlobalParams(unpacked, packed)
+
+      expect(packed[111]).toBe(0b00001111) // Feedback=7, Sync=1
+    })
+
+    it("should correctly pack LFO parameters", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[149] = 35
+      unpacked[150] = 10
+      unpacked[151] = 5
+      unpacked[152] = 3
+
+      DX7Voice._packGlobalParams(unpacked, packed)
+
+      expect(packed[112]).toBe(35)
+      expect(packed[113]).toBe(10)
+      expect(packed[114]).toBe(5)
+      expect(packed[115]).toBe(3)
+    })
+
+    it("should correctly combine LFO sync, wave, and PM sens", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      unpacked[153] = 1 // Key Sync
+      unpacked[154] = 2 // Wave
+      unpacked[155] = 3 // PM Sens
+
+      DX7Voice._packGlobalParams(unpacked, packed)
+
+      expect(packed[116]).toBe(0b00110101)
+    })
+  })
+
+  describe("_packName", () => {
+    it("should correctly copy voice name", () => {
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
+
+      const name = "TEST VOICE"
+      for (let i = 0; i < name.length; i++) {
+        unpacked[159 + i] = name.charCodeAt(i)
+      }
+
+      DX7Voice._packName(unpacked, packed)
+
+      for (let i = 0; i < name.length; i++) {
+        expect(packed[118 + i]).toBe(name.charCodeAt(i))
+      }
+    })
+  })
+
+  describe("pack/unpack round-trip with helpers", () => {
+    it("should maintain data integrity through unpack->pack cycle", () => {
+      const originalData = new Array(DX7Voice.PACKED_SIZE).fill(0)
+
+      // Set various test values
+      originalData[0] = 50 // OP6 EG Rate 1
+      originalData[85] = 99 // OP1 EG Rate 1
+      originalData[110] = 16 // Algorithm
+      originalData[111] = 7 // Feedback
+
+      const voice = new DX7Voice(originalData)
+      const unpacked = voice.unpack()
+      const repacked = DX7Voice.pack(unpacked)
+
+      for (let i = 0; i < DX7Voice.PACKED_SIZE; i++) {
+        expect(repacked[i]).toBe(originalData[i] & 0x7f)
+      }
+    })
+
+    it("should handle complex voice data correctly", () => {
+      // Use the real ROM data test case
+      const voice = DX7Voice.createDefault()
+      const unpacked1 = voice.unpack()
+      const packed = DX7Voice.pack(unpacked1)
+      const voice2 = new DX7Voice(packed)
+      const unpacked2 = voice2.unpack()
+
+      // Both unpacked versions should be identical
+      for (let i = 0; i < DX7Voice.UNPACKED_SIZE; i++) {
+        expect(unpacked2[i]).toBe(unpacked1[i])
+      }
     })
   })
 })

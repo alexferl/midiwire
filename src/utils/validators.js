@@ -77,12 +77,5 @@ export function isValidPitchBend(value) {
  * @returns {boolean}
  */
 export function isValidPitchBendBytes(msb, lsb) {
-  return (
-    Number.isInteger(msb) &&
-    msb >= 0 &&
-    msb <= 127 &&
-    Number.isInteger(lsb) &&
-    lsb >= 0 &&
-    lsb <= 127
-  )
+  return Number.isInteger(msb) && msb >= 0 && msb <= 127 && Number.isInteger(lsb) && lsb >= 0 && lsb <= 127
 }

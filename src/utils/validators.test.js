@@ -14,21 +14,7 @@ import {
 describe("Validators - Complete Tests", () => {
   describe("isValidChannel", () => {
     const validChannels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-    const invalidChannels = [
-      0,
-      17,
-      -1,
-      100,
-      1.5,
-      0.5,
-      NaN,
-      Infinity,
-      -Infinity,
-      null,
-      "",
-      "1",
-      undefined,
-    ]
+    const invalidChannels = [0, 17, -1, 100, 1.5, 0.5, NaN, Infinity, -Infinity, null, "", "1", undefined]
 
     it("should validate all valid channels 1-16", () => {
       validChannels.forEach((channel) => {
@@ -149,21 +135,7 @@ describe("Validators - Complete Tests", () => {
     })
 
     it("should reject invalid 14-bit CC numbers", () => {
-      const invalid = [
-        -1,
-        32,
-        100,
-        127,
-        128,
-        1.5,
-        NaN,
-        Infinity,
-        -Infinity,
-        null,
-        "",
-        "1",
-        undefined,
-      ]
+      const invalid = [-1, 32, 100, 127, 128, 1.5, NaN, Infinity, -Infinity, null, "", "1", undefined]
       invalid.forEach((cc) => {
         expect(isValid14BitCC(cc)).toBe(false)
       })

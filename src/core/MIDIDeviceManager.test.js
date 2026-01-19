@@ -161,9 +161,7 @@ describe("MIDIDeviceManager", () => {
 
     it("should prevent concurrent connections", async () => {
       const mockMidi = {
-        setOutput: vi
-          .fn()
-          .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
+        setOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
         getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
         connection: {
           on: vi.fn(),
@@ -173,8 +171,7 @@ describe("MIDIDeviceManager", () => {
       deviceManager.setMIDI(mockMidi)
 
       const select = document.createElement("select")
-      select.innerHTML =
-        '<option value="">Select a device</option><option value="0">Device 1</option>'
+      select.innerHTML = '<option value="">Select a device</option><option value="0">Device 1</option>'
 
       let connectCount = 0
       deviceManager.connectDeviceSelection(select, async () => {

@@ -217,14 +217,8 @@ describe("MIDIConnection", () => {
       connection.midiAccess.onstatechange({ port: mockPort })
 
       // Should emit devicechange and outputdisconnect (code emits for ALL disconnects)
-      expect(connection.emit).toHaveBeenCalledWith(
-        CONNECTION_EVENTS.DEVICE_CHANGE,
-        expect.any(Object),
-      )
-      expect(connection.emit).toHaveBeenCalledWith(
-        CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED,
-        expect.any(Object),
-      )
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.DEVICE_CHANGE, expect.any(Object))
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, expect.any(Object))
       expect(connection.output).not.toBeNull() // Still connected to original output
     })
 
@@ -258,27 +252,21 @@ describe("MIDIConnection", () => {
       global.navigator.requestMIDIAccess = undefined
       const connection = new MIDIConnection()
 
-      await expect(connection.requestAccess()).rejects.toThrow(
-        "Web MIDI API is not supported in this browser",
-      )
+      await expect(connection.requestAccess()).rejects.toThrow("Web MIDI API is not supported in this browser")
     })
 
     it("should handle SecurityError", async () => {
       global.navigator.requestMIDIAccess = vi.fn().mockRejectedValue({ name: "SecurityError" })
 
       const connection = new MIDIConnection()
-      await expect(connection.requestAccess()).rejects.toThrow(
-        "MIDI access denied. SysEx requires user permission.",
-      )
+      await expect(connection.requestAccess()).rejects.toThrow("MIDI access denied. SysEx requires user permission.")
     })
 
     it("should handle other errors", async () => {
       global.navigator.requestMIDIAccess = vi.fn().mockRejectedValue(new Error("Unknown error"))
 
       const connection = new MIDIConnection()
-      await expect(connection.requestAccess()).rejects.toThrow(
-        "Failed to get MIDI access: Unknown error",
-      )
+      await expect(connection.requestAccess()).rejects.toThrow("Failed to get MIDI access: Unknown error")
     })
   })
 
@@ -395,9 +383,7 @@ describe("MIDIConnection", () => {
 
     it("should throw error if MIDI access not initialized", async () => {
       const connection = new MIDIConnection()
-      await expect(connection.connect()).rejects.toThrow(
-        "MIDI access not initialized. Call requestAccess() first.",
-      )
+      await expect(connection.connect()).rejects.toThrow("MIDI access not initialized. Call requestAccess() first.")
     })
 
     it("should throw error if no outputs available", async () => {
@@ -436,15 +422,9 @@ describe("MIDIConnection", () => {
       await expect(connection.connectInput(0, "not a function")).rejects.toThrow(
         /onMessage callback must be a function/,
       )
-      await expect(connection.connectInput(0, null)).rejects.toThrow(
-        /onMessage callback must be a function/,
-      )
-      await expect(connection.connectInput(0, undefined)).rejects.toThrow(
-        /onMessage callback must be a function/,
-      )
-      await expect(connection.connectInput(0, 123)).rejects.toThrow(
-        /onMessage callback must be a function/,
-      )
+      await expect(connection.connectInput(0, null)).rejects.toThrow(/onMessage callback must be a function/)
+      await expect(connection.connectInput(0, undefined)).rejects.toThrow(/onMessage callback must be a function/)
+      await expect(connection.connectInput(0, 123)).rejects.toThrow(/onMessage callback must be a function/)
     })
 
     it("should connect to first available input by default", async () => {
@@ -504,18 +484,14 @@ describe("MIDIConnection", () => {
       const connection = new MIDIConnection()
       await connection.requestAccess()
 
-      await expect(connection.connectInput(0, mockOnMessage)).rejects.toThrow(
-        "No MIDI input devices available",
-      )
+      await expect(connection.connectInput(0, mockOnMessage)).rejects.toThrow("No MIDI input devices available")
     })
 
     it("should throw error for out of range index", async () => {
       const connection = new MIDIConnection()
       await connection.requestAccess()
 
-      await expect(connection.connectInput(99, mockOnMessage)).rejects.toThrow(
-        "Input index 99 out of range",
-      )
+      await expect(connection.connectInput(99, mockOnMessage)).rejects.toThrow("Input index 99 out of range")
     })
 
     it("should throw error if input device not found", async () => {
@@ -587,10 +563,7 @@ describe("MIDIConnection", () => {
 
       connection.send([0x90, 60, 100])
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to send MIDI message:",
-        expect.any(Error),
-      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to send MIDI message:", expect.any(Error))
       consoleErrorSpy.mockRestore()
     })
   })
