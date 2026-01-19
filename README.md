@@ -107,7 +107,7 @@ Or use directly in the browser:
 ### Programmatic API
 
 ```javascript
-import { createMIDIController, CONTROLLER_EVENTS } from "midiwire";
+import { CONTROLLER_EVENTS, createMIDIController } from "midiwire";
 
 // Initialize
 const midi = await createMIDIController({
@@ -143,7 +143,7 @@ midi.on(CONTROLLER_EVENTS.CC_SEND, ({ cc, value, channel }) => {
 ### SysEx and Bidirectional MIDI
 
 ```javascript
-import { createMIDIController, CONTROLLER_EVENTS, parseSysEx } from "midiwire";
+import { CONTROLLER_EVENTS, createMIDIController, parseSysEx } from "midiwire";
 
 // Enable SysEx and connect input/output
 const midi = await createMIDIController({
@@ -174,7 +174,7 @@ midi.on(CONTROLLER_EVENTS.CC_RECV, ({ cc, value, channel }) => {
 For quick prototypes and demos, use `createMIDIDeviceManager` which bundles a MIDIController with device management utilities:
 
 ```javascript
-import { createMIDIDeviceManager, CONTROLLER_EVENTS } from "midiwire";
+import { CONTROLLER_EVENTS, createMIDIDeviceManager } from "midiwire";
 
 // Check browser support first
 if (!navigator.requestMIDIAccess) {
@@ -456,7 +456,7 @@ midiwire includes comprehensive utility functions for MIDI data manipulation:
 #### MIDI Note Utilities
 
 ```javascript
-import { noteNameToNumber, noteNumberToName, noteToFrequency, frequencyToNote } from "midiwire";
+import { frequencyToNote, noteNameToNumber, noteNumberToName, noteToFrequency } from "midiwire";
 
 // Convert note names to MIDI numbers
 const midiNote = noteNameToNumber("C4"); // 60
@@ -490,7 +490,7 @@ const frequency = denormalize14BitValue(8192, 20, 20000); // 10010 Hz
 Create and manipulate System Exclusive messages:
 
 ```javascript
-import { createSysEx, isSysEx, encode7Bit, decode7Bit } from "midiwire";
+import { createSysEx, decode7Bit, encode7Bit, isSysEx } from "midiwire";
 
 // Create SysEx message
 createSysEx(0x43, [0x20, 0x7F, 0x1C]);
@@ -509,7 +509,7 @@ const decoded = decode7Bit(encoded);
 Validate MIDI parameters before use:
 
 ```javascript
-import { isValidChannel, isValidCC, isValidNote, isValidMIDIValue } from "midiwire";
+import { isValidCC, isValidChannel, isValidMIDIValue, isValidNote } from "midiwire";
 
 // Validate MIDI parameters
 if (isValidChannel(channel)) {
@@ -696,7 +696,7 @@ midi.sendCC(74, 100);  // Send to synth
 For low-level MIDI access, use the `MIDIConnection` class accessible via `midi.connection`:
 
 ```javascript
-import { createMIDIController, CONNECTION_EVENTS } from "midiwire";
+import { CONNECTION_EVENTS, createMIDIController } from "midiwire";
 
 const midi = await createMIDIController({ sysex: true });
 const connection = midi.connection;
