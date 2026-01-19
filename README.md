@@ -1,4 +1,4 @@
-# midiwire
+# midiwire [![codecov](https://codecov.io/gh/alexferl/midiwire/graph/badge.svg?token=k9OTOMHQpf)](https://codecov.io/gh/alexferl/midiwire)
 
 A modern, declarative JavaScript library for creating browser-based MIDI controllers. Build synth patch editors, hardware controllers, and MIDI utilities with simple HTML data attributes or a powerful programmatic API.
 
