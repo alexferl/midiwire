@@ -44,6 +44,10 @@
     "type": "git",
     "url": "git+https://github.com/alexferl/midiwire.git"
   },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
     "@vitest/coverage-v8": "4.0.17",
