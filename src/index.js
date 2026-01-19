@@ -155,6 +155,16 @@ export async function createMIDIDeviceManager(options = {}) {
 export { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 export { EventEmitter } from "./core/EventEmitter.js"
 export {
+  DX7Error,
+  DX7ParseError,
+  DX7ValidationError,
+  MIDIAccessError,
+  MIDIConnectionError,
+  MIDIDeviceError,
+  MIDIError,
+  MIDIValidationError,
+} from "./core/errors.js"
+export {
   CONNECTION_EVENTS,
   CONNECTION_EVENTS as CONN,
   MIDIConnection,
