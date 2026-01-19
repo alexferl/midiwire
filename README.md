@@ -841,4 +841,5 @@ npm run lint
 
 ## Credits
 
-Inspired by [ccynthmata](https://github.com/synthmata/ccynthmata) by synthmata.
+- Inspired by [synthmata/ccynthmata](https://github.com/synthmata/ccynthmata).
+- DX7 implementation based on the work of [asb2m10/dexed](https://github.com/asb2m10/dexed) and various DX7 SysEx documentation resources.
