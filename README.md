@@ -1,4 +1,4 @@
-# midiwire [![codecov](https://codecov.io/gh/alexferl/midiwire/graph/badge.svg?token=k9OTOMHQpf)](https://codecov.io/gh/alexferl/midiwire)
+# midiwire [![CI](https://github.com/alexferl/midiwire/actions/workflows/ci.yml/badge.svg)](https://github.com/alexferl/midiwire/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/alexferl/midiwire/branch/master/graph/badge.svg)](https://codecov.io/gh/alexferl/midiwire) [![npm version](https://badge.fury.io/js/midiwire.svg)](https://badge.fury.io/js/midiwire) [![Bundle Size](https://img.shields.io/bundlephobia/minzip/midiwire.svg)](https://bundlephobia.com/package/midiwire) [![Web MIDI API](https://img.shields.io/badge/Web%20MIDI-API%20Support-orange.svg)](https://caniuse.com/midi)
 
 A modern, declarative JavaScript library for creating browser-based MIDI controllers. Build synth patch editors, hardware controllers, and MIDI utilities with simple HTML data attributes or a powerful programmatic API.
 
