@@ -378,11 +378,15 @@ document.body.appendChild(slider);`;
         const channel = window.midi.options.channel;
 
         console.log(`Playing Cmaj7 chord: notes ${chord.join(", ")}, velocity ${velocity}, channel ${channel}`);
-        chord.forEach(note => window.midi.sendNoteOn(note, velocity, channel));
+        chord.forEach(note => {
+          window.midi.sendNoteOn(note, velocity, channel);
+        });
 
         setTimeout(() => {
           console.log(`Releasing Cmaj7 chord: notes ${chord.join(", ")}, channel ${channel}`);
-          chord.forEach(note => window.midi.sendNoteOff(note, channel));
+          chord.forEach(note => {
+            window.midi.sendNoteOff(note, channel);
+          });
         }, 1000);
       });
 

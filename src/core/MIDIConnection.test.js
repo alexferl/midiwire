@@ -433,13 +433,18 @@ describe("MIDIConnection", () => {
       const connection = new MIDIConnection()
       await connection.requestAccess()
 
-      await expect(connection.connectInput(0, "not a function")).rejects.toThrow(TypeError)
       await expect(connection.connectInput(0, "not a function")).rejects.toThrow(
-        "onMessage callback must be a function",
+        /onMessage callback must be a function/,
       )
-      await expect(connection.connectInput(0, null)).rejects.toThrow(TypeError)
-      await expect(connection.connectInput(0, undefined)).rejects.toThrow(TypeError)
-      await expect(connection.connectInput(0, 123)).rejects.toThrow(TypeError)
+      await expect(connection.connectInput(0, null)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
+      await expect(connection.connectInput(0, undefined)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
+      await expect(connection.connectInput(0, 123)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
     })
 
     it("should connect to first available input by default", async () => {

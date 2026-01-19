@@ -53,14 +53,7 @@ export class MIDIDeviceManager {
     this.midi.connection.on(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, ({ device }) => {
       this.updateStatus(`Device disconnected: ${device.name}`, "error")
 
-      // Check if the disconnected device was the current one
       const wasCurrentDevice = this.currentDevice && device.name === this.currentDevice.name
-      console.log("Device disconnect:", {
-        deviceName: device.name,
-        currentDeviceName: this.currentDevice?.name,
-        wasCurrentDevice,
-        willUpdateConnection: wasCurrentDevice,
-      })
 
       if (wasCurrentDevice) {
         this.currentDevice = null

@@ -5,6 +5,8 @@
  * @see https://github.com/asb2m10/dexed
  */
 
+import { DX7ParseError, DX7ValidationError } from "../core/errors.js"
+
 /**
  * @typedef {Object} DX7OperatorJSON - JSON representation of a DX7 operator
  * @property {number} id - Operator number (1-6)
@@ -36,6 +38,7 @@
 
 /**
  * @typedef {Object} DX7BankJSON - JSON representation of a DX7 bank
+ * @property {string} version - Version string (e.g., "1.0")
  * @property {string} name - Bank name (e.g., filename)
  * @property {DX7VoiceIndexJSON[]} voices - Array of 32 voices
  */
@@ -208,12 +211,14 @@ export class DX7Voice {
    * Create a DX7Voice from raw 128-byte data
    * @param {Array<number>|Uint8Array} data - 128 bytes of voice data
    * @param {number} index - Voice index (0-31)
-   * @throws {Error} If data length is not exactly 128 bytes
+   * @throws {DX7ValidationError} If data length is not exactly 128 bytes
    */
   constructor(data, index = 0) {
     if (data.length !== DX7Voice.PACKED_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Invalid voice data length: expected ${DX7Voice.PACKED_SIZE} bytes, got ${data.length}`,
+        "length",
+        data.length,
       )
     }
 
@@ -249,12 +254,14 @@ export class DX7Voice {
    * Get a raw parameter value from the packed data
    * @param {number} offset - Byte offset in the voice data (0-127)
    * @returns {number} Parameter value (0-127)
-   * @throws {Error} If offset is out of range
+   * @throws {DX7ValidationError} If offset is out of range
    */
   getParameter(offset) {
     if (offset < 0 || offset >= DX7Voice.PACKED_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Parameter offset out of range: ${offset} (must be 0-${DX7Voice.PACKED_SIZE - 1})`,
+        "offset",
+        offset,
       )
     }
     return this.data[offset] & DX7Voice.MASK_7BIT
@@ -264,12 +271,14 @@ export class DX7Voice {
    * Get a parameter value from the unpacked 169-byte format
    * @param {number} offset - Byte offset in the unpacked data (0-168)
    * @returns {number} Parameter value (0-127)
-   * @throws {Error} If offset is out of range
+   * @throws {DX7ValidationError} If offset is out of range
    */
   getUnpackedParameter(offset) {
     if (offset < 0 || offset >= DX7Voice.UNPACKED_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Unpacked parameter offset out of range: ${offset} (must be 0-${DX7Voice.UNPACKED_SIZE - 1})`,
+        "offset",
+        offset,
       )
     }
     const unpacked = this.unpack()
@@ -283,8 +292,10 @@ export class DX7Voice {
    */
   setParameter(offset, value) {
     if (offset < 0 || offset >= DX7Voice.PACKED_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Parameter offset out of range: ${offset} (must be 0-${DX7Voice.PACKED_SIZE - 1})`,
+        "offset",
+        offset,
       )
     }
     this.data[offset] = value & DX7Voice.MASK_7BIT
@@ -433,8 +444,10 @@ export class DX7Voice {
    */
   static pack(unpacked) {
     if (unpacked.length !== DX7Voice.UNPACKED_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Invalid unpacked data length: expected ${DX7Voice.UNPACKED_SIZE} bytes, got ${unpacked.length}`,
+        "length",
+        unpacked.length,
       )
     }
 
@@ -638,7 +651,8 @@ export class DX7Voice {
    * Load a DX7 voice from a single voice SYX file
    * @param {File|Blob} file - SYX file (single voice in VCED format)
    * @returns {Promise<DX7Voice>}
-   * @throws {Error} If file cannot be read or parsed
+   * @throws {DX7ParseError} If file has invalid VCED header
+   * @throws {Error} If file cannot be read (FileReader error)
    */
   static async fromFile(file) {
     return new Promise((resolve, reject) => {
@@ -656,7 +670,7 @@ export class DX7Voice {
             bytes[4] !== DX7Voice.VCED_BYTE_COUNT_MSB ||
             bytes[5] !== DX7Voice.VCED_BYTE_COUNT_LSB
           ) {
-            throw new Error("Invalid VCED header")
+            throw new DX7ParseError("Invalid VCED header", "header", 0)
           }
 
           // Extract the 155 bytes of voice data
@@ -1053,8 +1067,10 @@ export class DX7Bank {
 
       for (let i = 0; i < DX7Bank.SYSEX_HEADER_SIZE; i++) {
         if (header[i] !== expectedHeader[i]) {
-          throw new Error(
+          throw new DX7ParseError(
             `Invalid SysEx header at position ${i}: expected ${expectedHeader[i].toString(16)}, got ${header[i].toString(16)}`,
+            "header",
+            i,
           )
         }
       }
@@ -1069,15 +1085,19 @@ export class DX7Bank {
       // Raw voice data, no SysEx wrapper
       voiceData = bytes
     } else {
-      throw new Error(
+      throw new DX7ValidationError(
         `Invalid data length: expected ${DX7Bank.VOICE_DATA_SIZE} or ${DX7Bank.SYSEX_SIZE} bytes, got ${bytes.length}`,
+        "length",
+        bytes.length,
       )
     }
 
     // Verify total size
     if (voiceData.length !== DX7Bank.VOICE_DATA_SIZE) {
-      throw new Error(
+      throw new DX7ValidationError(
         `Invalid voice data length: expected ${DX7Bank.VOICE_DATA_SIZE} bytes, got ${voiceData.length}`,
+        "length",
+        voiceData.length,
       )
     }
 
@@ -1108,11 +1128,11 @@ export class DX7Bank {
    * Replace a voice at the specified index
    * @param {number} index - Voice index (0-31)
    * @param {DX7Voice} voice - Voice to insert
-   * @throws {Error} If index is out of range
+   * @throws {DX7ValidationError} If index is out of range
    */
   replaceVoice(index, voice) {
     if (index < 0 || index >= DX7Bank.NUM_VOICES) {
-      throw new Error(`Invalid voice index: ${index}`)
+      throw new DX7ValidationError(`Invalid voice index: ${index}`, "index", index)
     }
 
     // Create a copy of the voice with the correct index
@@ -1180,8 +1200,9 @@ export class DX7Bank {
    * Load a DX7 bank from a file
    * @param {File|Blob} file - SYX file to load
    * @returns {Promise<DX7Bank>}
-   * @throws {Error} If file cannot be read or parsed
-   * @throws {Error} If data is not valid DX7 SYX format
+   * @throws {DX7ParseError} If file is a single voice file
+   * @throws {DX7ValidationError} If data is not valid DX7 SYX format
+   * @throws {Error} If file cannot be read (FileReader error)
    */
   static async fromFile(file) {
     return new Promise((resolve, reject) => {
@@ -1195,10 +1216,17 @@ export class DX7Bank {
           // Single voice files have format byte 0x00, banks have 0x09
           if (bytes[0] === DX7Bank.SYSEX_START && bytes[3] === DX7Voice.VCED_FORMAT_SINGLE) {
             // This is a single voice file - DX7Bank is for banks only
-            reject(new Error("This is a single voice file. Use DX7Voice.fromFile() instead."))
+            reject(
+              new DX7ParseError(
+                "This is a single voice file. Use DX7Voice.fromFile() instead.",
+                "format",
+                3,
+              ),
+            )
           } else {
-            // This is a bank file
-            const bank = new DX7Bank(e.target.result, fileName)
+            // This is a bank file - strip file extension from name
+            const bankName = fileName.replace(/\.[^/.]+$/, "")
+            const bank = new DX7Bank(e.target.result, bankName)
             resolve(bank)
           }
         } catch (err) {
@@ -1258,6 +1286,7 @@ export class DX7Bank {
     })
 
     return {
+      version: "1.0",
       name: this.name || "",
       voices: voices,
     }

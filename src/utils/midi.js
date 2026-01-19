@@ -1,3 +1,5 @@
+import { MIDIValidationError } from "../core/errors.js"
+
 /**
  * Clamp a value between min and max
  * @param {number} value - Value to clamp
@@ -55,6 +57,7 @@ export function denormalizeValue(midiValue, outputMin, outputMax, invert = false
  * Convert a note name to MIDI note number
  * @param {string} noteName - Note name (e.g., "C4", "A#3", "Bb5")
  * @returns {number} MIDI note number (0-127)
+ * @throws {MIDIValidationError} If noteName is not a valid note format
  */
 export function noteNameToNumber(noteName) {
   const notes = {
@@ -79,14 +82,14 @@ export function noteNameToNumber(noteName) {
 
   const match = noteName.match(/^([A-G][#b]?)(-?\d+)$/i)
   if (!match) {
-    throw new Error(`Invalid note name: ${noteName}`)
+    throw new MIDIValidationError(`Invalid note name: ${noteName}`, "note", noteName)
   }
 
   const [, note, octave] = match
   const noteValue = notes[note.toUpperCase()]
 
   if (noteValue === undefined) {
-    throw new Error(`Invalid note: ${note}`)
+    throw new MIDIValidationError(`Invalid note: ${note}`, "note", note)
   }
 
   const midiNote = (parseInt(octave, 10) + 1) * 12 + noteValue
