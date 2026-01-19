@@ -39,8 +39,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -56,11 +56,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run tests
+        run: npm test
+
       - name: Build library
-        run: npm run build
+        run: npm run build --if-present
 
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: npm publish
 
   release:
     name: Create GitHub Release
