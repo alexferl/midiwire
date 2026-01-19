@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DX7 Voice Manager - midiwire</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>🎹 DX7 Voice Manager</h1>
+
+  <div id="status" class="status">Initializing MIDI...</div>
+
+  <div class="section">
+    <h2>MIDI Configuration</h2>
+    <label for="device-select">Output Device</label>
+    <select id="device-select">
+      <option value="">Select a device</option>
+    </select>
+
+    <label for="channel-select" style="margin-top: 15px;">MIDI Channel</label>
+    <select id="channel-select">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
+      <option value="13">13</option>
+      <option value="14">14</option>
+      <option value="15">15</option>
+      <option value="16">16</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <h2>Voice Library</h2>
+
+    <div class="info-box">
+      <p><strong>Compatible with DX7 devices</strong> including KORG Volca FM, Reface DX, and other 6-operator FM synthesizers that support the DX7 SysEx format.</p>
+    </div>
+
+    <p style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
+      Supports DX7 bank files (32 voices) and single voices (VCED format)
+    </p>
+
+    <div class="file-input-wrapper">
+      <label for="bank-file" class="file-input-label">
+        Load SYX File
+      </label>
+      <input type="file" id="bank-file" accept=".syx">
+    </div>
+
+    <div id="loaded-bank" class="loaded-bank" style="display: none;">
+      <div class="bank-details">
+        <h3 id="bank-name-display">No bank loaded</h3>
+        <p id="bank-stats-display">Select a SYX file to begin</p>
+        <div class="voice-count" id="voice-count-display">0 voices</div>
+      </div>
+      <div class="bank-actions">
+        <button class="button button-secondary" id="export-bank-json" onclick="exportBankJSON()" style="display: none;">
+          Export JSON
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="voice-section" class="section" style="display: none;">
+    <h2>Patches</h2>
+    <div id="voice-list" class="voice-list"></div>
+  </div>
+
+  <script type="module">
+    import { createMIDIDeviceManager, DX7Bank, DX7Voice } from "../src/index.js";
+
+    let bank = null;
+    let deviceManager = null;
+
+    const status = document.getElementById("status");
+    const fileInput = document.getElementById("bank-file");
+    const voiceSection = document.getElementById("voice-section");
+    const voiceList = document.getElementById("voice-list");
+
+    async function initMIDI() {
+      try {
+        deviceManager = await createMIDIDeviceManager({
+          sysex: true, // Enable SysEx for DX7 voice dumps
+          onStatusUpdate: (message, state) => {
+            status.textContent = message;
+            status.className = state ? `status ${state}` : "status";
+          },
+          onConnectionUpdate: (device, midiInstance) => {
+            if (device && midiInstance) {
+              status.textContent = `Connected to ${device.name}`;
+              status.className = "status connected";
+            } else {
+              status.textContent = "Ready - Connect a MIDI device";
+              status.className = "status";
+            }
+            updateSendButtons();
+          },
+          onReady: (_midiInstance) => {
+            updateSendButtons();
+          }
+        });
+
+        const deviceSelect = document.getElementById("device-select");
+        const channelSelect = document.getElementById("channel-select");
+
+        deviceManager.setupDeviceListeners(() => {
+          deviceManager.populateDeviceList(deviceSelect);
+        });
+
+        deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.connectDeviceSelection(deviceSelect);
+        deviceManager.connectChannelSelection(channelSelect);
+      } catch (err) {
+        status.textContent = `MIDI initialization failed: ${err.message}`;
+        status.className = "status error";
+      }
+    }
+
+    async function loadBankFile(file) {
+      try {
+        status.textContent = `Loading ${file.name}...`;
+
+        try {
+          // Try to load as a bank first
+          bank = await DX7Bank.fromFile(file);
+          displayBank();
+          status.textContent = `Loaded bank: ${file.name}`;
+          status.className = "status success";
+        } catch (err) {
+          // If it's a single voice file, DX7Bank.fromFile will throw an error
+          if (err.message?.includes("Use DX7Voice.fromFile")) {
+            // Load as single voice instead
+            const voice = await DX7Voice.fromFile(file);
+
+            // Create a bank with the single voice
+            bank = new DX7Bank();
+            bank.voices.fill(DX7Voice.createDefault());
+            bank.voices[0] = voice;
+            bank.name = file.name; // Keep the full filename including extension
+
+            displayBank();
+            status.textContent = `Loaded single voice: ${voice.name}`;
+            status.className = "status success";
+          } else {
+            // Re-throw if it's a different error
+            throw err;
+          }
+        }
+      } catch (err) {
+        let errorMessage = `Error loading file: ${err.message}`
+
+        // Show additional details for custom error types
+        if (err.code) {
+          errorMessage += ` (Error code: ${err.code})`
+        }
+        if (err.validationType) {
+          errorMessage += ` [${err.validationType}]`
+        }
+        if (err.parseType) {
+          errorMessage += ` [${err.parseType}]`
+        }
+
+        status.textContent = errorMessage;
+        status.className = "status error";
+        console.error(err);
+      }
+    }
+
+    // Update the state of Send to DX7 buttons based on MIDI connection
+    function updateSendButtons() {
+      const sendButtons = document.querySelectorAll(".voice-actions .button-primary");
+      const isConnected = !!deviceManager?.currentDevice;
+
+      sendButtons.forEach(button => {
+        button.style.opacity = isConnected ? "1" : "0.5";
+        button.style.cursor = isConnected ? "pointer" : "not-allowed";
+        button.disabled = !isConnected;
+
+        // Update the CSS class to match the connection state
+        if (isConnected) {
+          button.classList.remove("disabled");
+          button.removeAttribute("data-tooltip");
+        } else {
+          button.classList.add("disabled");
+          button.setAttribute("data-tooltip", "Connect to a MIDI device first");
+        }
+      });
+    }
+
+    function displayBank() {
+      if (!bank) return;
+
+      const loadedBank = document.getElementById("loaded-bank");
+      const bankNameDisplay = document.getElementById("bank-name-display");
+      const bankStatsDisplay = document.getElementById("bank-stats-display");
+      const voiceCountDisplay = document.getElementById("voice-count-display");
+      const exportBankButton = document.getElementById("export-bank-json");
+
+      loadedBank.style.display = "flex";
+      bankNameDisplay.textContent = bank.name || "Unnamed Bank";
+
+      // Detect if this is a single voice file
+      const actualVoices = bank.voices.filter(v => v.name && v.name !== "Init Voice" && v.name !== "");
+      const isSingleVoice = actualVoices.length === 1;
+
+      if (isSingleVoice) {
+        bankStatsDisplay.textContent = "Voice file";
+        voiceCountDisplay.textContent = "1 voice";
+        exportBankButton.style.display = "none"; // Hide for single voice
+      } else {
+        bankStatsDisplay.textContent = "Bank file";
+        voiceCountDisplay.textContent = `${bank.voices.length} voices`;
+        exportBankButton.style.display = "block"; // Show for banks
+      }
+
+      voiceSection.style.display = "block";
+
+      voiceList.innerHTML = "";
+
+      // Only display actual voices (not default filler voices for single voice files)
+      const voicesToDisplay = isSingleVoice ? actualVoices : bank.voices;
+      const voiceIndices = isSingleVoice ? [bank.voices.indexOf(actualVoices[0])] : bank.voices.map((_, i) => i);
+
+      voicesToDisplay.forEach((voice, displayIndex) => {
+        const card = document.createElement("div");
+        card.className = "voice-card";
+
+        const voiceName = voice.name || "(Empty)";
+        const originalIndex = isSingleVoice ? voiceIndices[0] : displayIndex;
+
+        const isConnected = !!deviceManager?.currentDevice;
+
+        const sendButtonClass = isConnected ? "button button-primary" : "button button-primary disabled";
+
+        card.innerHTML = `
+          <div class="voice-header">
+            <span class="voice-number">${originalIndex + 1}</span>
+            <h3 class="voice-name" title="${voiceName}">${voiceName}</h3>
+          </div>
+          <div class="voice-actions">
+            <button class="${sendButtonClass}" ${!isConnected ? 'data-tooltip="Connect to a MIDI device first"' : ""} onclick="sendPatch(${originalIndex}, this)">
+              <span class="button-content">
+                <span class="spinner" style="display: none;"></span>
+                <span class="button-text">Send to DX7</span>
+              </span>
+            </button>
+            <button class="button button-secondary" onclick="exportPatch(${originalIndex})">
+              Export SYX
+            </button>
+            <button class="button button-secondary" onclick="exportPatchJSON(${originalIndex})">
+              Export JSON
+            </button>
+            <button class="button button-secondary" onclick="viewParameters(${originalIndex})">
+              Parameters
+            </button>
+          </div>
+        `;
+
+        voiceList.appendChild(card);
+      });
+
+      updateSendButtons();
+    }
+
+    window.sendPatch = (index, button) => {
+      if (!bank || !deviceManager?.midi?.connection?.output) {
+        status.textContent = "Error: No bank loaded or MIDI not connected";
+        status.className = "status error";
+        return;
+      }
+
+      const spinner = button.querySelector(".spinner");
+      const buttonText = button.querySelector(".button-text");
+      spinner.style.display = "inline-block";
+      buttonText.textContent = "Sending...";
+      button.disabled = true;
+
+      try {
+        const voice = bank.voices[index];
+        const sysex = voice.toSysEx();
+
+        // Note: toSysEx() already includes the 0xF0/0xF7 wrapper
+        deviceManager.midi.sendSysEx(sysex);
+
+        status.textContent = `Sent "${voice.name}" to DX7`;
+        status.className = "status success";
+      } catch (err) {
+        status.textContent = `Error sending voice: ${err.message}`;
+        status.className = "status error";
+        console.error(err);
+      } finally {
+        setTimeout(() => {
+          spinner.style.display = "none";
+          buttonText.textContent = "Send to DX7";
+          button.disabled = false;
+        }, 500);
+      }
+    };
+
+    window.exportPatch = (index) => {
+      if (!bank) {
+        status.textContent = "Error: No bank loaded";
+        status.className = "status error";
+        return;
+      }
+
+      try {
+        const voice = bank.voices[index];
+        const sysex = voice.toSysEx();
+
+        // Check if this is a single voice file by counting non-default voices
+        const nonDefaultVoices = bank.voices.filter(v => v.name && v.name !== "Init Voice" && v.name !== "").length;
+        const isSingleVoiceFile = nonDefaultVoices === 1;
+
+        let fileName;
+        if (isSingleVoiceFile) {
+          // For single voice files, use the original filename and ensure .syx extension
+          const baseName = bank.name.replace(/\.[^/.]+$/, ""); // Remove any existing extension
+          fileName = `${baseName}.syx`;
+        } else {
+          // For bank files, append the voice name
+          const voiceName = voice.name || "voice";
+          const safeName = voiceName.replace(/[^a-zA-Z0-9]/g, "_");
+          const bankFileName = bank.name ? bank.name.replace(/\.[^/.]+$/, "") : "";
+          const safeBankName = bankFileName.replace(/[^a-zA-Z0-9]/g, "_");
+          fileName = safeBankName ? `${safeBankName}_${safeName}.syx` : `${safeName}.syx`;
+        }
+
+        const blob = new Blob([sysex], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        status.textContent = `Exported "${voice.name}"`;
+        status.className = "status success";
+      } catch (err) {
+        status.textContent = `Error exporting voice: ${err.message}`;
+        status.className = "status error";
+        console.error(err);
+      }
+    };
+
+    window.exportPatchJSON = (index) => {
+      if (!bank) {
+        status.textContent = "Error: No bank loaded";
+        status.className = "status error";
+        return;
+      }
+
+      try {
+        const voice = bank.voices[index];
+        const jsonData = voice.toJSON();
+
+        // Check if this is a single voice file (bank.name is the original filename)
+        // or a bank file (bank.name doesn't end with .syx)
+        const isSingleVoiceFile = bank.name?.toLowerCase().endsWith(".syx");
+
+        let fileName;
+        if (isSingleVoiceFile) {
+          // For single voice files, use the original filename only (no voice name appended)
+          const baseName = bank.name.replace(/\.[^/.]+$/, ""); // Remove any existing extension
+          fileName = `${baseName}.json`;
+        } else {
+          // For bank files, append the voice name
+          const voiceName = voice.name || "voice";
+          const safeName = voiceName.replace(/[^a-zA-Z0-9]/g, "_");
+          const bankFileName = bank.name ? bank.name.replace(/\.[^/.]+$/, "") : "";
+          const safeBankName = bankFileName.replace(/[^a-zA-Z0-9]/g, "_");
+          fileName = safeBankName ? `${safeBankName}_${safeName}.json` : `${safeName}.json`;
+        }
+
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        status.textContent = `Exported "${voice.name}" as JSON`;
+        status.className = "status success";
+      } catch (err) {
+        status.textContent = `Error exporting voice JSON: ${err.message}`;
+        status.className = "status error";
+        console.error(err);
+      }
+    };
+
+    window.exportBankJSON = () => {
+      if (!bank) {
+        status.textContent = "Error: No bank loaded";
+        status.className = "status error";
+        return;
+      }
+
+      try {
+        const jsonData = bank.toJSON();
+
+        // Use bank name for filename, default if none
+        const bankFileName = bank.name || "DX7_Bank";
+        const safeBankName = bankFileName.replace(/\.[^/.]+$/, ""); // Remove extension
+        const fileName = `${safeBankName}.json`;
+
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        status.textContent = `Exported bank as JSON: ${fileName}`;
+        status.className = "status success";
+      } catch (err) {
+        status.textContent = `Error exporting bank JSON: ${err.message}`;
+        status.className = "status error";
+        console.error(err);
+      }
+    };
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        loadBankFile(file);
+      }
+    });
+
+    // Parameters modal functions
+    window.viewParameters = (index) => {
+      if (!bank) return;
+
+      const voice = bank.voices[index];
+      const modal = document.getElementById("parameters-modal");
+      const voiceNameEl = document.getElementById("modal-voice-name");
+      const parametersEl = document.getElementById("modal-parameters");
+
+      voiceNameEl.textContent = `${voice.name || "Unnamed Voice"} - Parameters`;
+
+      // Get voice data as JSON
+      const voiceData = voice.toJSON();
+
+      // Generate parameters HTML
+      let html = `
+        <div class="params-grid">
+          <div class="params-section">
+            <h3>Algorithm & Pitch</h3>
+            <div class="param-row">
+              <span class="param-label">Algorithm:</span>
+              <span class="param-value">${voiceData.global.algorithm}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Feedback:</span>
+              <span class="param-value">${voiceData.global.feedback}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Oscillator Sync:</span>
+              <span class="param-value">${voiceData.global.oscKeySync ? "On" : "Off"}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Speed:</span>
+              <span class="param-value">${voiceData.lfo.speed}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Delay:</span>
+              <span class="param-value">${voiceData.lfo.delay}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Pitch Mod:</span>
+              <span class="param-value">${voiceData.lfo.pmDepth}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Amp Mod:</span>
+              <span class="param-value">${voiceData.lfo.amDepth}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Sync:</span>
+              <span class="param-value">${voiceData.lfo.keySync ? "On" : "Off"}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">LFO Waveform:</span>
+              <span class="param-value">${voiceData.lfo.wave}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Pitch Mod Sensitivity:</span>
+              <span class="param-value">${voiceData.global.pitchModSens}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Transpose:</span>
+              <span class="param-value">${voiceData.global.transpose}</span>
+            </div>
+          </div>
+
+          <div class="params-section">
+            <h3>Pitch Envelope</h3>
+            <div class="param-row">
+              <span class="param-label">Rate 1:</span>
+              <span class="param-value">${voiceData.pitchEG.rates[0]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Rate 2:</span>
+              <span class="param-value">${voiceData.pitchEG.rates[1]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Rate 3:</span>
+              <span class="param-value">${voiceData.pitchEG.rates[2]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Rate 4:</span>
+              <span class="param-value">${voiceData.pitchEG.rates[3]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Level 1:</span>
+              <span class="param-value">${voiceData.pitchEG.levels[0]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Level 2:</span>
+              <span class="param-value">${voiceData.pitchEG.levels[1]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Level 3:</span>
+              <span class="param-value">${voiceData.pitchEG.levels[2]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Level 4:</span>
+              <span class="param-value">${voiceData.pitchEG.levels[3]}</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 25px; margin-bottom: 15px;">Operators</h3>
+        <div class="operators-grid">
+      `;
+
+      // Add operator parameters
+      voiceData.operators.forEach((operator, opIndex) => {
+        const opNum = opIndex + 1;
+        html += `
+          <div class="operator-card">
+            <h4>Operator ${opNum}</h4>
+            <div class="param-row">
+              <span class="param-label">Mode:</span>
+              <span class="param-value">${operator.osc.freq.mode}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Frequency:</span>
+              <span class="param-value">${operator.osc.freq.coarse}.${operator.osc.freq.fine}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Detune:</span>
+              <span class="param-value">${operator.osc.detune}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Output Level:</span>
+              <span class="param-value">${operator.output.level}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Velocity:</span>
+              <span class="param-value">${operator.key.velocity}</span>
+            </div>
+
+            <h5 style="margin-top: 15px; color: var(--primary);">Amplitude Envelope</h5>
+            <div class="param-row">
+              <span class="param-label small">R1:</span>
+              <span class="param-value">${operator.eg.rates[0]}</span>
+              <span class="param-label small">L1:</span>
+              <span class="param-value">${operator.eg.levels[0]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label small">R2:</span>
+              <span class="param-value">${operator.eg.rates[1]}</span>
+              <span class="param-label small">L2:</span>
+              <span class="param-value">${operator.eg.levels[1]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label small">R3:</span>
+              <span class="param-value">${operator.eg.rates[2]}</span>
+              <span class="param-label small">L3:</span>
+              <span class="param-value">${operator.eg.levels[2]}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label small">R4:</span>
+              <span class="param-value">${operator.eg.rates[3]}</span>
+              <span class="param-label small">L4:</span>
+              <span class="param-value">${operator.eg.levels[3]}</span>
+            </div>
+
+            <div class="param-row">
+              <span class="param-label">Breakpoint:</span>
+              <span class="param-value">${operator.key.breakPoint}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Scaling Left:</span>
+              <span class="param-value">${operator.scale.left.depth} ${operator.scale.left.curve}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Scaling Right:</span>
+              <span class="param-value">${operator.scale.right.depth} ${operator.scale.right.curve}</span>
+            </div>
+            <div class="param-row">
+              <span class="param-label">Amp Mod Sens:</span>
+              <span class="param-value">${operator.output.ampModSens}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      html += "</div>";
+      parametersEl.innerHTML = html;
+      modal.style.display = "block";
+      document.body.classList.add("modal-open");
+    };
+
+    window.closeParametersModal = () => {
+      document.getElementById("parameters-modal").style.display = "none";
+      document.body.classList.remove("modal-open");
+    };
+
+    // Close modal when clicking outside
+    window.onclick = (event) => {
+      const modal = document.getElementById("parameters-modal");
+      if (event.target === modal) {
+        modal.style.display = "none";
+        document.body.classList.remove("modal-open");
+      }
+    };
+
+    initMIDI();
+  </script>
+
+  <!-- Parameters Modal -->
+  <div id="parameters-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-voice-name">Voice Parameters</h2>
+        <span class="modal-close" onclick="closeParametersModal()">&times;</span>
+      </div>
+      <div id="modal-parameters" class="modal-body">
+        <!-- Parameters will be populated here -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>

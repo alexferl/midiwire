@@ -239,7 +239,7 @@
     import { createMIDIDeviceManager } from "../src/index.js";
 
     let deviceManager = null;
-    let currentDevice = null;
+    let _currentDevice = null;
     let controlCounter = 0;
 
     // Helper function to set up value display updates
@@ -275,7 +275,7 @@
         const control = document.querySelector(selector);
         if (control) {
           control.addEventListener("input", (e) => {
-            const value = parseInt(e.target.value);
+            const value = parseInt(e.target.value, 10);
             document.getElementById(display).textContent = max - value;
           });
         }
@@ -310,11 +310,11 @@
               status.className = "status connected";
               controlsContainer.style.display = "block";
               connectMessage.style.display = "none";
-              currentDevice = device;
+              _currentDevice = device;
             } else {
               controlsContainer.style.display = "none";
               connectMessage.style.display = "block";
-              currentDevice = null;
+              _currentDevice = null;
             }
           },
           onReady: (midi) => {
@@ -346,7 +346,7 @@
     }
 
     // Dynamic control functions
-    window.addControl = function() {
+    window.addControl = () => {
       const container = document.getElementById("dynamic-controls-container");
       const controlId = ++controlCounter;
       const ccNumber = 20 + controlId;
@@ -372,7 +372,7 @@
       updateControlCount();
     };
 
-    window.addInvertedControl = function() {
+    window.addInvertedControl = () => {
       const container = document.getElementById("dynamic-controls-container");
       const controlId = ++controlCounter;
       const ccNumber = 40 + controlId;
@@ -392,14 +392,14 @@
       const slider = controlDiv.querySelector("input");
       const display = controlDiv.querySelector(".value-display");
       slider.addEventListener("input", (e) => {
-        const value = parseInt(e.target.value);
+        const value = parseInt(e.target.value, 10);
         display.textContent = 127 - value;
       });
 
       updateControlCount();
     };
 
-    window.addCustomRangeControl = function() {
+    window.addCustomRangeControl = () => {
       const container = document.getElementById("dynamic-controls-container");
       const controlId = ++controlCounter;
       const ccNumber = 60 + controlId;
@@ -433,14 +433,14 @@
       updateControlCount();
     };
 
-    window.clearControls = function() {
+    window.clearControls = () => {
       const container = document.getElementById("dynamic-controls-container");
       container.innerHTML = "";
       controlCounter = 0;
       updateControlCount();
     };
 
-    window.addAndBindManually = function() {
+    window.addAndBindManually = () => {
       const container = document.getElementById("manual-controls");
       const controlId = ++controlCounter;
       const ccNumber = 80 + (controlId % 20);

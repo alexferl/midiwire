@@ -433,13 +433,18 @@ describe("MIDIConnection", () => {
       const connection = new MIDIConnection()
       await connection.requestAccess()
 
-      await expect(connection.connectInput(0, "not a function")).rejects.toThrow(TypeError)
       await expect(connection.connectInput(0, "not a function")).rejects.toThrow(
-        "onMessage callback must be a function",
+        /onMessage callback must be a function/,
       )
-      await expect(connection.connectInput(0, null)).rejects.toThrow(TypeError)
-      await expect(connection.connectInput(0, undefined)).rejects.toThrow(TypeError)
-      await expect(connection.connectInput(0, 123)).rejects.toThrow(TypeError)
+      await expect(connection.connectInput(0, null)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
+      await expect(connection.connectInput(0, undefined)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
+      await expect(connection.connectInput(0, 123)).rejects.toThrow(
+        /onMessage callback must be a function/,
+      )
     })
 
     it("should connect to first available input by default", async () => {
@@ -597,7 +602,7 @@ describe("MIDIConnection", () => {
       await connection.connect()
 
       const data = [0x42, 0x30, 0x00, 0x01, 0x2f, 0x12]
-      connection.sendSysEx(data)
+      connection.sendSysEx(data, true)
 
       expect(mockOutput.send).toHaveBeenCalledWith(new Uint8Array([0xf0, ...data, 0xf7]))
     })
@@ -608,7 +613,7 @@ describe("MIDIConnection", () => {
       await connection.connect()
 
       const data = [0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]
-      connection.sendSysEx(data, true)
+      connection.sendSysEx(data)
 
       expect(mockOutput.send).toHaveBeenCalledWith(new Uint8Array(data))
     })

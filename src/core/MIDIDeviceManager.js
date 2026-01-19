@@ -53,8 +53,9 @@ export class MIDIDeviceManager {
     this.midi.connection.on(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, ({ device }) => {
       this.updateStatus(`Device disconnected: ${device.name}`, "error")
 
-      // Check if the disconnected device was the current one
-      if (this.currentDevice && device.name === this.currentDevice.name) {
+      const wasCurrentDevice = this.currentDevice && device.name === this.currentDevice.name
+
+      if (wasCurrentDevice) {
         this.currentDevice = null
         this.updateConnectionStatus()
       }
@@ -150,8 +151,7 @@ export class MIDIDeviceManager {
 
     channelSelectElement.addEventListener("change", (e) => {
       if (this.midi) {
-        const channel = parseInt(e.target.value, 10)
-        this.midi.options.channel = channel
+        this.midi.options.channel = parseInt(e.target.value, 10)
         this.updateConnectionStatus()
       }
     })

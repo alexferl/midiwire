@@ -1,4 +1,10 @@
 import { EventEmitter } from "./EventEmitter.js"
+import {
+  MIDIAccessError,
+  MIDIConnectionError,
+  MIDIDeviceError,
+  MIDIValidationError,
+} from "./errors.js"
 
 /**
  * Connection event constants
@@ -45,11 +51,11 @@ export class MIDIConnection extends EventEmitter {
   /**
    * Request MIDI access from the browser
    * @returns {Promise<void>}
-   * @throws {Error} If MIDI is not supported or access is denied
+   * @throws {MIDIAccessError} If MIDI is not supported or access is denied
    */
   async requestAccess() {
     if (!navigator.requestMIDIAccess) {
-      throw new Error("Web MIDI API is not supported in this browser")
+      throw new MIDIAccessError("Web MIDI API is not supported in this browser", "unsupported")
     }
 
     try {
@@ -98,11 +104,11 @@ export class MIDIConnection extends EventEmitter {
           }
         }
       }
-    } catch (error) {
-      if (error.name === "SecurityError") {
-        throw new Error("MIDI access denied. SysEx requires user permission.")
+    } catch (err) {
+      if (err.name === "SecurityError") {
+        throw new MIDIAccessError("MIDI access denied. SysEx requires user permission.", "denied")
       }
-      throw new Error(`Failed to get MIDI access: ${error.message}`)
+      throw new MIDIAccessError(`Failed to get MIDI access: ${err.message}`, "failed")
     }
   }
 
@@ -153,17 +159,18 @@ export class MIDIConnection extends EventEmitter {
    * Connect to a MIDI output device
    * @param {string|number} [device] - Device name, ID, or index (defaults to first available)
    * @returns {Promise<void>}
-   * @throws {Error} If device not found
+   * @throws {MIDIConnectionError} If MIDI access not initialized
+   * @throws {MIDIDeviceError} If device not found or index out of range
    */
   async connect(device) {
     if (!this.midiAccess) {
-      throw new Error("MIDI access not initialized. Call requestAccess() first.")
+      throw new MIDIConnectionError("MIDI access not initialized. Call requestAccess() first.")
     }
 
     const outputs = Array.from(this.midiAccess.outputs.values())
 
     if (outputs.length === 0) {
-      throw new Error("No MIDI output devices available")
+      throw new MIDIDeviceError("No MIDI output devices available", "output")
     }
 
     // If no device specified, use first available
@@ -175,7 +182,11 @@ export class MIDIConnection extends EventEmitter {
     // Connect by index
     if (typeof device === "number") {
       if (device < 0 || device >= outputs.length) {
-        throw new Error(`Output index ${device} out of range (0-${outputs.length - 1})`)
+        throw new MIDIDeviceError(
+          `Output index ${device} out of range (0-${outputs.length - 1})`,
+          "output",
+          device,
+        )
       }
       this.output = outputs[device]
       return
@@ -186,7 +197,11 @@ export class MIDIConnection extends EventEmitter {
 
     if (!this.output) {
       const availableNames = outputs.map((o) => o.name).join(", ")
-      throw new Error(`MIDI output "${device}" not found. Available: ${availableNames}`)
+      throw new MIDIDeviceError(
+        `MIDI output "${device}" not found. Available: ${availableNames}`,
+        "output",
+        device,
+      )
     }
   }
 
@@ -195,21 +210,24 @@ export class MIDIConnection extends EventEmitter {
    * @param {string|number} [device] - Device name, ID, or index (defaults to first available)
    * @param {Function} onMessage - Callback for incoming MIDI messages
    * @returns {Promise<void>}
+   * @throws {MIDIConnectionError} If MIDI access not initialized
+   * @throws {MIDIValidationError} If onMessage is not a function
+   * @throws {MIDIDeviceError} If device not found or index out of range
    */
   async connectInput(device, onMessage) {
     if (!this.midiAccess) {
-      throw new Error("MIDI access not initialized. Call requestAccess() first.")
+      throw new MIDIConnectionError("MIDI access not initialized. Call requestAccess() first.")
     }
 
     // Validate onMessage is a function
     if (typeof onMessage !== "function") {
-      throw new TypeError("onMessage callback must be a function")
+      throw new MIDIValidationError("onMessage callback must be a function", "callback")
     }
 
     const inputs = Array.from(this.midiAccess.inputs.values())
 
     if (inputs.length === 0) {
-      throw new Error("No MIDI input devices available")
+      throw new MIDIDeviceError("No MIDI input devices available", "input")
     }
 
     // Disconnect existing input
@@ -223,7 +241,11 @@ export class MIDIConnection extends EventEmitter {
     } else if (typeof device === "number") {
       // Connect by index
       if (device < 0 || device >= inputs.length) {
-        throw new Error(`Input index ${device} out of range (0-${inputs.length - 1})`)
+        throw new MIDIDeviceError(
+          `Input index ${device} out of range (0-${inputs.length - 1})`,
+          "input",
+          device,
+        )
       }
       this.input = inputs[device]
     } else {
@@ -232,7 +254,11 @@ export class MIDIConnection extends EventEmitter {
 
       if (!this.input) {
         const availableNames = inputs.map((i) => i.name).join(", ")
-        throw new Error(`MIDI input "${device}" not found. Available: ${availableNames}`)
+        throw new MIDIDeviceError(
+          `MIDI input "${device}" not found. Available: ${availableNames}`,
+          "input",
+          device,
+        )
       }
     }
 
@@ -262,14 +288,14 @@ export class MIDIConnection extends EventEmitter {
       } else {
         this.output.send(data, timestamp)
       }
-    } catch (error) {
-      console.error("Failed to send MIDI message:", error)
+    } catch (err) {
+      console.error("Failed to send MIDI message:", err)
     }
   }
 
   /**
    * Send a SysEx message
-   * @param {Array<number>} data - SysEx data (without 0xF0 and 0xF7)
+   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
    * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
    */
   sendSysEx(data, includeWrapper = false) {
@@ -280,10 +306,10 @@ export class MIDIConnection extends EventEmitter {
 
     let message
     if (includeWrapper) {
-      message = data
-    } else {
       // Add SysEx wrapper bytes
       message = [0xf0, ...data, 0xf7]
+    } else {
+      message = data
     }
 
     this.send(message)

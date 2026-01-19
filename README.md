@@ -12,10 +12,51 @@ A modern, declarative JavaScript library for creating browser-based MIDI control
 - ⏱️ **Debouncing** - Prevent MIDI device overload with configurable debouncing
 - 🔌 **Hotplug support** - Detect and handle device connections/disconnections
 - 💾 **Patch management** - Save/load patches with automatic element sync and versioning
+- 🎹 **DX7 support** - Load and create Yamaha DX7 voice (patch) banks (.syx files)
 - 📦 **Zero dependencies** - Lightweight and fast
 - 🔧 **Flexible API** - Works with data attributes or programmatically
 - 🎨 **Framework agnostic** - Use with vanilla JS, React, Vue, or anything else
 - 📝 **Fully documented** - JSDoc types for excellent IDE support
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [HTML Data Attributes](#html-data-attributes-easiest)
+  - [Programmatic API](#programmatic-api)
+  - [SysEx and Bidirectional MIDI](#sysex-and-bidirectional-midi)
+  - [Device Manager](#device-manager-high-level-convenience-api)
+- [Key Features](#key-features)
+  - [Declarative Data Attributes](#declarative-data-attributes)
+  - [14-bit MIDI Control](#14-bit-midi-control)
+  - [Debouncing](#debouncing)
+  - [Custom Controls](#custom-controls-svg-knobs-canvas-etc)
+  - [Send MIDI Messages](#send-midi-messages)
+  - [Receive MIDI Messages](#receive-midi-messages)
+  - [Device Management](#device-management)
+  - [Patch Management](#patch-management)
+    - [Automatic Patch Creation](#automatic-patch-creation)
+    - [Apply Patches](#apply-patches)
+    - [Patch Storage](#patch-storage)
+    - [Advanced: Working with Settings](#advanced-working-with-settings)
+  - [Utility Functions](#utility-functions)
+    - [MIDI Note Utilities](#midi-note-utilities)
+    - [14-bit MIDI Control](#14-bit-midi-control-1)
+    - [SysEx Utilities](#sysex-utilities)
+    - [MIDI Validators](#midi-validators)
+  - [DX7 Bank Support](#dx7-bank-support)
+  - [Working with Raw Data](#working-with-raw-data)
+  - [Device Change Events](#device-change-events)
+  - [Connection Status](#connection-status)
+  - [MIDIConnection Class](#midiconnection-class-advanced)
+  - [MIDI Event Constants](#midi-event-constants)
+    - [Shorthand Aliases](#shorthand-aliases-optional)
+- [Use Cases](#use-cases)
+- [Browser Support](#browser-support)
+- [Examples](#examples)
+- [Development](#development)
+- [License](#license)
+- [Credits](#credits)
 
 ## Installation
 
@@ -348,7 +389,7 @@ if (loaded) {
 
 // Or apply a patch you created
 await midi.setPatch({
-  name: "Manual Patch",
+  name: "Manual Voice",
   channels: {
     "1": {
       ccs: {
@@ -401,19 +442,193 @@ midi.bind(filterSlider, {
 });
 
 // Save the complete configuration
-midi.savePatch("Bass Patch");
+midi.savePatch("Bass Voice");
 
 // Later: load and everything is restored correctly
-const bassPatch = midi.loadPatch("Bass Patch");
+const bassPatch = midi.loadPatch("Bass Voice");
 await midi.setPatch(bassPatch); // Slider shows frequency, not 0-127
 ```
+
+### Utility Functions
+
+midiwire includes comprehensive utility functions for MIDI data manipulation:
+
+#### MIDI Note Utilities
+
+```javascript
+import { noteNameToNumber, noteNumberToName, noteToFrequency, frequencyToNote } from "midiwire";
+
+// Convert note names to MIDI numbers
+const midiNote = noteNameToNumber("C4"); // 60
+const noteName = noteNumberToName(60); // "C4"
+
+// Frequency conversions
+const freq = noteToFrequency(69); // 440.00 Hz (A4)
+const noteFromFreq = frequencyToNote(440); // 69
+```
+
+#### 14-bit MIDI Control
+
+Functions for working with high-resolution (0-16383) MIDI values:
+
+```javascript
+import { encode14BitValue, decode14BitValue, denormalize14BitValue } from "midiwire";
+
+// Encode 14-bit value to MSB/LSB
+const { msb, lsb } = encode14BitValue(8192); // Center value
+console.log(msb, lsb); // 64, 0
+
+// Decode MSB/LSB back to 14-bit
+const value = decode14BitValue(64, 0); // 8192
+
+// Convert MIDI value back to custom range
+const frequency = denormalize14BitValue(8192, 20, 20000); // 10010 Hz
+```
+
+#### SysEx Utilities
+
+Create and manipulate System Exclusive messages:
+
+```javascript
+import { createSysEx, isSysEx, encode7Bit, decode7Bit } from "midiwire";
+
+// Create SysEx message
+createSysEx(0x43, [0x20, 0x7F, 0x1C]);
+// Returns: [0xF0, 0x43, 0x20, 0x7F, 0x1C, 0xF7]
+
+// Check if data is SysEx
+isSysEx([0xF0, 0x43, 0xF7]); // true
+
+// Encode/decode 8-bit data to 7-bit MIDI format
+const encoded = encode7Bit([0xFF, 0xFE, 0xFD]);
+const decoded = decode7Bit(encoded);
+```
+
+#### MIDI Validators
+
+Validate MIDI parameters before use:
+
+```javascript
+import { isValidChannel, isValidCC, isValidNote, isValidMIDIValue } from "midiwire";
+
+// Validate MIDI parameters
+if (isValidChannel(channel)) {
+  midi.sendCC(cc, value);
+}
+
+// All validation functions
+isValidChannel(1)        // true (1-16)
+isValidCC(74)            // true (0-127)
+isValid14BitCC(31)       // true (0-31 for MSB)
+isValidMIDIValue(100)    // true (0-127)
+isValidNote(60)          // true (0-127)
+isValidVelocity(100)     // true (0-127)
+isValidProgramChange(5)  // true (0-127)
+isValidPitchBend(8192)   // true (0-16383)
+```
+
+See the [API documentation](https://github.com/alexferl/midiwire) for complete utility function reference.
+
+### DX7 Bank Support
+
+Load, create, and manipulate Yamaha DX7 voice (patch) banks (.syx files):
+
+```javascript
+import { DX7Bank, DX7Voice } from "midiwire";
+
+// Load a bank from a file
+const bank = await DX7Bank.fromFile(fileInput.files[0]);
+
+// Get all voices
+const voices = bank.getVoices();
+console.log(`Loaded ${voices.length} voices`);
+
+// Get a specific voice
+const voice = bank.getVoice(0);
+console.log("Voice name:", voice.name);
+
+// Read parameters (0-127 range)
+const algorithm = voice.getParameter(110); // Algorithm 1-32
+const feedback = voice.getParameter(111);  // Feedback 0-7
+const lfoSpeed = voice.getParameter(112);  // LFO speed
+
+// Create a new voice
+const newPatch = DX7Voice.createDefault();
+newPatch.setParameter(0, 50);   // EG Rate 1
+newPatch.setParameter(110, 5);  // Algorithm 6
+
+// Set voice name (10 characters max)
+const name = "SUPER BASS";
+for (let i = 0; i < name.length; i++) {
+  newPatch.setParameter(118 + i, name.charCodeAt(i));
+}
+
+// Replace voice in bank
+bank.replaceVoice(0, newPatch);
+
+// Find voices by name
+const bassPatch = bank.findVoiceByName("BASS");
+if (bassPatch) {
+  console.log(`Found "${bassPatch.name}" at index ${bassPatch.index}`);
+}
+
+// Export to SYX format
+const sysexData = bank.toSysex();
+const blob = new Blob([sysexData], { type: "application/octet-stream" });
+
+// Unpack to 155-byte format (for detailed parameter access)
+const unpacked = voice.unpack();
+// unpacked[0] = OP1 EG Rate 1
+// unpacked[4] = OP1 EG Level 1
+// ... full DX7 parameter set
+
+// Access parameters in unpacked format (0-168 range)
+const unpackedAlgorithm = voice.getUnpackedParameter(146); // Algorithm 1-32
+const operator1Level = voice.getUnpackedParameter(16); // OP1 output level
+
+// Create voice from unpacked data
+const customUnpacked = new Uint8Array(169);
+// ... fill with your parameters ...
+const customVoice = DX7Voice.fromUnpacked(customUnpacked);
+
+// Export single voice to SYX format (VCED)
+const singleVoiceSysex = voice.toSysEx();
+// Useful for synths that only accept single voice dumps (e.g., KORG Volca FM)
+
+// Add voice to first empty slot in bank
+const newBank = new DX7Bank();
+const slotIndex = newBank.addVoice(customVoice);
+console.log(`Added voice to slot ${slotIndex}`);
+
+// Convert to JSON for storage or transmission
+const voiceJSON = voice.toJSON();
+const bankJSON = bank.toJSON();
+console.log(voiceJSON.name); // Voice name
+console.log(bankJSON.voices[0].name); // First voice name
+```
+
+### Working with Raw Data
+
+For advanced use cases, work directly with packed/unpacked formats:
+
+```javascript
+// Pack unpacked data (169 bytes) to DX7 format (128 bytes)
+const unpackedData = new Uint8Array(169);
+// ... fill with parameters ...
+const packedData = DX7Voice.pack(unpackedData);
+
+// Create voice from packed data
+const voiceFromPacked = new DX7Voice(packedData, 0);
+```
+
+See [`examples/dx7.html`](examples/dx7.html) for a working demo with file upload, voice visualization, and export.
 
 ### Device Change Events
 
 midiwire detects when MIDI devices are connected or disconnected:
 
 ```javascript
-import { createMIDIController, CONNECTION_EVENTS } from "midiwire";
+import { CONNECTION_EVENTS, createMIDIController } from "midiwire";
 
 const midi = await createMIDIController({ ... });
 
@@ -474,6 +689,49 @@ const midi = await createMIDIController({
 // Then send/receive will work bidirectionally
 midi.sendCC(74, 100);  // Send to synth
 // MIDI sent from synth knobs will trigger CC_RECV events
+```
+
+### MIDIConnection Class (Advanced)
+
+For low-level MIDI access, use the `MIDIConnection` class accessible via `midi.connection`:
+
+```javascript
+import { createMIDIController, CONNECTION_EVENTS } from "midiwire";
+
+const midi = await createMIDIController({ sysex: true });
+const connection = midi.connection;
+
+// Get all available devices
+const outputs = connection.getOutputs();
+const inputs = connection.getInputs();
+console.log('Available outputs:', outputs);
+console.log('Available inputs:', inputs);
+
+// Connect to specific devices
+await connection.connect("My Synth");        // By name
+await connection.connect(0);                 // By index
+await connection.connectInput("My Synth", (event) => {
+  console.log('MIDI message received:', event.data);
+});
+
+// Send raw MIDI messages
+connection.send([0x90, 60, 100]);  // Note on
+connection.send([0x80, 60, 0]);    // Note off
+
+// Send SysEx messages
+connection.sendSysEx([0x43, 0x20, 0x7F, 0x1C]);
+
+// Check connection status
+if (connection.isConnected()) {
+  console.log('Connected to:', connection.getCurrentOutput().name);
+}
+
+// Get current device info
+const outputInfo = connection.getCurrentOutput();
+const inputInfo = connection.getCurrentInput();
+
+// Disconnect devices
+connection.disconnect();
 ```
 
 ### MIDI Event Constants
@@ -556,6 +814,7 @@ Check out the [`examples/`](examples) folder for working demos:
 - [`programmatic.html`](examples/programmatic.html) - Manual binding and custom SVG/canvas controls
 - [`patches.html`](examples/patches.html) - Complete patch management system with localStorage
 - [`sysex.html`](examples/sysex.html) - SysEx communication and device inquiry
+- [`dx7.html`](examples/dx7.html) - Load and create Yamaha DX7 voice banks
 
 ## Development
 
@@ -582,4 +841,5 @@ npm run lint
 
 ## Credits
 
-Inspired by [ccynthmata](https://github.com/synthmata/ccynthmata) by synthmata.
+- Inspired by [synthmata/ccynthmata](https://github.com/synthmata/ccynthmata).
+- DX7 implementation based on the work of [asb2m10/dexed](https://github.com/asb2m10/dexed) and various DX7 SysEx documentation resources.

@@ -22,7 +22,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "biome check --write src"
+    "lint": "biome check --write"
   },
   "keywords": [
     "midiwire",

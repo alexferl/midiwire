@@ -3,7 +3,7 @@
  *
  * A lightweight, zero-dependency library for creating web-based MIDI controllers.
  * Features declarative HTML binding via data attributes, programmatic APIs,
- * bidirectional MIDI communication, SysEx support, patch management, and more.
+ * bidirectional MIDI communication, SysEx support, voice management, and more.
  *
  * Works with the Web MIDI API in Chrome, Firefox, and Opera.
  *
@@ -50,7 +50,6 @@ export async function createMIDIController(options = {}) {
   const controller = new MIDIController(options)
   await controller.initialize()
 
-  // Default to [data-midi-cc] selector if not specified
   const selector = options.selector || "[data-midi-cc]"
   if (selector) {
     const binder = new DataAttributeBinder(controller, selector)
@@ -116,11 +115,8 @@ export async function createMIDIDeviceManager(options = {}) {
     watchDOM,
     ...otherOptions
   } = options
-
-  // Default to [data-midi-cc] selector if not specified
   const selectorToUse = selector || "[data-midi-cc]"
 
-  // Create MIDIController with specified options
   const midi = await createMIDIController({
     autoConnect: false,
     sysex,
@@ -131,7 +127,6 @@ export async function createMIDIDeviceManager(options = {}) {
     ...otherOptions,
   })
 
-  // Create MIDIDeviceManager
   const deviceManager = new MIDIDeviceManager({
     midiController: midi,
     onStatusUpdate: onStatusUpdate || (() => {}),
@@ -139,7 +134,6 @@ export async function createMIDIDeviceManager(options = {}) {
     channel: channel || 1,
   })
 
-  // Auto-connect if device is specified
   if (output) {
     try {
       await midi.setOutput(output)
@@ -151,7 +145,6 @@ export async function createMIDIDeviceManager(options = {}) {
     }
   }
 
-  // Call onReady callback
   if (onReady) {
     onReady(midi, deviceManager)
   }
@@ -161,6 +154,16 @@ export async function createMIDIDeviceManager(options = {}) {
 
 export { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 export { EventEmitter } from "./core/EventEmitter.js"
+export {
+  DX7Error,
+  DX7ParseError,
+  DX7ValidationError,
+  MIDIAccessError,
+  MIDIConnectionError,
+  MIDIDeviceError,
+  MIDIError,
+  MIDIValidationError,
+} from "./core/errors.js"
 export {
   CONNECTION_EVENTS,
   CONNECTION_EVENTS as CONN,
@@ -172,7 +175,7 @@ export {
   MIDIController,
 } from "./core/MIDIController.js"
 export { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
-
+export { DX7Bank, DX7Voice } from "./utils/dx7.js"
 export * from "./utils/midi.js"
 export * from "./utils/sysex.js"
 export * from "./utils/validators.js"

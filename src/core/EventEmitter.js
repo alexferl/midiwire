@@ -73,8 +73,8 @@ export class EventEmitter {
     handlers.forEach((handler) => {
       try {
         handler(data)
-      } catch (error) {
-        console.error(`Error in event handler for "${event}":`, error)
+      } catch (err) {
+        console.error(`Error in event handler for "${event}":`, err)
       }
     })
   }

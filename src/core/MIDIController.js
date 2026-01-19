@@ -1,5 +1,6 @@
 import { clamp, normalize14BitValue, normalizeValue } from "../utils/midi.js"
 import { EventEmitter } from "./EventEmitter.js"
+import { MIDIValidationError } from "./errors.js"
 import { MIDIConnection } from "./MIDIConnection.js"
 
 /**
@@ -117,10 +118,10 @@ export class MIDIController extends EventEmitter {
       this.initialized = true
       this.emit(CONTROLLER_EVENTS.READY, this)
       this.options.onReady?.(this)
-    } catch (error) {
-      this.emit(CONTROLLER_EVENTS.ERROR, error)
-      this.options.onError?.(error)
-      throw error
+    } catch (err) {
+      this.emit(CONTROLLER_EVENTS.ERROR, err)
+      this.options.onError?.(err)
+      throw err
     }
   }
 
@@ -542,7 +543,7 @@ export class MIDIController extends EventEmitter {
       const { config } = binding
       if (config.cc) {
         const settingKey = `cc${config.cc}`
-        const setting = {
+        patch.settings[settingKey] = {
           min: config.min,
           max: config.max,
           invert: config.invert || false,
@@ -550,8 +551,6 @@ export class MIDIController extends EventEmitter {
           label: element.getAttribute?.("data-midi-label") || null,
           elementId: element.id || null,
         }
-
-        patch.settings[settingKey] = setting
       }
     }
 
@@ -565,7 +564,7 @@ export class MIDIController extends EventEmitter {
    */
   async setPatch(patch) {
     if (!patch || !patch.channels) {
-      throw new Error("Invalid patch format")
+      throw new MIDIValidationError("Invalid patch format", "patch")
     }
 
     // Handle different patch versions
@@ -683,9 +682,9 @@ export class MIDIController extends EventEmitter {
       localStorage.setItem(key, JSON.stringify(patchToSave))
       this.emit(CONTROLLER_EVENTS.PATCH_SAVED, { name, patch: patchToSave })
       return key
-    } catch (error) {
-      console.error("Failed to save patch:", error)
-      throw error
+    } catch (err) {
+      console.error("Failed to save patch:", err)
+      throw err
     }
   }
 
@@ -706,8 +705,8 @@ export class MIDIController extends EventEmitter {
       const patch = JSON.parse(stored)
       this.emit(CONTROLLER_EVENTS.PATCH_LOADED, { name, patch })
       return patch
-    } catch (error) {
-      console.error("Failed to load patch:", error)
+    } catch (err) {
+      console.error("Failed to load patch:", err)
       return null
     }
   }
@@ -724,8 +723,8 @@ export class MIDIController extends EventEmitter {
       localStorage.removeItem(key)
       this.emit(CONTROLLER_EVENTS.PATCH_DELETED, { name })
       return true
-    } catch (error) {
-      console.error("Failed to delete patch:", error)
+    } catch (err) {
+      console.error("Failed to delete patch:", err)
       return false
     }
   }
@@ -748,8 +747,8 @@ export class MIDIController extends EventEmitter {
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to list patches:", error)
+    } catch (err) {
+      console.error("Failed to list patches:", err)
     }
 
     return patches.sort((a, b) => a.name.localeCompare(b.name))
