@@ -251,17 +251,13 @@ describe("MIDIController", () => {
     it("should send SysEx message", async () => {
       midiController.sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
-      expect(mockOutputs[0].send).toHaveBeenCalledWith(
-        new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
-      )
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should send SysEx message with wrapper bytes", async () => {
       midiController.sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
-      expect(mockOutputs[0].send).toHaveBeenCalledWith(
-        new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
-      )
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should emit sysex-send event", async () => {
@@ -1696,9 +1692,7 @@ describe("MIDIController", () => {
           channels: { 1: { ccs: { 74: 100 } } },
         }
         await midiController.setPatch(patch)
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining("Unknown patch version: 99.0"),
-        )
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown patch version: 99.0"))
         consoleSpy.mockRestore()
       })
 
@@ -1732,10 +1726,7 @@ describe("MIDIController", () => {
         const key = midiController.savePatch("Test Patch", patch)
 
         expect(key).toBe("midiwire_patch_Test Patch")
-        expect(localStorage.setItem).toHaveBeenCalledWith(
-          "midiwire_patch_Test Patch",
-          JSON.stringify(patch),
-        )
+        expect(localStorage.setItem).toHaveBeenCalledWith("midiwire_patch_Test Patch", JSON.stringify(patch))
       })
 
       it("should use getPatch() if no patch provided", () => {

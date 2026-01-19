@@ -30,9 +30,7 @@ export class DataAttributeBinder {
   bindAll() {
     // Support both 7-bit CC (data-midi-cc) and 14-bit CC (data-midi-msb + data-midi-lsb)
     const elements = document.querySelectorAll(
-      this.selector === "[data-midi-cc]"
-        ? "[data-midi-cc], [data-midi-msb][data-midi-lsb]"
-        : this.selector,
+      this.selector === "[data-midi-cc]" ? "[data-midi-cc], [data-midi-msb][data-midi-lsb]" : this.selector,
     )
 
     elements.forEach((element) => {
@@ -55,9 +53,7 @@ export class DataAttributeBinder {
 
     // Support both 7-bit CC (data-midi-cc) and 14-bit CC (data-midi-msb + data-midi-lsb)
     const selector =
-      this.selector === "[data-midi-cc]"
-        ? "[data-midi-cc], [data-midi-msb][data-midi-lsb]"
-        : this.selector
+      this.selector === "[data-midi-cc]" ? "[data-midi-cc], [data-midi-msb][data-midi-lsb]" : this.selector
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -136,14 +132,7 @@ export class DataAttributeBinder {
     const msb = parseInt(element.dataset.midiMsb, 10)
     const lsb = parseInt(element.dataset.midiLsb, 10)
 
-    if (
-      !Number.isNaN(msb) &&
-      !Number.isNaN(lsb) &&
-      msb >= 0 &&
-      msb <= 127 &&
-      lsb >= 0 &&
-      lsb <= 127
-    ) {
+    if (!Number.isNaN(msb) && !Number.isNaN(lsb) && msb >= 0 && msb <= 127 && lsb >= 0 && lsb <= 127) {
       // Check if 7-bit CC is also present
       const cc = parseInt(element.dataset.midiCc, 10)
       if (!Number.isNaN(cc) && cc >= 0 && cc <= 127) {

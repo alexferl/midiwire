@@ -225,6 +225,7 @@ export class DX7Voice {
     this.index = index
     this.data = new Uint8Array(data)
     this.name = this._extractName()
+    this._unpackedCache = null
   }
 
   /**
@@ -232,19 +233,14 @@ export class DX7Voice {
    * @private
    */
   _extractName() {
-    const nameBytes = this.data.subarray(
-      DX7Voice.PACKED_NAME_START,
-      DX7Voice.PACKED_NAME_START + DX7Voice.NAME_LENGTH,
-    )
-    // Normalize DX7 special characters
+    const nameBytes = this.data.subarray(DX7Voice.PACKED_NAME_START, DX7Voice.PACKED_NAME_START + DX7Voice.NAME_LENGTH)
     const normalized = Array.from(nameBytes).map((byte) => {
       let c = byte & DX7Voice.MASK_7BIT
       // Dexed special character mappings
       if (c === DX7Voice.CHAR_YEN) c = DX7Voice.CHAR_REPLACEMENT_Y
       if (c === DX7Voice.CHAR_ARROW_RIGHT) c = DX7Voice.CHAR_REPLACEMENT_GT
       if (c === DX7Voice.CHAR_ARROW_LEFT) c = DX7Voice.CHAR_REPLACEMENT_LT
-      if (c < DX7Voice.CHAR_MIN_PRINTABLE || c > DX7Voice.CHAR_MAX_PRINTABLE)
-        c = DX7Voice.CHAR_SPACE
+      if (c < DX7Voice.CHAR_MIN_PRINTABLE || c > DX7Voice.CHAR_MAX_PRINTABLE) c = DX7Voice.CHAR_SPACE
       return String.fromCharCode(c)
     })
     return normalized.join("").trim()
@@ -281,8 +277,12 @@ export class DX7Voice {
         offset,
       )
     }
-    const unpacked = this.unpack()
-    return unpacked[offset] & DX7Voice.MASK_7BIT
+
+    if (!this._unpackedCache) {
+      this._unpackedCache = this.unpack()
+    }
+
+    return this._unpackedCache[offset] & DX7Voice.MASK_7BIT
   }
 
   /**
@@ -298,12 +298,12 @@ export class DX7Voice {
         offset,
       )
     }
+
     this.data[offset] = value & DX7Voice.MASK_7BIT
+    this._unpackedCache = null
+
     // Update name if name bytes changed
-    if (
-      offset >= DX7Voice.PACKED_NAME_START &&
-      offset < DX7Voice.PACKED_NAME_START + DX7Voice.NAME_LENGTH
-    ) {
+    if (offset >= DX7Voice.PACKED_NAME_START && offset < DX7Voice.PACKED_NAME_START + DX7Voice.NAME_LENGTH) {
       this.name = this._extractName()
     }
   }
@@ -317,91 +317,131 @@ export class DX7Voice {
     const packed = this.data
     const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
 
-    // Operators (6 operators × 17 bytes each in packed format)
-    // Note: DX7 stores operators in reverse order in packed format
-    // OP1 data is at the end (packed offset 85-101), OP6 data is at the beginning (packed offset 0-16)
+    this._unpackOperators(packed, unpacked)
+    this._unpackPitchEG(packed, unpacked)
+    this._unpackGlobalParams(packed, unpacked)
+    this._unpackName(packed, unpacked)
+
+    return unpacked
+  }
+
+  /**
+   * Unpack all 6 operators from packed to unpacked format
+   * @private
+   */
+  _unpackOperators(packed, unpacked) {
     for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
-      // Calculate source and destination offsets
-      // op=0 is OP1, which is at packed offset 85, unpacked offset 0
-      // op=5 is OP6, which is at packed offset 0, unpacked offset 115
-      const src = (DX7Voice.NUM_OPERATORS - 1 - op) * DX7Voice.PACKED_OP_SIZE // Source offset in packed data
-      const dst = op * DX7Voice.UNPACKED_OP_SIZE // Destination offset in unpacked data
+      // DX7 stores operators in reverse: OP1 at end, OP6 at start
+      const src = (DX7Voice.NUM_OPERATORS - 1 - op) * DX7Voice.PACKED_OP_SIZE
+      const dst = op * DX7Voice.UNPACKED_OP_SIZE
 
-      // EG rates and levels (4 bytes each) - bytes 0-7
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_1] =
-        packed[src + DX7Voice.PACKED_OP_EG_RATE_1] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_2] =
-        packed[src + DX7Voice.PACKED_OP_EG_RATE_2] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_3] =
-        packed[src + DX7Voice.PACKED_OP_EG_RATE_3] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_4] =
-        packed[src + DX7Voice.PACKED_OP_EG_RATE_4] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_1] =
-        packed[src + DX7Voice.PACKED_OP_EG_LEVEL_1] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_2] =
-        packed[src + DX7Voice.PACKED_OP_EG_LEVEL_2] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_3] =
-        packed[src + DX7Voice.PACKED_OP_EG_LEVEL_3] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_4] =
-        packed[src + DX7Voice.PACKED_OP_EG_LEVEL_4] & DX7Voice.MASK_7BIT
-
-      // Break point and scaling depths - bytes 8-10
-      unpacked[dst + DX7Voice.UNPACKED_OP_BREAK_POINT] =
-        packed[src + DX7Voice.PACKED_OP_BREAK_POINT] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH] =
-        packed[src + DX7Voice.PACKED_OP_L_SCALE_DEPTH] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH] =
-        packed[src + DX7Voice.PACKED_OP_R_SCALE_DEPTH] & DX7Voice.MASK_7BIT
-
-      // Key scales (bits 0-1 = LC, bits 2-3 = RC)
-      const curves = packed[src + DX7Voice.PACKED_OP_CURVES] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_L_CURVE] = curves & DX7Voice.MASK_2BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_R_CURVE] = (curves >> 2) & DX7Voice.MASK_2BIT
-
-      // Rate scaling and detune (bits 0-2 = RS, bits 3-6 = DET)
-      const rateScaling = packed[src + DX7Voice.PACKED_OP_RATE_SCALING] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_RATE_SCALING] = rateScaling & DX7Voice.MASK_3BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_DETUNE] = (rateScaling >> 3) & DX7Voice.MASK_4BIT
-
-      // Amp mod sensitivity and key velocity sensitivity (bits 0-1 = AMS, bits 2-4 = KVS)
-      const modSens = packed[src + DX7Voice.PACKED_OP_MOD_SENS] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] = modSens & DX7Voice.MASK_2BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] = (modSens >> 2) & DX7Voice.MASK_3BIT
-
-      // Output level
-      unpacked[dst + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] =
-        packed[src + DX7Voice.PACKED_OP_OUTPUT_LEVEL] & DX7Voice.MASK_7BIT
-
-      // Mode, frequency (bits 0 = MODE, bits 1-5 = FREQ)
-      const modeFreq = packed[src + DX7Voice.PACKED_OP_MODE_FREQ] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = modeFreq & DX7Voice.MASK_1BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = (modeFreq >> 1) & DX7Voice.MASK_5BIT
-
-      // OSC detune and frequency fine (bits 0-2 = OSC DET, bits 3-6 = FREQ FINE)
-      const detuneFine = packed[src + DX7Voice.PACKED_OP_DETUNE_FINE] & DX7Voice.MASK_7BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = detuneFine & DX7Voice.MASK_3BIT
-      unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = (detuneFine >> 3) & DX7Voice.MASK_4BIT
+      this._unpackOperator(packed, unpacked, src, dst)
     }
+  }
 
-    // Pitch EG rates and levels
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_1] =
-      packed[DX7Voice.PACKED_PITCH_EG_RATE_1] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_2] =
-      packed[DX7Voice.PACKED_PITCH_EG_RATE_2] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_3] =
-      packed[DX7Voice.PACKED_PITCH_EG_RATE_3] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_4] =
-      packed[DX7Voice.PACKED_PITCH_EG_RATE_4] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_1] =
-      packed[DX7Voice.PACKED_PITCH_EG_LEVEL_1] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_2] =
-      packed[DX7Voice.PACKED_PITCH_EG_LEVEL_2] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_3] =
-      packed[DX7Voice.PACKED_PITCH_EG_LEVEL_3] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_4] =
-      packed[DX7Voice.PACKED_PITCH_EG_LEVEL_4] & DX7Voice.MASK_7BIT
+  /**
+   * Unpack a single operator's parameters
+   * @private
+   */
+  _unpackOperator(packed, unpacked, src, dst) {
+    this._unpackOperatorEG(packed, unpacked, src, dst)
+    this._unpackOperatorScaling(packed, unpacked, src, dst)
+    this._unpackOperatorPackedParams(packed, unpacked, src, dst)
+    this._unpackOperatorFrequency(packed, unpacked, src, dst)
+  }
 
-    // Global parameters
+  /**
+   * Unpack operator EG rates and levels
+   * @private
+   */
+  _unpackOperatorEG(packed, unpacked, src, dst) {
+    // EG rates (4 bytes)
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_1] = packed[src + DX7Voice.PACKED_OP_EG_RATE_1] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_2] = packed[src + DX7Voice.PACKED_OP_EG_RATE_2] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_3] = packed[src + DX7Voice.PACKED_OP_EG_RATE_3] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_4] = packed[src + DX7Voice.PACKED_OP_EG_RATE_4] & DX7Voice.MASK_7BIT
+
+    // EG levels (4 bytes)
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_1] = packed[src + DX7Voice.PACKED_OP_EG_LEVEL_1] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_2] = packed[src + DX7Voice.PACKED_OP_EG_LEVEL_2] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_3] = packed[src + DX7Voice.PACKED_OP_EG_LEVEL_3] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_4] = packed[src + DX7Voice.PACKED_OP_EG_LEVEL_4] & DX7Voice.MASK_7BIT
+  }
+
+  /**
+   * Unpack operator keyboard scaling parameters
+   * @private
+   */
+  _unpackOperatorScaling(packed, unpacked, src, dst) {
+    unpacked[dst + DX7Voice.UNPACKED_OP_BREAK_POINT] = packed[src + DX7Voice.PACKED_OP_BREAK_POINT] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH] =
+      packed[src + DX7Voice.PACKED_OP_L_SCALE_DEPTH] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH] =
+      packed[src + DX7Voice.PACKED_OP_R_SCALE_DEPTH] & DX7Voice.MASK_7BIT
+  }
+
+  /**
+   * Unpack operator bit-packed parameters (curves, rate scaling, mod sens)
+   * @private
+   */
+  _unpackOperatorPackedParams(packed, unpacked, src, dst) {
+    // Key scales (bits 0-1 = LC, bits 2-3 = RC)
+    const curves = packed[src + DX7Voice.PACKED_OP_CURVES] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_L_CURVE] = curves & DX7Voice.MASK_2BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_R_CURVE] = (curves >> 2) & DX7Voice.MASK_2BIT
+
+    // Rate scaling and detune (bits 0-2 = RS, bits 3-6 = DET)
+    const rateScaling = packed[src + DX7Voice.PACKED_OP_RATE_SCALING] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_RATE_SCALING] = rateScaling & DX7Voice.MASK_3BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_DETUNE] = (rateScaling >> 3) & DX7Voice.MASK_4BIT
+
+    // Amp mod sensitivity and key velocity sensitivity (bits 0-1 = AMS, bits 2-4 = KVS)
+    const modSens = packed[src + DX7Voice.PACKED_OP_MOD_SENS] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] = modSens & DX7Voice.MASK_2BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] = (modSens >> 2) & DX7Voice.MASK_3BIT
+
+    // Output level
+    unpacked[dst + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] =
+      packed[src + DX7Voice.PACKED_OP_OUTPUT_LEVEL] & DX7Voice.MASK_7BIT
+  }
+
+  /**
+   * Unpack operator frequency parameters
+   * @private
+   */
+  _unpackOperatorFrequency(packed, unpacked, src, dst) {
+    // Mode and frequency (bits 0 = MODE, bits 1-5 = FREQ)
+    const modeFreq = packed[src + DX7Voice.PACKED_OP_MODE_FREQ] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = modeFreq & DX7Voice.MASK_1BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = (modeFreq >> 1) & DX7Voice.MASK_5BIT
+
+    // OSC detune and frequency fine (bits 0-2 = OSC DET, bits 3-6 = FREQ FINE)
+    const detuneFine = packed[src + DX7Voice.PACKED_OP_DETUNE_FINE] & DX7Voice.MASK_7BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = detuneFine & DX7Voice.MASK_3BIT
+    unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = (detuneFine >> 3) & DX7Voice.MASK_4BIT
+  }
+
+  /**
+   * Unpack pitch envelope generator parameters
+   * @private
+   */
+  _unpackPitchEG(packed, unpacked) {
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_1] = packed[DX7Voice.PACKED_PITCH_EG_RATE_1] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_2] = packed[DX7Voice.PACKED_PITCH_EG_RATE_2] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_3] = packed[DX7Voice.PACKED_PITCH_EG_RATE_3] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_4] = packed[DX7Voice.PACKED_PITCH_EG_RATE_4] & DX7Voice.MASK_7BIT
+
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_1] = packed[DX7Voice.PACKED_PITCH_EG_LEVEL_1] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_2] = packed[DX7Voice.PACKED_PITCH_EG_LEVEL_2] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_3] = packed[DX7Voice.PACKED_PITCH_EG_LEVEL_3] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_4] = packed[DX7Voice.PACKED_PITCH_EG_LEVEL_4] & DX7Voice.MASK_7BIT
+  }
+
+  /**
+   * Unpack global voice parameters (algorithm, feedback, LFO, etc.)
+   * @private
+   */
+  _unpackGlobalParams(packed, unpacked) {
     unpacked[DX7Voice.UNPACKED_ALGORITHM] = packed[DX7Voice.OFFSET_ALGORITHM] & DX7Voice.MASK_5BIT
 
     // Feedback and OSC Sync combined (bits 0-2 = Feedback, bit 3 = OSC Sync)
@@ -411,10 +451,8 @@ export class DX7Voice {
 
     unpacked[DX7Voice.UNPACKED_LFO_SPEED] = packed[DX7Voice.OFFSET_LFO_SPEED] & DX7Voice.MASK_7BIT
     unpacked[DX7Voice.UNPACKED_LFO_DELAY] = packed[DX7Voice.OFFSET_LFO_DELAY] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_LFO_PM_DEPTH] =
-      packed[DX7Voice.OFFSET_LFO_PM_DEPTH] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_LFO_AM_DEPTH] =
-      packed[DX7Voice.OFFSET_LFO_AM_DEPTH] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_LFO_PM_DEPTH] = packed[DX7Voice.OFFSET_LFO_PM_DEPTH] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_LFO_AM_DEPTH] = packed[DX7Voice.OFFSET_LFO_AM_DEPTH] & DX7Voice.MASK_7BIT
 
     // LFO Key Sync, Wave, Pitch Mod Sensitivity packed
     const lfoParams = packed[DX7Voice.OFFSET_LFO_SYNC_WAVE] & DX7Voice.MASK_7BIT
@@ -422,19 +460,19 @@ export class DX7Voice {
     unpacked[DX7Voice.UNPACKED_LFO_WAVE] = (lfoParams >> 1) & DX7Voice.MASK_3BIT
     unpacked[DX7Voice.UNPACKED_LFO_PM_SENS] = (lfoParams >> 4) & DX7Voice.MASK_3BIT
 
-    unpacked[DX7Voice.UNPACKED_AMP_MOD_SENS] =
-      packed[DX7Voice.OFFSET_AMP_MOD_SENS] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_AMP_MOD_SENS] = packed[DX7Voice.OFFSET_AMP_MOD_SENS] & DX7Voice.MASK_7BIT
     unpacked[DX7Voice.UNPACKED_TRANSPOSE] = packed[DX7Voice.OFFSET_TRANSPOSE] & DX7Voice.MASK_7BIT
-    unpacked[DX7Voice.UNPACKED_EG_BIAS_SENS] =
-      packed[DX7Voice.OFFSET_EG_BIAS_SENS] & DX7Voice.MASK_7BIT
+    unpacked[DX7Voice.UNPACKED_EG_BIAS_SENS] = packed[DX7Voice.OFFSET_EG_BIAS_SENS] & DX7Voice.MASK_7BIT
+  }
 
-    // Copy voice name
+  /**
+   * Copy voice name from packed to unpacked format
+   * @private
+   */
+  _unpackName(packed, unpacked) {
     for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
-      unpacked[DX7Voice.UNPACKED_NAME_START + i] =
-        packed[DX7Voice.PACKED_NAME_START + i] & DX7Voice.MASK_7BIT
+      unpacked[DX7Voice.UNPACKED_NAME_START + i] = packed[DX7Voice.PACKED_NAME_START + i] & DX7Voice.MASK_7BIT
     }
-
-    return unpacked
   }
 
   /**
@@ -453,80 +491,131 @@ export class DX7Voice {
 
     const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
 
-    // Pack operators (6 operators × 17 bytes each in packed format)
-    // DX7 stores operators in reverse order: OP1 data goes to packed[85-101], OP6 to packed[0-16]
+    DX7Voice._packOperators(unpacked, packed)
+    DX7Voice._packPitchEG(unpacked, packed)
+    DX7Voice._packGlobalParams(unpacked, packed)
+    DX7Voice._packName(unpacked, packed)
+
+    return packed
+  }
+
+  /**
+   * Pack all 6 operators from unpacked to packed format
+   * @private
+   */
+  static _packOperators(unpacked, packed) {
     for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
-      const opSrc = op * DX7Voice.UNPACKED_OP_SIZE // Read OP1-OP6 sequentially from unpacked
-      const opDst = (DX7Voice.NUM_OPERATORS - 1 - op) * DX7Voice.PACKED_OP_SIZE // Write in reverse
+      // DX7 stores operators in reverse: OP1 goes to packed[85-101], OP6 to packed[0-16]
+      const src = op * DX7Voice.UNPACKED_OP_SIZE
+      const dst = (DX7Voice.NUM_OPERATORS - 1 - op) * DX7Voice.PACKED_OP_SIZE
 
-      // EG rates and levels - bytes 0-7
-      packed[opDst + DX7Voice.PACKED_OP_EG_RATE_1] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_RATE_1]
-      packed[opDst + DX7Voice.PACKED_OP_EG_RATE_2] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_RATE_2]
-      packed[opDst + DX7Voice.PACKED_OP_EG_RATE_3] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_RATE_3]
-      packed[opDst + DX7Voice.PACKED_OP_EG_RATE_4] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_RATE_4]
-      packed[opDst + DX7Voice.PACKED_OP_EG_LEVEL_1] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_LEVEL_1]
-      packed[opDst + DX7Voice.PACKED_OP_EG_LEVEL_2] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_LEVEL_2]
-      packed[opDst + DX7Voice.PACKED_OP_EG_LEVEL_3] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_LEVEL_3]
-      packed[opDst + DX7Voice.PACKED_OP_EG_LEVEL_4] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_EG_LEVEL_4]
-
-      // Break point and scaling depths
-      packed[opDst + DX7Voice.PACKED_OP_BREAK_POINT] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_BREAK_POINT]
-      packed[opDst + DX7Voice.PACKED_OP_L_SCALE_DEPTH] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH]
-      packed[opDst + DX7Voice.PACKED_OP_R_SCALE_DEPTH] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH]
-
-      // Key scales (LC and RC) combined
-      const lc = unpacked[opSrc + DX7Voice.UNPACKED_OP_L_CURVE] & DX7Voice.MASK_2BIT
-      const rc = unpacked[opSrc + DX7Voice.UNPACKED_OP_R_CURVE] & DX7Voice.MASK_2BIT
-      packed[opDst + DX7Voice.PACKED_OP_CURVES] = lc | (rc << 2)
-
-      // Rate scaling and detune combined
-      const rs = unpacked[opSrc + DX7Voice.UNPACKED_OP_RATE_SCALING] & DX7Voice.MASK_3BIT
-      const det = unpacked[opSrc + DX7Voice.UNPACKED_OP_DETUNE] & DX7Voice.MASK_4BIT
-      packed[opDst + DX7Voice.PACKED_OP_RATE_SCALING] = rs | (det << 3)
-
-      // Amp mod sensitivity and key velocity sensitivity combined
-      const ams = unpacked[opSrc + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] & DX7Voice.MASK_2BIT
-      const kvs = unpacked[opSrc + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] & DX7Voice.MASK_3BIT
-      packed[opDst + DX7Voice.PACKED_OP_MOD_SENS] = ams | (kvs << 2)
-
-      // Output level
-      packed[opDst + DX7Voice.PACKED_OP_OUTPUT_LEVEL] =
-        unpacked[opSrc + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL]
-
-      // Mode and frequency combined
-      const mode = unpacked[opSrc + DX7Voice.UNPACKED_OP_MODE] & DX7Voice.MASK_1BIT
-      const freq = unpacked[opSrc + DX7Voice.UNPACKED_OP_FREQ_COARSE] & DX7Voice.MASK_5BIT
-      packed[opDst + DX7Voice.PACKED_OP_MODE_FREQ] = mode | (freq << 1)
-
-      // OSC detune and frequency fine combined
-      const oscDetune = unpacked[opSrc + DX7Voice.UNPACKED_OP_OSC_DETUNE] & DX7Voice.MASK_3BIT
-      const freqFine = unpacked[opSrc + DX7Voice.UNPACKED_OP_FREQ_FINE] & DX7Voice.MASK_4BIT
-      packed[opDst + DX7Voice.PACKED_OP_DETUNE_FINE] = oscDetune | (freqFine << 3)
+      DX7Voice._packOperator(unpacked, packed, src, dst)
     }
+  }
 
-    // Pitch EG rates and levels
+  /**
+   * Pack a single operator's parameters
+   * @private
+   */
+  static _packOperator(unpacked, packed, src, dst) {
+    DX7Voice._packOperatorEG(unpacked, packed, src, dst)
+    DX7Voice._packOperatorScaling(unpacked, packed, src, dst)
+    DX7Voice._packOperatorPackedParams(unpacked, packed, src, dst)
+    DX7Voice._packOperatorFrequency(unpacked, packed, src, dst)
+  }
+
+  /**
+   * Pack operator EG rates and levels
+   * @private
+   */
+  static _packOperatorEG(unpacked, packed, src, dst) {
+    // EG rates (4 bytes)
+    packed[dst + DX7Voice.PACKED_OP_EG_RATE_1] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_1]
+    packed[dst + DX7Voice.PACKED_OP_EG_RATE_2] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_2]
+    packed[dst + DX7Voice.PACKED_OP_EG_RATE_3] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_3]
+    packed[dst + DX7Voice.PACKED_OP_EG_RATE_4] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_4]
+
+    // EG levels (4 bytes)
+    packed[dst + DX7Voice.PACKED_OP_EG_LEVEL_1] = unpacked[src + DX7Voice.UNPACKED_OP_EG_LEVEL_1]
+    packed[dst + DX7Voice.PACKED_OP_EG_LEVEL_2] = unpacked[src + DX7Voice.UNPACKED_OP_EG_LEVEL_2]
+    packed[dst + DX7Voice.PACKED_OP_EG_LEVEL_3] = unpacked[src + DX7Voice.UNPACKED_OP_EG_LEVEL_3]
+    packed[dst + DX7Voice.PACKED_OP_EG_LEVEL_4] = unpacked[src + DX7Voice.UNPACKED_OP_EG_LEVEL_4]
+  }
+
+  /**
+   * Pack operator keyboard scaling parameters
+   * @private
+   */
+  static _packOperatorScaling(unpacked, packed, src, dst) {
+    packed[dst + DX7Voice.PACKED_OP_BREAK_POINT] = unpacked[src + DX7Voice.UNPACKED_OP_BREAK_POINT]
+    packed[dst + DX7Voice.PACKED_OP_L_SCALE_DEPTH] = unpacked[src + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH]
+    packed[dst + DX7Voice.PACKED_OP_R_SCALE_DEPTH] = unpacked[src + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH]
+  }
+
+  /**
+   * Pack operator bit-packed parameters
+   * @private
+   */
+  static _packOperatorPackedParams(unpacked, packed, src, dst) {
+    // Combine key scales (LC and RC)
+    const lc = unpacked[src + DX7Voice.UNPACKED_OP_L_CURVE] & DX7Voice.MASK_2BIT
+    const rc = unpacked[src + DX7Voice.UNPACKED_OP_R_CURVE] & DX7Voice.MASK_2BIT
+    packed[dst + DX7Voice.PACKED_OP_CURVES] = lc | (rc << 2)
+
+    // Combine rate scaling and detune
+    const rs = unpacked[src + DX7Voice.UNPACKED_OP_RATE_SCALING] & DX7Voice.MASK_3BIT
+    const det = unpacked[src + DX7Voice.UNPACKED_OP_DETUNE] & DX7Voice.MASK_4BIT
+    packed[dst + DX7Voice.PACKED_OP_RATE_SCALING] = rs | (det << 3)
+
+    // Combine amp mod sensitivity and key velocity sensitivity
+    const ams = unpacked[src + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] & DX7Voice.MASK_2BIT
+    const kvs = unpacked[src + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] & DX7Voice.MASK_3BIT
+    packed[dst + DX7Voice.PACKED_OP_MOD_SENS] = ams | (kvs << 2)
+
+    // Output level
+    packed[dst + DX7Voice.PACKED_OP_OUTPUT_LEVEL] = unpacked[src + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL]
+  }
+
+  /**
+   * Pack operator frequency parameters
+   * @private
+   */
+  static _packOperatorFrequency(unpacked, packed, src, dst) {
+    // Combine mode and frequency
+    const mode = unpacked[src + DX7Voice.UNPACKED_OP_MODE] & DX7Voice.MASK_1BIT
+    const freq = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_COARSE] & DX7Voice.MASK_5BIT
+    packed[dst + DX7Voice.PACKED_OP_MODE_FREQ] = mode | (freq << 1)
+
+    // Combine OSC detune and frequency fine
+    const oscDetune = unpacked[src + DX7Voice.UNPACKED_OP_OSC_DETUNE] & DX7Voice.MASK_3BIT
+    const freqFine = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_FINE] & DX7Voice.MASK_4BIT
+    packed[dst + DX7Voice.PACKED_OP_DETUNE_FINE] = oscDetune | (freqFine << 3)
+  }
+
+  /**
+   * Pack pitch envelope generator parameters
+   * @private
+   */
+  static _packPitchEG(unpacked, packed) {
     packed[DX7Voice.PACKED_PITCH_EG_RATE_1] = unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_1]
     packed[DX7Voice.PACKED_PITCH_EG_RATE_2] = unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_2]
     packed[DX7Voice.PACKED_PITCH_EG_RATE_3] = unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_3]
     packed[DX7Voice.PACKED_PITCH_EG_RATE_4] = unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_4]
+
     packed[DX7Voice.PACKED_PITCH_EG_LEVEL_1] = unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_1]
     packed[DX7Voice.PACKED_PITCH_EG_LEVEL_2] = unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_2]
     packed[DX7Voice.PACKED_PITCH_EG_LEVEL_3] = unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_3]
     packed[DX7Voice.PACKED_PITCH_EG_LEVEL_4] = unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_4]
+  }
+
+  /**
+   * Pack global voice parameters (algorithm, feedback, LFO, etc.)
+   * @private
+   */
+  static _packGlobalParams(unpacked, packed) {
     packed[DX7Voice.OFFSET_ALGORITHM] = unpacked[DX7Voice.UNPACKED_ALGORITHM]
 
-    // Feedback and OSC Sync combined
+    // Combine feedback and OSC Sync
     const feedback = unpacked[DX7Voice.UNPACKED_FEEDBACK] & DX7Voice.MASK_3BIT
     const oscSync = unpacked[DX7Voice.UNPACKED_OSC_SYNC] & DX7Voice.MASK_1BIT
     packed[DX7Voice.OFFSET_FEEDBACK] = feedback | (oscSync << 3)
@@ -536,7 +625,7 @@ export class DX7Voice {
     packed[DX7Voice.OFFSET_LFO_PM_DEPTH] = unpacked[DX7Voice.UNPACKED_LFO_PM_DEPTH]
     packed[DX7Voice.OFFSET_LFO_AM_DEPTH] = unpacked[DX7Voice.UNPACKED_LFO_AM_DEPTH]
 
-    // LFO Key Sync, Wave, Pitch Mod Sensitivity combined
+    // Combine LFO Key Sync, Wave, Pitch Mod Sensitivity
     const lfoKeySync = unpacked[DX7Voice.UNPACKED_LFO_KEY_SYNC] & DX7Voice.MASK_1BIT
     const lfoWave = unpacked[DX7Voice.UNPACKED_LFO_WAVE] & DX7Voice.MASK_3BIT
     const lfoPitchSens = unpacked[DX7Voice.UNPACKED_LFO_PM_SENS] & DX7Voice.MASK_3BIT
@@ -545,13 +634,16 @@ export class DX7Voice {
     packed[DX7Voice.OFFSET_AMP_MOD_SENS] = unpacked[DX7Voice.UNPACKED_AMP_MOD_SENS]
     packed[DX7Voice.OFFSET_TRANSPOSE] = unpacked[DX7Voice.UNPACKED_TRANSPOSE]
     packed[DX7Voice.OFFSET_EG_BIAS_SENS] = unpacked[DX7Voice.UNPACKED_EG_BIAS_SENS]
+  }
 
-    // Write voice name
+  /**
+   * Copy voice name from unpacked to packed format
+   * @private
+   */
+  static _packName(unpacked, packed) {
     for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
       packed[DX7Voice.PACKED_NAME_START + i] = unpacked[DX7Voice.UNPACKED_NAME_START + i]
     }
-
-    return packed
   }
 
   /**
@@ -562,7 +654,6 @@ export class DX7Voice {
   static createDefault(index = 0) {
     const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
 
-    // Default operator settings
     for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
       const opOffset = op * DX7Voice.UNPACKED_OP_SIZE
 
@@ -625,11 +716,9 @@ export class DX7Voice {
     unpacked[DX7Voice.UNPACKED_TRANSPOSE] = DX7Voice.TRANSPOSE_CENTER
     unpacked[DX7Voice.UNPACKED_EG_BIAS_SENS] = 0
 
-    // Set name to "Init Voice"
     const name = "Init Voice"
     for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
-      unpacked[DX7Voice.UNPACKED_NAME_START + i] =
-        i < name.length ? name.charCodeAt(i) : DX7Voice.CHAR_SPACE
+      unpacked[DX7Voice.UNPACKED_NAME_START + i] = i < name.length ? name.charCodeAt(i) : DX7Voice.CHAR_SPACE
     }
 
     const packed = DX7Voice.pack(unpacked)
@@ -661,7 +750,6 @@ export class DX7Voice {
         try {
           const bytes = new Uint8Array(e.target.result)
 
-          // Verify VCED header
           if (
             bytes[0] !== DX7Voice.VCED_SYSEX_START ||
             bytes[1] !== DX7Voice.VCED_YAMAHA_ID ||
@@ -679,7 +767,6 @@ export class DX7Voice {
             DX7Voice.VCED_HEADER_SIZE + DX7Voice.VCED_DATA_SIZE,
           )
 
-          // Verify checksum
           const checksum = bytes[DX7Voice.VCED_HEADER_SIZE + DX7Voice.VCED_DATA_SIZE]
           const calculatedChecksum = DX7Bank._calculateChecksum(voiceData, DX7Voice.VCED_DATA_SIZE)
 
@@ -854,7 +941,6 @@ export class DX7Voice {
     )
     result[offset++] = DX7Bank._calculateChecksum(dataForChecksum, DX7Voice.VCED_DATA_SIZE)
 
-    // SysEx end
     result[offset++] = DX7Voice.VCED_SYSEX_END
 
     return result
@@ -888,7 +974,6 @@ export class DX7Voice {
       return `${note}${octave}`
     }
 
-    // Extract operator data
     for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
       const opOffset = op * DX7Voice.UNPACKED_OP_SIZE
       const mode = unpacked[opOffset + DX7Voice.UNPACKED_OP_MODE] === 0 ? "RATIO" : "FIXED"
@@ -921,8 +1006,7 @@ export class DX7Voice {
           velocity: unpacked[opOffset + DX7Voice.UNPACKED_OP_KEY_VEL_SENS],
           scaling: unpacked[opOffset + DX7Voice.UNPACKED_OP_RATE_SCALING],
           breakPoint: getNoteName(
-            unpacked[opOffset + DX7Voice.UNPACKED_OP_BREAK_POINT] +
-              DX7Voice.MIDI_BREAK_POINT_OFFSET,
+            unpacked[opOffset + DX7Voice.UNPACKED_OP_BREAK_POINT] + DX7Voice.MIDI_BREAK_POINT_OFFSET,
           ),
         },
         output: {
@@ -1021,10 +1105,8 @@ export class DX7Bank {
     this.name = name
 
     if (data) {
-      // Load existing data
       this._load(data)
     } else {
-      // Create empty bank with default voices
       for (let i = 0; i < DX7Bank.NUM_VOICES; i++) {
         this.voices[i] = DX7Voice.createDefault(i)
       }
@@ -1052,7 +1134,6 @@ export class DX7Bank {
    * @param {Array<number>|ArrayBuffer|Uint8Array} data
    */
   _load(data) {
-    // Convert to Uint8Array if needed
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
 
     // Check if we have raw voice data or full SysEx
@@ -1061,7 +1142,6 @@ export class DX7Bank {
 
     // Remove SysEx wrapper if present
     if (bytes[0] === DX7Bank.SYSEX_START) {
-      // Verify header
       const header = bytes.subarray(0, DX7Bank.SYSEX_HEADER_SIZE)
       const expectedHeader = DX7Bank.SYSEX_HEADER
 
@@ -1076,10 +1156,7 @@ export class DX7Bank {
       }
 
       // Extract voice data (skip header and footer)
-      voiceData = bytes.subarray(
-        DX7Bank.SYSEX_HEADER_SIZE,
-        DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE,
-      )
+      voiceData = bytes.subarray(DX7Bank.SYSEX_HEADER_SIZE, DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE)
       offset = DX7Bank.SYSEX_HEADER_SIZE
     } else if (bytes.length === DX7Bank.VOICE_DATA_SIZE) {
       // Raw voice data, no SysEx wrapper
@@ -1092,7 +1169,6 @@ export class DX7Bank {
       )
     }
 
-    // Verify total size
     if (voiceData.length !== DX7Bank.VOICE_DATA_SIZE) {
       throw new DX7ValidationError(
         `Invalid voice data length: expected ${DX7Bank.VOICE_DATA_SIZE} bytes, got ${voiceData.length}`,
@@ -1101,7 +1177,6 @@ export class DX7Bank {
       )
     }
 
-    // Validate checksum if we have SysEx wrapper
     const checksumOffset = DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE
     if (offset > 0 && bytes.length >= checksumOffset + 1) {
       const checksum = bytes[checksumOffset]
@@ -1115,7 +1190,6 @@ export class DX7Bank {
       }
     }
 
-    // Extract voices
     this.voices = new Array(DX7Bank.NUM_VOICES)
     for (let i = 0; i < DX7Bank.NUM_VOICES; i++) {
       const voiceStart = i * DX7Bank.VOICE_SIZE
@@ -1215,14 +1289,8 @@ export class DX7Bank {
           // Check if it's a single voice file (VCED format)
           // Single voice files have format byte 0x00, banks have 0x09
           if (bytes[0] === DX7Bank.SYSEX_START && bytes[3] === DX7Voice.VCED_FORMAT_SINGLE) {
-            // This is a single voice file - DX7Bank is for banks only
-            reject(
-              new DX7ParseError(
-                "This is a single voice file. Use DX7Voice.fromFile() instead.",
-                "format",
-                3,
-              ),
-            )
+            // This is a single voice file
+            reject(new DX7ParseError("This is a single voice file. Use DX7Voice.fromFile() instead.", "format", 3))
           } else {
             // This is a bank file - strip file extension from name
             const bankName = fileName.replace(/\.[^/.]+$/, "")
@@ -1246,26 +1314,19 @@ export class DX7Bank {
     const result = new Uint8Array(DX7Bank.SYSEX_SIZE)
     let offset = 0
 
-    // Header
     DX7Bank.SYSEX_HEADER.forEach((byte) => {
       result[offset++] = byte
     })
 
-    // Voice data (all voices)
     for (const voice of this.voices) {
       for (let i = 0; i < DX7Bank.VOICE_SIZE; i++) {
         result[offset++] = voice.data[i]
       }
     }
 
-    // Checksum
-    const voiceData = result.subarray(
-      DX7Bank.SYSEX_HEADER_SIZE,
-      DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE,
-    )
+    const voiceData = result.subarray(DX7Bank.SYSEX_HEADER_SIZE, DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE)
     result[offset++] = DX7Bank._calculateChecksum(voiceData, DX7Bank.VOICE_DATA_SIZE)
 
-    // SysEx end
     result[offset++] = DX7Bank.SYSEX_END
 
     return result
@@ -1278,7 +1339,7 @@ export class DX7Bank {
   toJSON() {
     const voices = this.voices.map((voice, index) => {
       const jsonPatch = voice.toJSON()
-      // Voice indices are 0-based internally, but show as 1-32 to users
+      // Voice indices are 0-based internally, but shown as 1-32 to users
       return {
         index: index + 1,
         ...jsonPatch,

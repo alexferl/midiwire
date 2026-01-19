@@ -16,7 +16,7 @@ export default defineConfig({
     },
   },
   server: {
-    open: "/examples/basic.html",
+    open: "/examples/index.html",
   },
   test: {
     environment: "jsdom",

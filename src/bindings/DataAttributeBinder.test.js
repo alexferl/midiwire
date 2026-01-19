@@ -248,9 +248,7 @@ describe("DataAttributeBinder", () => {
       binder.bindAll()
 
       expect(mockController.boundElements.size).toBe(1)
-      expect(
-        mockController.boundElements.get(document.querySelector('[data-midi-cc="74"]')).cc,
-      ).toBe(74)
+      expect(mockController.boundElements.get(document.querySelector('[data-midi-cc="74"]')).cc).toBe(74)
     })
 
     it("should handle empty document", () => {
@@ -664,10 +662,7 @@ describe("DataAttributeBinder", () => {
 
         // Should warn about the conflict
         expect(consoleWarnSpy).toHaveBeenCalledOnce()
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          expect.stringMatching(/both 7-bit.*14-bit/),
-          element,
-        )
+        expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringMatching(/both 7-bit.*14-bit/), element)
 
         consoleWarnSpy.mockRestore()
       })

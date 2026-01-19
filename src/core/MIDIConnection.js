@@ -1,10 +1,5 @@
 import { EventEmitter } from "./EventEmitter.js"
-import {
-  MIDIAccessError,
-  MIDIConnectionError,
-  MIDIDeviceError,
-  MIDIValidationError,
-} from "./errors.js"
+import { MIDIAccessError, MIDIConnectionError, MIDIDeviceError, MIDIValidationError } from "./errors.js"
 
 /**
  * Connection event constants
@@ -182,11 +177,7 @@ export class MIDIConnection extends EventEmitter {
     // Connect by index
     if (typeof device === "number") {
       if (device < 0 || device >= outputs.length) {
-        throw new MIDIDeviceError(
-          `Output index ${device} out of range (0-${outputs.length - 1})`,
-          "output",
-          device,
-        )
+        throw new MIDIDeviceError(`Output index ${device} out of range (0-${outputs.length - 1})`, "output", device)
       }
       this.output = outputs[device]
       return
@@ -197,11 +188,7 @@ export class MIDIConnection extends EventEmitter {
 
     if (!this.output) {
       const availableNames = outputs.map((o) => o.name).join(", ")
-      throw new MIDIDeviceError(
-        `MIDI output "${device}" not found. Available: ${availableNames}`,
-        "output",
-        device,
-      )
+      throw new MIDIDeviceError(`MIDI output "${device}" not found. Available: ${availableNames}`, "output", device)
     }
   }
 
@@ -241,11 +228,7 @@ export class MIDIConnection extends EventEmitter {
     } else if (typeof device === "number") {
       // Connect by index
       if (device < 0 || device >= inputs.length) {
-        throw new MIDIDeviceError(
-          `Input index ${device} out of range (0-${inputs.length - 1})`,
-          "input",
-          device,
-        )
+        throw new MIDIDeviceError(`Input index ${device} out of range (0-${inputs.length - 1})`, "input", device)
       }
       this.input = inputs[device]
     } else {
@@ -254,11 +237,7 @@ export class MIDIConnection extends EventEmitter {
 
       if (!this.input) {
         const availableNames = inputs.map((i) => i.name).join(", ")
-        throw new MIDIDeviceError(
-          `MIDI input "${device}" not found. Available: ${availableNames}`,
-          "input",
-          device,
-        )
+        throw new MIDIDeviceError(`MIDI input "${device}" not found. Available: ${availableNames}`, "input", device)
       }
     }
 

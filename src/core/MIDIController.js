@@ -639,12 +639,8 @@ export class MIDIController extends EventEmitter {
           const ccValue = channelData.ccs[config.cc]
           if (ccValue !== undefined) {
             // Convert MIDI value (0-127) back to element value
-            const min =
-              config.min !== undefined ? config.min : parseFloat(element.getAttribute?.("min")) || 0
-            const max =
-              config.max !== undefined
-                ? config.max
-                : parseFloat(element.getAttribute?.("max")) || 127
+            const min = config.min !== undefined ? config.min : parseFloat(element.getAttribute?.("min")) || 0
+            const max = config.max !== undefined ? config.max : parseFloat(element.getAttribute?.("max")) || 127
             const invert = config.invert || false
 
             let elementValue
