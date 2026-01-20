@@ -11,7 +11,7 @@ import {
   isValidVelocity,
 } from "./validators.js"
 
-describe("Validators - Complete Tests", () => {
+describe("Validators Utils", () => {
   describe("isValidChannel", () => {
     const validChannels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     const invalidChannels = [0, 17, -1, 100, 1.5, 0.5, NaN, Infinity, -Infinity, null, "", "1", undefined]

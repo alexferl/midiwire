@@ -21,7 +21,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
+    "coverage": "vitest run --coverage",
+    "coverage:ui": "vitest run --coverage && open coverage/index.html",
     "lint": "biome check --write"
   },
   "keywords": [
