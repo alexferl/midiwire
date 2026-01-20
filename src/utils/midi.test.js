@@ -14,7 +14,7 @@ import {
   noteToFrequency,
 } from "./midi.js"
 
-describe("MIDI Utils - Additional Tests", () => {
+describe("MIDI Utils", () => {
   describe("denormalizeValue", () => {
     it("should denormalize MIDI values to custom range", () => {
       expect(denormalizeValue(64, 0, 100, false)).toBeCloseTo(50, 0) // 50% of 100

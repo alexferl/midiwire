@@ -175,7 +175,7 @@ export {
   MIDIController,
 } from "./core/MIDIController.js"
 export { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
-export { DX7Bank, DX7Voice } from "./utils/dx7.js"
+export { DX7Bank, DX7Voice } from "./utils/dx7"
 export * from "./utils/midi.js"
 export * from "./utils/sysex.js"
 export * from "./utils/validators.js"

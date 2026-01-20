@@ -47,14 +47,14 @@
     </div>
 
     <p style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
-      Supports DX7 bank files (32 voices) and single voices (VCED format)
+      Supports DX7 bank/voice files (.syx) and JSON exports (.json)
     </p>
 
     <div class="file-input-wrapper">
       <label for="bank-file" class="file-input-label">
-        Load SYX File
+        Load SYX/JSON File
       </label>
-      <input type="file" id="bank-file" accept=".syx">
+      <input type="file" id="bank-file" accept=".syx,.json">
     </div>
 
     <div class="button-row" style="margin-top: 15px;">
@@ -87,7 +87,7 @@
   </div>
 
   <script type="module">
-    import { createMIDIDeviceManager, DX7Bank, DX7Voice } from "../src/index.js";
+    import { CTRL, createMIDIDeviceManager, DX7Bank, DX7Voice } from "../src/index.js";
 
     let bank = null;
     let deviceManager = null;
@@ -140,31 +140,12 @@
       try {
         status.textContent = `Loading ${file.name}...`;
 
-        try {
-          // Try to load as a bank first
-          bank = await DX7Bank.fromFile(file);
-          displayBank();
-          status.textContent = `Loaded bank: ${file.name}`;
-          status.className = "status success";
-        } catch (err) {
-          // If it's a single voice file, DX7Bank.fromFile will throw an error
-          if (err.message?.includes("Use DX7Voice.fromFile")) {
-            // Load as single voice instead
-            const voice = await DX7Voice.fromFile(file);
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-            // Create a bank with the single voice
-            bank = new DX7Bank();
-            bank.voices.fill(DX7Voice.createDefault());
-            bank.voices[0] = voice;
-            bank.name = file.name; // Keep the full filename including extension
-
-            displayBank();
-            status.textContent = `Loaded single voice: ${voice.name}`;
-            status.className = "status success";
-          } else {
-            // Re-throw if it's a different error
-            throw err;
-          }
+        if (fileExtension === "json") {
+          await loadJSONFile(file);
+        } else {
+          await loadSYXFile(file);
         }
       } catch (err) {
         let errorMessage = `Error loading file: ${err.message}`
@@ -184,6 +165,75 @@
         status.className = "status error";
         console.error(err);
       }
+    }
+
+    async function loadSYXFile(file) {
+      try {
+        // Try to load as a bank first
+        bank = await DX7Bank.fromFile(file);
+        displayBank();
+        status.textContent = `Loaded bank: ${file.name}`;
+        status.className = "status success";
+      } catch (err) {
+        // If it's a single voice file, DX7Bank.fromFile will throw an error
+        if (err.message?.includes("Use DX7Voice.fromFile")) {
+          const voice = await DX7Voice.fromFile(file);
+
+          bank = new DX7Bank();
+          bank.voices.fill(DX7Voice.createDefault());
+          bank.voices[0] = voice;
+          bank.name = file.name; // Keep the full filename including extension
+
+          displayBank();
+          status.textContent = `Loaded single voice: ${voice.name}`;
+          status.className = "status success";
+        } else {
+          // Re-throw if it's a different error
+          throw err;
+        }
+      }
+    }
+
+    async function loadJSONFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const jsonData = JSON.parse(e.target.result);
+
+            // Check if this is a bank JSON or a single voice JSON
+            if (jsonData.voices && Array.isArray(jsonData.voices)) {
+              // This is a bank JSON
+              bank = DX7Bank.fromJSON(jsonData);
+              bank.name = file.name.replace(/\.[^/.]+$/, ""); // Remove .json extension
+              displayBank();
+              status.textContent = `Loaded bank from JSON: ${file.name}`;
+              status.className = "status success";
+            } else if (jsonData.operators && jsonData.global) {
+              // This is a single voice JSON
+              const voice = DX7Voice.fromJSON(jsonData);
+
+              // Create a bank with the single voice
+              bank = new DX7Bank();
+              bank.voices.fill(DX7Voice.createDefault());
+              bank.voices[0] = voice;
+              bank.name = file.name.replace(/\.[^/.]+$/, ""); // Remove .json extension
+
+              displayBank();
+              status.textContent = `Loaded voice from JSON: ${voice.name}`;
+              status.className = "status success";
+            } else {
+              throw new Error("Invalid JSON format: expected bank or voice data");
+            }
+
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error("Failed to read JSON file"));
+        reader.readAsText(file);
+      });
     }
 
     // Update the state of Send to DX7 buttons based on MIDI connection
@@ -467,6 +517,89 @@
       }
     });
 
+    /**
+     * Requests the current voice from a DX7 device via SysEx
+     * @returns {Promise<DX7Voice>} A promise that resolves to the received voice
+     */
+    async function requestCurrentVoice() {
+      if (!deviceManager?.midi?.connection?.output) {
+        throw new Error("MIDI not connected");
+      }
+
+      return new Promise((resolve, reject) => {
+        // Set up a one-time handler for the SysEx response
+        const sysExHandler = (event) => {
+          try {
+            // Use DX7Voice.fromSysEx to parse the received data
+            const voice = DX7Voice.fromSysEx(event.data);
+
+            // Remove the handler immediately after receiving valid data
+            deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+
+            resolve(voice);
+          } catch (err) {
+            // Only remove handler and reject if it's a real error
+            // (not just an invalid header which might be from another device)
+            if (err.code !== "header") {
+              deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+              reject(err);
+            }
+          }
+        };
+
+        // Add the SysEx receive handler
+        deviceManager.midi.on(CTRL.SYSEX_RECV, sysExHandler);
+
+        // Send the request after a short delay to ensure handler is registered
+        setTimeout(() => {
+          try {
+            // DX7 request current voice: F0 43 20 7F 1B 00 F7
+            // Note: includeWrapper=true to add F0/F7 automatically
+            deviceManager.midi.sendSysEx([0x43, 0x20, 0x7F, 0x1B, 0x00], true);
+          } catch (err) {
+            deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+            reject(new Error(`Failed to send request: ${err.message}`));
+          }
+        }, 100);
+
+        // Timeout after 5 seconds if no response
+        setTimeout(() => {
+          deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+          reject(new Error("No response from DX7 (timeout)"));
+        }, 5000);
+      });
+    }
+
+    document.getElementById("request-current-voice").addEventListener("click", async () => {
+      const button = document.getElementById("request-current-voice");
+
+      button.disabled = true;
+      button.textContent = "Requesting...";
+      status.textContent = "Requesting current voice from DX7...";
+      status.className = "status";
+
+      try {
+        const voice = await requestCurrentVoice();
+
+        bank = new DX7Bank();
+        bank.voices.fill(DX7Voice.createDefault());
+        bank.voices[0] = voice;
+        bank.name = "Received from DX7";
+
+        displayBank();
+
+        status.textContent = `Received voice: ${voice.name}`;
+        status.className = "status success";
+      } catch (err) {
+        console.error("Error requesting voice:", err);
+        status.textContent = `Error: ${err.message}`;
+        status.className = "status error";
+      } finally {
+        button.disabled = false;
+        button.textContent = "Request Current Voice from DX7";
+      }
+    });
+
     // Parameters modal functions
     window.viewParameters = (index) => {
       if (!bank) return;
@@ -478,10 +611,8 @@
 
       voiceNameEl.textContent = `${voice.name || "Unnamed Voice"} - Parameters`;
 
-      // Get voice data as JSON
       const voiceData = voice.toJSON();
 
-      // Generate parameters HTML
       let html = `
         <div class="params-grid">
           <div class="params-section">
@@ -665,164 +796,6 @@
         document.body.classList.remove("modal-open");
       }
     };
-
-    // Request current voice from DX7 via SysEx
-    document.getElementById("request-current-voice").addEventListener("click", async () => {
-      const button = document.getElementById("request-current-voice");
-
-      if (!deviceManager?.midi?.connection?.output) {
-        status.textContent = "Error: MIDI not connected";
-        status.className = "status error";
-        return;
-      }
-
-      // Update button state
-      button.disabled = true;
-      button.textContent = "Requesting...";
-      status.textContent = "Requesting current voice from DX7...";
-      status.className = "status";
-
-      // Set up a one-time handler for the SysEx response
-      const sysExHandler = (event) => {
-        try {
-          const data = event.data;
-
-          // Check if this is a DX7 single voice dump (VCED format)
-          // Header: F0 43 00 00 01 1B
-          if (data.length === 163 &&
-              data[0] === 0xF0 && // SysEx start
-              data[1] === 0x43 && // Yamaha manufacturer ID
-              data[3] === 0x00 && // Format: single voice dump
-              data[4] === 0x01 && // Byte count MSB
-              data[5] === 0x1B) { // Byte count LSB
-
-            // Parse the received voice data
-            const voiceData = data.subarray(6, 161); // Extract 155 bytes of voice data
-            const unpacked = new Uint8Array(169);
-            let offset = 0;
-
-            // Convert VCED data to unpacked format (169 bytes)
-            // Operators: 6 × 21 bytes = 126 bytes
-            for (let op = 0; op < 6; op++) {
-              const dst = (5 - op) * 23; // DX7 stores operators in reverse order
-
-              unpacked[dst + 0] = voiceData[offset++]; // EG Rate 1
-              unpacked[dst + 1] = voiceData[offset++]; // EG Rate 2
-              unpacked[dst + 2] = voiceData[offset++]; // EG Rate 3
-              unpacked[dst + 3] = voiceData[offset++]; // EG Rate 4
-              unpacked[dst + 4] = voiceData[offset++]; // EG Level 1
-              unpacked[dst + 5] = voiceData[offset++]; // EG Level 2
-              unpacked[dst + 6] = voiceData[offset++]; // EG Level 3
-              unpacked[dst + 7] = voiceData[offset++]; // EG Level 4
-              unpacked[dst + 8] = voiceData[offset++]; // Break Point
-              unpacked[dst + 9] = voiceData[offset++]; // L Scale Depth
-              unpacked[dst + 10] = voiceData[offset++]; // R Scale Depth
-              unpacked[dst + 11] = voiceData[offset++]; // L Curve
-              unpacked[dst + 12] = voiceData[offset++]; // R Curve
-              unpacked[dst + 13] = voiceData[offset++]; // Rate Scaling
-              unpacked[dst + 14] = voiceData[offset++]; // Detune
-
-              // Amp Mod Sens and Key Vel Sens are packed
-              const modSens = voiceData[offset++];
-              unpacked[dst + 15] = modSens & 0x03; // Amp Mod Sens
-              unpacked[dst + 22] = (modSens >> 2) & 0x07; // Key Vel Sens
-
-              unpacked[dst + 16] = voiceData[offset++]; // Output Level
-              unpacked[dst + 17] = voiceData[offset++]; // Mode
-              unpacked[dst + 19] = voiceData[offset++]; // Freq Coarse
-              unpacked[dst + 21] = voiceData[offset++]; // Freq Fine (VCED has OSC_DETUNE before FREQ_FINE)
-              unpacked[dst + 20] = voiceData[offset++]; // OSC Detune
-            }
-
-            // Pitch EG: 8 bytes
-            unpacked[138] = voiceData[offset++]; // Pitch EG Rate 1
-            unpacked[139] = voiceData[offset++]; // Pitch EG Rate 2
-            unpacked[140] = voiceData[offset++]; // Pitch EG Rate 3
-            unpacked[141] = voiceData[offset++]; // Pitch EG Rate 4
-            unpacked[142] = voiceData[offset++]; // Pitch EG Level 1
-            unpacked[143] = voiceData[offset++]; // Pitch EG Level 2
-            unpacked[144] = voiceData[offset++]; // Pitch EG Level 3
-            unpacked[145] = voiceData[offset++]; // Pitch EG Level 4
-
-            // Algorithm and global parameters: 11 bytes
-            unpacked[146] = voiceData[offset++]; // Algorithm
-            unpacked[147] = voiceData[offset++]; // Feedback
-            unpacked[148] = voiceData[offset++]; // OSC Sync
-            unpacked[149] = voiceData[offset++]; // LFO Speed
-            unpacked[150] = voiceData[offset++]; // LFO Delay
-            unpacked[151] = voiceData[offset++]; // LFO PM Depth
-            unpacked[152] = voiceData[offset++]; // LFO AM Depth
-            unpacked[153] = voiceData[offset++]; // LFO Key Sync
-            unpacked[154] = voiceData[offset++]; // LFO Wave
-            unpacked[155] = voiceData[offset++]; // LFO PM Sens
-            unpacked[157] = voiceData[offset++]; // Transpose
-
-            // Voice name: 10 bytes
-            for (let i = 0; i < 10; i++) {
-              unpacked[159 + i] = voiceData[offset++];
-            }
-
-            // Pack to 128-byte format
-            const packed = DX7Voice.pack(unpacked);
-
-            // Create a new bank with the received voice
-            bank = new DX7Bank();
-            bank.voices.fill(DX7Voice.createDefault());
-
-            const receivedVoice = new DX7Voice(packed, 0);
-            bank.voices[0] = receivedVoice;
-            bank.name = "Received from DX7";
-
-            // Display the received voice
-            displayBank();
-
-            status.textContent = `Received voice: ${receivedVoice.name}`;
-            status.className = "status success";
-          }
-        } catch (err) {
-          console.error("Error parsing received voice:", err);
-          status.textContent = "Error: Failed to parse received voice data";
-          status.className = "status error";
-        }
-
-        // Remove the handler after receiving data or on error
-        deviceManager.midi.off("sysex-recv", sysExHandler);
-
-        // Reset button state
-        button.disabled = false;
-        button.textContent = "Request Current Voice from DX7";
-      };
-
-      // Add the SysEx receive handler
-      deviceManager.midi.on("sysex-recv", sysExHandler);
-
-      // Send the request after a short delay to ensure handler is registered
-      setTimeout(() => {
-        try {
-          // DX7 request current voice: F0 43 20 7F 1B 00 F7
-          // Note: includeWrapper=true to add F0/F7 automatically
-          deviceManager.midi.sendSysEx([0x43, 0x20, 0x7F, 0x1B, 0x00], true);
-        } catch (err) {
-          console.error("Error sending request:", err);
-          status.textContent = "Error: Failed to send request";
-          status.className = "status error";
-          button.disabled = false;
-          button.textContent = "Request Current Voice from DX7";
-          deviceManager.midi.off("sysex-recv", sysExHandler);
-        }
-      }, 100);
-
-      // Timeout after 5 seconds if no response
-      setTimeout(() => {
-        if (button.disabled) {
-          status.textContent = "Error: No response from DX7 (timeout)";
-          status.className = "status error";
-          button.disabled = false;
-          button.textContent = "Request Current Voice from DX7";
-          deviceManager.midi.off("sysex-recv", sysExHandler);
-        }
-      }, 5000);
-    });
 
     initMIDI();
   </script>

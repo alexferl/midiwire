@@ -5,7 +5,8 @@
  * @see https://github.com/asb2m10/dexed
  */
 
-import { DX7ParseError, DX7ValidationError } from "../core/errors.js"
+import { DX7ParseError, DX7ValidationError } from "../../core/errors.js"
+import { DX7Bank } from "./DX7Bank.js"
 
 /**
  * @typedef {Object} DX7OperatorJSON - JSON representation of a DX7 operator
@@ -678,6 +679,7 @@ export class DX7Voice {
 
       // Rate scaling, detune, sensitivities
       unpacked[opOffset + DX7Voice.UNPACKED_OP_RATE_SCALING] = 0
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_DETUNE] = 7 // Detune center (actual detune = value - 7)
       unpacked[opOffset + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = DX7Voice.DEFAULT_OUTPUT_LEVEL
@@ -855,6 +857,408 @@ export class DX7Voice {
   }
 
   /**
+   * Create a DX7Voice from SysEx data
+   * @param {Array<number>|ArrayBuffer|Uint8Array} data - Voice data (128 bytes of packed voice data) or VCED SysEx data (163 bytes with header/footer)
+   * @param {number} index - Voice index (optional, defaults to 0)
+   * @returns {DX7Voice}
+   * @throws {DX7ParseError} If VCED header is invalid
+   * @throws {DX7ValidationError} If data length is invalid
+   */
+  static fromSysEx(data, index = 0) {
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
+
+    // Check if we have raw voice data or full VCED SysEx
+    let voiceData
+
+    // Remove VCED wrapper if present
+    if (bytes[0] === DX7Voice.VCED_SYSEX_START) {
+      // Validate VCED header
+      if (
+        bytes[0] !== DX7Voice.VCED_SYSEX_START ||
+        bytes[1] !== DX7Voice.VCED_YAMAHA_ID ||
+        bytes[2] !== DX7Voice.VCED_SUB_STATUS ||
+        bytes[3] !== DX7Voice.VCED_FORMAT_SINGLE ||
+        bytes[4] !== DX7Voice.VCED_BYTE_COUNT_MSB ||
+        bytes[5] !== DX7Voice.VCED_BYTE_COUNT_LSB
+      ) {
+        throw new DX7ParseError("Invalid VCED header", "header", 0)
+      }
+
+      // Extract voice data (skip header and footer)
+      voiceData = bytes.subarray(DX7Voice.VCED_HEADER_SIZE, DX7Voice.VCED_HEADER_SIZE + DX7Voice.VCED_DATA_SIZE)
+    } else if (bytes.length === DX7Voice.PACKED_SIZE) {
+      // Raw voice data, no SysEx wrapper
+      voiceData = bytes
+    } else {
+      throw new DX7ValidationError(
+        `Invalid data length: expected ${DX7Voice.PACKED_SIZE} or ${DX7Voice.VCED_SIZE} bytes, got ${bytes.length}`,
+        "length",
+        bytes.length,
+      )
+    }
+
+    // Validate voice data length
+    if (voiceData.length !== DX7Voice.VCED_DATA_SIZE && voiceData.length !== DX7Voice.PACKED_SIZE) {
+      throw new DX7ValidationError(
+        `Invalid voice data length: expected ${DX7Voice.VCED_DATA_SIZE} or ${DX7Voice.PACKED_SIZE} bytes, got ${voiceData.length}`,
+        "length",
+        voiceData.length,
+      )
+    }
+
+    // If we have VCED data (155 bytes), convert it to packed format
+    if (voiceData.length === DX7Voice.VCED_DATA_SIZE) {
+      // Convert VCED to unpacked format first
+      const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+      let offset = 0
+
+      // Operators: 6 × 21 bytes = 126 bytes
+      // VCED stores operators in reverse order: OP6, OP5, OP4, OP3, OP2, OP1
+      for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
+        const dst = (DX7Voice.NUM_OPERATORS - 1 - op) * DX7Voice.UNPACKED_OP_SIZE
+
+        // Copy operator parameters
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_1] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_2] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_3] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_RATE_4] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_1] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_2] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_3] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_EG_LEVEL_4] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_BREAK_POINT] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_L_CURVE] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_R_CURVE] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_RATE_SCALING] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_DETUNE] = voiceData[offset++]
+        // Amp mod sensitivity and key velocity sensitivity are packed in VCED
+        const modSens = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] = modSens & DX7Voice.MASK_2BIT
+        unpacked[dst + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] = (modSens >> 2) & DX7Voice.MASK_3BIT
+        unpacked[dst + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = voiceData[offset++]
+        // FREQ_FINE and OSC_DETUNE order swapped from unpacked format
+        unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = voiceData[offset++]
+        unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = voiceData[offset++]
+      }
+
+      // Pitch EG: 8 bytes
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_1] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_2] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_3] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_RATE_4] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_1] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_2] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_3] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_PITCH_EG_LEVEL_4] = voiceData[offset++]
+
+      // Algorithm and global parameters: 11 bytes
+      unpacked[DX7Voice.UNPACKED_ALGORITHM] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_FEEDBACK] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_OSC_SYNC] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_SPEED] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_DELAY] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_PM_DEPTH] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_AM_DEPTH] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_KEY_SYNC] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_WAVE] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_LFO_PM_SENS] = voiceData[offset++]
+      unpacked[DX7Voice.UNPACKED_TRANSPOSE] = voiceData[offset++]
+
+      // Voice name: 10 bytes
+      for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
+        unpacked[DX7Voice.UNPACKED_NAME_START + i] = voiceData[offset++]
+      }
+
+      // Pack to 128-byte format
+      const packed = DX7Voice.pack(unpacked)
+      return new DX7Voice(packed, index)
+    }
+
+    // We already have packed data
+    return new DX7Voice(voiceData, index)
+  }
+
+  /**
+   * Create a DX7Voice from a JSON object
+   * @param {DX7VoiceJSON} json - JSON representation of a DX7 voice
+   * @param {number} index - Voice index (optional, defaults to 0)
+   * @returns {DX7Voice}
+   * @throws {DX7ValidationError} If JSON structure is invalid
+   */
+  static fromJSON(json, index = 0) {
+    if (!json || typeof json !== "object") {
+      throw new DX7ValidationError("Invalid JSON: expected object", "json", json)
+    }
+
+    const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
+
+    const setParam = (offset, value, name, min = 0, max = 127) => {
+      if (value === undefined || value === null) {
+        throw new DX7ValidationError(`Missing required parameter: ${name}`, name, value)
+      }
+      const numValue = Number(value)
+      if (Number.isNaN(numValue)) {
+        throw new DX7ValidationError(`Invalid parameter value for ${name}: ${value}`, name, value)
+      }
+      if (numValue < min || numValue > max) {
+        throw new DX7ValidationError(
+          `Parameter ${name} out of range: ${numValue} (must be ${min}-${max})`,
+          name,
+          numValue,
+        )
+      }
+      unpacked[offset] = Math.floor(numValue)
+    }
+
+    const getCurveValue = (curveName) => {
+      const curves = { "-LN": 0, "-EX": 1, "+EX": 2, "+LN": 3 }
+      return curves[curveName] !== undefined ? curves[curveName] : 0
+    }
+
+    const getWaveValue = (waveName) => {
+      const waves = {
+        TRIANGLE: 0,
+        "SAW DOWN": 1,
+        "SAW UP": 2,
+        SQUARE: 3,
+        SINE: 4,
+        "SAMPLE & HOLD": 5,
+      }
+      return waves[waveName] !== undefined ? waves[waveName] : 0
+    }
+
+    const parseNoteName = (noteName) => {
+      if (!noteName || typeof noteName !== "string") return 60 // Default to C3
+
+      const match = noteName.trim().match(/^([A-G]#?)(-?\d+)$/)
+      if (!match) return 60
+
+      const [, note, octaveStr] = match
+      const octave = parseInt(octaveStr, 10)
+
+      const noteMap = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11 }
+      const noteValue = noteMap[note.toUpperCase()]
+      if (noteValue === undefined) return 60
+
+      return (octave - DX7Voice.MIDI_OCTAVE_OFFSET) * 12 + noteValue
+    }
+
+    if (!Array.isArray(json.operators)) {
+      throw new DX7ValidationError("Invalid operators array: expected array", "operators", json.operators)
+    }
+
+    // Validate each operator's data structure first (before checking length)
+    // This ensures we get specific validation errors (e.g., "Invalid EG rates")
+    // rather than generic length errors when data is malformed
+    for (let op = 0; op < json.operators.length; op++) {
+      const opData = json.operators[op]
+
+      if (!opData || typeof opData !== "object") {
+        throw new DX7ValidationError(`Invalid operator data at index ${op}`, `operators[${op}]`, opData)
+      }
+
+      // EG rates (0-99)
+      if (!opData.eg || !Array.isArray(opData.eg.rates) || opData.eg.rates.length !== 4) {
+        throw new DX7ValidationError(
+          `Invalid EG rates for operator ${op}`,
+          `operators[${op}].eg.rates`,
+          opData.eg?.rates,
+        )
+      }
+
+      // EG levels (0-99)
+      if (!opData.eg || !Array.isArray(opData.eg.levels) || opData.eg.levels.length !== 4) {
+        throw new DX7ValidationError(
+          `Invalid EG levels for operator ${op}`,
+          `operators[${op}].eg.levels`,
+          opData.eg?.levels,
+        )
+      }
+    }
+
+    if (json.operators.length !== DX7Voice.NUM_OPERATORS) {
+      throw new DX7ValidationError(
+        `Invalid operators array: expected ${DX7Voice.NUM_OPERATORS} operators`,
+        "operators",
+        json.operators,
+      )
+    }
+
+    for (let op = 0; op < DX7Voice.NUM_OPERATORS; op++) {
+      const opData = json.operators[op]
+      const opOffset = op * DX7Voice.UNPACKED_OP_SIZE
+
+      // EG rates (0-99)
+      if (!opData.eg || !Array.isArray(opData.eg.rates) || opData.eg.rates.length !== 4) {
+        throw new DX7ValidationError(
+          `Invalid EG rates for operator ${op}`,
+          `operators[${op}].eg.rates`,
+          opData.eg?.rates,
+        )
+      }
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_RATE_1, opData.eg.rates[0], `operators[${op}].eg.rates[0]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_RATE_2, opData.eg.rates[1], `operators[${op}].eg.rates[1]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_RATE_3, opData.eg.rates[2], `operators[${op}].eg.rates[2]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_RATE_4, opData.eg.rates[3], `operators[${op}].eg.rates[3]`, 0, 99)
+
+      // EG levels (0-99)
+      if (!opData.eg || !Array.isArray(opData.eg.levels) || opData.eg.levels.length !== 4) {
+        throw new DX7ValidationError(
+          `Invalid EG levels for operator ${op}`,
+          `operators[${op}].eg.levels`,
+          opData.eg?.levels,
+        )
+      }
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_LEVEL_1, opData.eg.levels[0], `operators[${op}].eg.levels[0]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_LEVEL_2, opData.eg.levels[1], `operators[${op}].eg.levels[1]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_LEVEL_3, opData.eg.levels[2], `operators[${op}].eg.levels[2]`, 0, 99)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_EG_LEVEL_4, opData.eg.levels[3], `operators[${op}].eg.levels[3]`, 0, 99)
+
+      // Break point (MIDI note number)
+      const breakPoint = parseNoteName(opData.key?.breakPoint) - DX7Voice.MIDI_BREAK_POINT_OFFSET
+      setParam(opOffset + DX7Voice.UNPACKED_OP_BREAK_POINT, breakPoint, `operators[${op}].key.breakPoint`, 0, 127)
+
+      // Scale depths (0-99)
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_L_SCALE_DEPTH,
+        opData.scale?.left?.depth || 0,
+        `operators[${op}].scale.left.depth`,
+        0,
+        99,
+      )
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_R_SCALE_DEPTH,
+        opData.scale?.right?.depth || 0,
+        `operators[${op}].scale.right.depth`,
+        0,
+        99,
+      )
+
+      // Curves
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_L_CURVE] = getCurveValue(opData.scale?.left?.curve || "-LN")
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_R_CURVE] = getCurveValue(opData.scale?.right?.curve || "-LN")
+
+      // Rate scaling (0-7)
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_RATE_SCALING,
+        opData.key?.scaling || 0,
+        `operators[${op}].key.scaling`,
+        0,
+        7,
+      )
+
+      // Detune (-7 to +7, stored as 0-14)
+      const detune = Number(opData.osc?.detune) || 0
+      setParam(opOffset + DX7Voice.UNPACKED_OP_DETUNE, detune + 7, `operators[${op}].osc.detune`, 0, 14)
+
+      // Amp mod sensitivity (0-3)
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_AMP_MOD_SENS,
+        opData.output?.ampModSens || 0,
+        `operators[${op}].output.ampModSens`,
+        0,
+        3,
+      )
+
+      // Output level (0-99)
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL,
+        opData.output?.level || 0,
+        `operators[${op}].output.level`,
+        0,
+        99,
+      )
+
+      // Mode and frequency
+      const mode = opData.osc?.freq?.mode?.toUpperCase() === "FIXED" ? 1 : 0
+      const freqCoarse = Number(opData.osc?.freq?.coarse) || 0
+      const freqFine = Number(opData.osc?.freq?.fine) || 0
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_MODE] = mode
+      setParam(opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE, freqCoarse, `operators[${op}].osc.freq.coarse`, 0, 31)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE, freqFine, `operators[${op}].osc.freq.fine`, 0, 15)
+
+      // Key velocity sensitivity (0-7)
+      setParam(
+        opOffset + DX7Voice.UNPACKED_OP_KEY_VEL_SENS,
+        opData.key?.velocity || 0,
+        `operators[${op}].key.velocity`,
+        0,
+        7,
+      )
+    }
+
+    // Parse pitch EG
+    if (!json.pitchEG || !Array.isArray(json.pitchEG.rates) || json.pitchEG.rates.length !== 4) {
+      throw new DX7ValidationError("Invalid pitch EG rates", "pitchEG.rates", json.pitchEG?.rates)
+    }
+    if (!json.pitchEG || !Array.isArray(json.pitchEG.levels) || json.pitchEG.levels.length !== 4) {
+      throw new DX7ValidationError("Invalid pitch EG levels", "pitchEG.levels", json.pitchEG?.levels)
+    }
+
+    setParam(DX7Voice.UNPACKED_PITCH_EG_RATE_1, json.pitchEG.rates[0], "pitchEG.rates[0]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_RATE_2, json.pitchEG.rates[1], "pitchEG.rates[1]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_RATE_3, json.pitchEG.rates[2], "pitchEG.rates[2]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_RATE_4, json.pitchEG.rates[3], "pitchEG.rates[3]", 0, 99)
+
+    setParam(DX7Voice.UNPACKED_PITCH_EG_LEVEL_1, json.pitchEG.levels[0], "pitchEG.levels[0]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_LEVEL_2, json.pitchEG.levels[1], "pitchEG.levels[1]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_LEVEL_3, json.pitchEG.levels[2], "pitchEG.levels[2]", 0, 99)
+    setParam(DX7Voice.UNPACKED_PITCH_EG_LEVEL_4, json.pitchEG.levels[3], "pitchEG.levels[3]", 0, 99)
+
+    // Parse LFO
+    if (!json.lfo || typeof json.lfo !== "object") {
+      throw new DX7ValidationError("Invalid LFO data", "lfo", json.lfo)
+    }
+
+    setParam(DX7Voice.UNPACKED_LFO_SPEED, json.lfo.speed, "lfo.speed", 0, 99)
+    setParam(DX7Voice.UNPACKED_LFO_DELAY, json.lfo.delay, "lfo.delay", 0, 99)
+    setParam(DX7Voice.UNPACKED_LFO_PM_DEPTH, json.lfo.pmDepth, "lfo.pmDepth", 0, 99)
+    setParam(DX7Voice.UNPACKED_LFO_AM_DEPTH, json.lfo.amDepth, "lfo.amDepth", 0, 99)
+    unpacked[DX7Voice.UNPACKED_LFO_KEY_SYNC] = json.lfo.keySync ? 1 : 0
+    unpacked[DX7Voice.UNPACKED_LFO_WAVE] = getWaveValue(json.lfo.wave)
+
+    // Parse global parameters
+    if (!json.global || typeof json.global !== "object") {
+      throw new DX7ValidationError("Invalid global data", "global", json.global)
+    }
+
+    // Algorithm (0-31 in unpacked, 1-32 in JSON)
+    const algorithm = Number(json.global.algorithm) || 1
+    setParam(DX7Voice.UNPACKED_ALGORITHM, algorithm - 1, "global.algorithm", 0, 31)
+
+    // Feedback (0-7)
+    setParam(DX7Voice.UNPACKED_FEEDBACK, json.global.feedback, "global.feedback", 0, 7)
+
+    // OSC Sync
+    unpacked[DX7Voice.UNPACKED_OSC_SYNC] = json.global.oscKeySync ? 1 : 0
+
+    // Pitch Mod Sensitivity
+    setParam(DX7Voice.UNPACKED_LFO_PM_SENS, json.global.pitchModSens, "global.pitchModSens", 0, 7)
+
+    // Transpose (-24 to +24 in JSON, 0-127 in unpacked where 24 = C0)
+    const transpose = Number(json.global.transpose) || 0
+    setParam(DX7Voice.UNPACKED_TRANSPOSE, transpose + DX7Voice.TRANSPOSE_CENTER, "global.transpose", -24, 24)
+
+    // Amp Mod Sensitivity (optional, defaults to 0)
+    setParam(DX7Voice.UNPACKED_AMP_MOD_SENS, json.global.ampModSens || 0, "global.ampModSens", 0, 3)
+
+    // EG Bias Sensitivity (default to 0 if not provided)
+    setParam(DX7Voice.UNPACKED_EG_BIAS_SENS, json.global.egBiasSens || 0, "global.egBiasSens", 0, 7)
+
+    // Set voice name
+    const name = json.name || ""
+    for (let i = 0; i < DX7Voice.NAME_LENGTH; i++) {
+      unpacked[DX7Voice.UNPACKED_NAME_START + i] = i < name.length ? name.charCodeAt(i) : DX7Voice.CHAR_SPACE
+    }
+
+    return DX7Voice.fromUnpacked(unpacked, index)
+  }
+
+  /**
    * Export voice to DX7 single voice SysEx format (VCED format)
    * This is useful for synths that only support single voice dumps (e.g., KORG Volca FM)
    * Converts from 169-byte unpacked format to 155-byte VCED format
@@ -954,19 +1358,16 @@ export class DX7Voice {
     const unpacked = this.unpack()
     const operators = []
 
-    // Helper function to get key scale curve string
     const getKeyScaleCurve = (value) => {
       const curves = ["-LN", "-EX", "+EX", "+LN"]
       return curves[value] || "UNKNOWN"
     }
 
-    // Helper function to get LFO wave string
     const getLFOWave = (value) => {
       const waves = ["TRIANGLE", "SAW DOWN", "SAW UP", "SQUARE", "SINE", "SAMPLE & HOLD"]
       return waves[value] || "UNKNOWN"
     }
 
-    // Helper function to convert MIDI note to note name
     const getNoteName = (midiNote) => {
       const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
       const octave = Math.floor(midiNote / 12) + DX7Voice.MIDI_OCTAVE_OFFSET
@@ -1058,298 +1459,6 @@ export class DX7Voice {
         pitchModSens: unpacked[DX7Voice.UNPACKED_LFO_PM_SENS],
         transpose: unpacked[DX7Voice.UNPACKED_TRANSPOSE] - DX7Voice.TRANSPOSE_CENTER,
       },
-    }
-  }
-}
-
-/**
- * DX7Bank - Represents a DX7 bank loaded from a SYX file
- * Contains 32 voices in the packed 128-byte format
- */
-export class DX7Bank {
-  // SysEx header
-  static SYSEX_START = 0xf0
-  static SYSEX_END = 0xf7
-  static SYSEX_YAMAHA_ID = 0x43
-  static SYSEX_SUB_STATUS = 0x00
-  static SYSEX_FORMAT_32_VOICES = 0x09
-  static SYSEX_BYTE_COUNT_MSB = 0x20
-  static SYSEX_BYTE_COUNT_LSB = 0x00
-  static SYSEX_HEADER = [
-    DX7Bank.SYSEX_START,
-    DX7Bank.SYSEX_YAMAHA_ID,
-    DX7Bank.SYSEX_SUB_STATUS,
-    DX7Bank.SYSEX_FORMAT_32_VOICES,
-    DX7Bank.SYSEX_BYTE_COUNT_MSB,
-    DX7Bank.SYSEX_BYTE_COUNT_LSB,
-  ]
-  static SYSEX_HEADER_SIZE = 6
-
-  // Bank structure
-  static VOICE_DATA_SIZE = 4096 // 32 voices × 128 bytes
-  static SYSEX_SIZE = 4104 // Header(6) + Data(4096) + Checksum(1) + End(1)
-  static VOICE_SIZE = 128 // Bytes per voice in packed format
-  static NUM_VOICES = 32
-
-  // Checksum
-  static CHECKSUM_MODULO = 128
-  static MASK_7BIT = 0x7f
-
-  /**
-   * Create a DX7Bank
-   * @param {Array<number>|ArrayBuffer|Uint8Array} data - Bank SYX data (optional)
-   * @param {string} name - Optional bank name (e.g., filename)
-   */
-  constructor(data, name = "") {
-    this.voices = new Array(DX7Bank.NUM_VOICES)
-    this.name = name
-
-    if (data) {
-      this._load(data)
-    } else {
-      for (let i = 0; i < DX7Bank.NUM_VOICES; i++) {
-        this.voices[i] = DX7Voice.createDefault(i)
-      }
-    }
-  }
-
-  /**
-   * Calculate DX7 SysEx checksum
-   * @private
-   * @param {Uint8Array} data - Data to checksum
-   * @param {number} size - Number of bytes
-   * @returns {number} Checksum byte
-   */
-  static _calculateChecksum(data, size) {
-    let sum = 0
-    for (let i = 0; i < size; i++) {
-      sum += data[i]
-    }
-    return (DX7Bank.CHECKSUM_MODULO - (sum % DX7Bank.CHECKSUM_MODULO)) & DX7Bank.MASK_7BIT
-  }
-
-  /**
-   * Load and validate bank data
-   * @private
-   * @param {Array<number>|ArrayBuffer|Uint8Array} data
-   */
-  _load(data) {
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
-
-    // Check if we have raw voice data or full SysEx
-    let voiceData
-    let offset = 0
-
-    // Remove SysEx wrapper if present
-    if (bytes[0] === DX7Bank.SYSEX_START) {
-      const header = bytes.subarray(0, DX7Bank.SYSEX_HEADER_SIZE)
-      const expectedHeader = DX7Bank.SYSEX_HEADER
-
-      for (let i = 0; i < DX7Bank.SYSEX_HEADER_SIZE; i++) {
-        if (header[i] !== expectedHeader[i]) {
-          throw new DX7ParseError(
-            `Invalid SysEx header at position ${i}: expected ${expectedHeader[i].toString(16)}, got ${header[i].toString(16)}`,
-            "header",
-            i,
-          )
-        }
-      }
-
-      // Extract voice data (skip header and footer)
-      voiceData = bytes.subarray(DX7Bank.SYSEX_HEADER_SIZE, DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE)
-      offset = DX7Bank.SYSEX_HEADER_SIZE
-    } else if (bytes.length === DX7Bank.VOICE_DATA_SIZE) {
-      // Raw voice data, no SysEx wrapper
-      voiceData = bytes
-    } else {
-      throw new DX7ValidationError(
-        `Invalid data length: expected ${DX7Bank.VOICE_DATA_SIZE} or ${DX7Bank.SYSEX_SIZE} bytes, got ${bytes.length}`,
-        "length",
-        bytes.length,
-      )
-    }
-
-    if (voiceData.length !== DX7Bank.VOICE_DATA_SIZE) {
-      throw new DX7ValidationError(
-        `Invalid voice data length: expected ${DX7Bank.VOICE_DATA_SIZE} bytes, got ${voiceData.length}`,
-        "length",
-        voiceData.length,
-      )
-    }
-
-    const checksumOffset = DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE
-    if (offset > 0 && bytes.length >= checksumOffset + 1) {
-      const checksum = bytes[checksumOffset]
-      const calculatedChecksum = DX7Bank._calculateChecksum(voiceData, DX7Bank.VOICE_DATA_SIZE)
-
-      if (checksum !== calculatedChecksum) {
-        console.warn(
-          `DX7 checksum mismatch (expected ${calculatedChecksum.toString(16)}, got ${checksum.toString(16)}). ` +
-            `This is common with vintage SysEx files and the data is likely still valid.`,
-        )
-      }
-    }
-
-    this.voices = new Array(DX7Bank.NUM_VOICES)
-    for (let i = 0; i < DX7Bank.NUM_VOICES; i++) {
-      const voiceStart = i * DX7Bank.VOICE_SIZE
-      const singleVoiceData = voiceData.subarray(voiceStart, voiceStart + DX7Bank.VOICE_SIZE)
-      this.voices[i] = new DX7Voice(singleVoiceData, i)
-    }
-  }
-
-  /**
-   * Replace a voice at the specified index
-   * @param {number} index - Voice index (0-31)
-   * @param {DX7Voice} voice - Voice to insert
-   * @throws {DX7ValidationError} If index is out of range
-   */
-  replaceVoice(index, voice) {
-    if (index < 0 || index >= DX7Bank.NUM_VOICES) {
-      throw new DX7ValidationError(`Invalid voice index: ${index}`, "index", index)
-    }
-
-    // Create a copy of the voice with the correct index
-    const voiceData = new Uint8Array(voice.data)
-    this.voices[index] = new DX7Voice(voiceData, index)
-  }
-
-  /**
-   * Add a voice to the first empty slot
-   * @param {DX7Voice} voice - Voice to add
-   * @returns {number} Index where voice was added, or -1 if bank is full
-   */
-  addVoice(voice) {
-    for (let i = 0; i < this.voices.length; i++) {
-      const currentPatch = this.voices[i]
-      // Check if slot is empty (all zeros or default voice)
-      const isEmpty = currentPatch.name === "" || currentPatch.name === "Init Voice"
-      if (isEmpty) {
-        this.replaceVoice(i, voice)
-        return i
-      }
-    }
-    return -1
-  }
-
-  /**
-   * Get all voices in the bank
-   * @returns {DX7Voice[]}
-   */
-  getVoices() {
-    return this.voices
-  }
-
-  /**
-   * Get a specific voice by index
-   * @param {number} index - Voice index (0-31)
-   * @returns {DX7Voice|null}
-   */
-  getVoice(index) {
-    if (index < 0 || index >= this.voices.length) {
-      return null
-    }
-    return this.voices[index]
-  }
-
-  /**
-   * Get all voice names
-   * @returns {string[]}
-   */
-  getVoiceNames() {
-    return this.voices.map((voice) => voice.name)
-  }
-
-  /**
-   * Find a voice by name (case-insensitive, partial match)
-   * @param {string} name - Voice name to search for
-   * @returns {DX7Voice|null}
-   */
-  findVoiceByName(name) {
-    const lowerName = name.toLowerCase()
-    return this.voices.find((voice) => voice.name.toLowerCase().includes(lowerName)) || null
-  }
-
-  /**
-   * Load a DX7 bank from a file
-   * @param {File|Blob} file - SYX file to load
-   * @returns {Promise<DX7Bank>}
-   * @throws {DX7ParseError} If file is a single voice file
-   * @throws {DX7ValidationError} If data is not valid DX7 SYX format
-   * @throws {Error} If file cannot be read (FileReader error)
-   */
-  static async fromFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const fileName = file.name || ""
-          const bytes = new Uint8Array(e.target.result)
-
-          // Check if it's a single voice file (VCED format)
-          // Single voice files have format byte 0x00, banks have 0x09
-          if (bytes[0] === DX7Bank.SYSEX_START && bytes[3] === DX7Voice.VCED_FORMAT_SINGLE) {
-            // This is a single voice file
-            reject(new DX7ParseError("This is a single voice file. Use DX7Voice.fromFile() instead.", "format", 3))
-          } else {
-            // This is a bank file - strip file extension from name
-            const bankName = fileName.replace(/\.[^/.]+$/, "")
-            const bank = new DX7Bank(e.target.result, bankName)
-            resolve(bank)
-          }
-        } catch (err) {
-          reject(err)
-        }
-      }
-      reader.onerror = () => reject(new Error("Failed to read file"))
-      reader.readAsArrayBuffer(file)
-    })
-  }
-
-  /**
-   * Export bank to SysEx format
-   * @returns {Uint8Array} Full SysEx data (4104 bytes)
-   */
-  toSysEx() {
-    const result = new Uint8Array(DX7Bank.SYSEX_SIZE)
-    let offset = 0
-
-    DX7Bank.SYSEX_HEADER.forEach((byte) => {
-      result[offset++] = byte
-    })
-
-    for (const voice of this.voices) {
-      for (let i = 0; i < DX7Bank.VOICE_SIZE; i++) {
-        result[offset++] = voice.data[i]
-      }
-    }
-
-    const voiceData = result.subarray(DX7Bank.SYSEX_HEADER_SIZE, DX7Bank.SYSEX_HEADER_SIZE + DX7Bank.VOICE_DATA_SIZE)
-    result[offset++] = DX7Bank._calculateChecksum(voiceData, DX7Bank.VOICE_DATA_SIZE)
-
-    result[offset++] = DX7Bank.SYSEX_END
-
-    return result
-  }
-
-  /**
-   * Convert bank to JSON format
-   * @returns {object} Bank data in JSON format
-   */
-  toJSON() {
-    const voices = this.voices.map((voice, index) => {
-      const jsonPatch = voice.toJSON()
-      // Voice indices are 0-based internally, but shown as 1-32 to users
-      return {
-        index: index + 1,
-        ...jsonPatch,
-      }
-    })
-
-    return {
-      version: "1.0",
-      name: this.name || "",
-      voices: voices,
     }
   }
 }
