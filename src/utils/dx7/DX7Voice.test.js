@@ -1856,4 +1856,104 @@ describe("Real DX7 Single Voice File (ROM1A_BASS____1.syx)", () => {
       expect(singleVoiceJson.name).toBe(bankJson.name)
     })
   })
+
+  describe("regression tests", () => {
+    it("should handle transpose values correctly in fromJSON", () => {
+      // Regression test for issue where transpose validation was applied to unpacked value
+      // instead of the JSON value, causing valid transpose values (+12) to fail validation
+      const voiceJson = {
+        name: "SYN-LEAD 1",
+        operators: Array.from({ length: 6 }, (_, i) => ({
+          id: i + 1,
+          osc: {
+            detune: 0,
+            freq: { coarse: 1, fine: 0, mode: "RATIO" },
+          },
+          eg: {
+            rates: [95, 95, 0, 0],
+            levels: [99, 96, 89, 0],
+          },
+          key: { velocity: 2, scaling: 0, breakPoint: "C3" },
+          output: { level: 73, ampModSens: 0 },
+          scale: {
+            left: { depth: 0, curve: "+LN" },
+            right: { depth: 46, curve: "-LN" },
+          },
+        })),
+        pitchEG: {
+          rates: [84, 95, 95, 60],
+          levels: [50, 50, 50, 50],
+        },
+        lfo: {
+          speed: 35,
+          delay: 0,
+          pmDepth: 0,
+          amDepth: 0,
+          keySync: false,
+          wave: "TRIANGLE",
+        },
+        global: {
+          algorithm: 18,
+          feedback: 7,
+          oscKeySync: false,
+          pitchModSens: 4,
+          transpose: 12, // This was failing validation with range -24 to 24
+        },
+      }
+
+      // Should not throw
+      const voice = DX7Voice.fromJSON(voiceJson, 13)
+      expect(voice.name).toBe("SYN-LEAD 1")
+
+      // Verify the transpose was set correctly
+      const unpacked = voice.unpack()
+      expect(unpacked[DX7Voice.UNPACKED_TRANSPOSE]).toBe(36) // 12 + TRANSPOSE_CENTER(24)
+    })
+
+    it("should handle negative transpose values correctly", () => {
+      const voiceJson = {
+        name: "Test Voice",
+        operators: Array.from({ length: 6 }, () => ({
+          osc: { detune: 0, freq: { coarse: 1, fine: 0, mode: "RATIO" } },
+          eg: { rates: [0, 0, 0, 0], levels: [0, 0, 0, 0] },
+          key: { velocity: 0, scaling: 0, breakPoint: "C3" },
+          output: { level: 0, ampModSens: 0 },
+          scale: {
+            left: { depth: 0, curve: "+LN" },
+            right: { depth: 0, curve: "+LN" },
+          },
+        })),
+        pitchEG: { rates: [0, 0, 0, 0], levels: [50, 50, 50, 50] },
+        lfo: { speed: 0, delay: 0, pmDepth: 0, amDepth: 0, keySync: false, wave: "TRIANGLE" },
+        global: { algorithm: 1, feedback: 0, oscKeySync: false, pitchModSens: 0, transpose: -12 },
+      }
+
+      const voice = DX7Voice.fromJSON(voiceJson, 0)
+      const unpacked = voice.unpack()
+      expect(unpacked[DX7Voice.UNPACKED_TRANSPOSE]).toBe(12) // -12 + TRANSPOSE_CENTER(24)
+    })
+
+    it("should handle maximum transpose values correctly", () => {
+      const voiceJson = {
+        name: "Max Transpose",
+        operators: Array.from({ length: 6 }, () => ({
+          osc: { detune: 0, freq: { coarse: 1, fine: 0, mode: "RATIO" } },
+          eg: { rates: [0, 0, 0, 0], levels: [0, 0, 0, 0] },
+          key: { velocity: 0, scaling: 0, breakPoint: "C3" },
+          output: { level: 0, ampModSens: 0 },
+          scale: {
+            left: { depth: 0, curve: "+LN" },
+            right: { depth: 0, curve: "+LN" },
+          },
+        })),
+        pitchEG: { rates: [0, 0, 0, 0], levels: [50, 50, 50, 50] },
+        lfo: { speed: 0, delay: 0, pmDepth: 0, amDepth: 0, keySync: false, wave: "TRIANGLE" },
+        global: { algorithm: 1, feedback: 0, oscKeySync: false, pitchModSens: 0, transpose: 24 },
+      }
+
+      const voice = DX7Voice.fromJSON(voiceJson, 0)
+      const unpacked = voice.unpack()
+      expect(unpacked[DX7Voice.UNPACKED_TRANSPOSE]).toBe(48) // 24 + TRANSPOSE_CENTER(24)
+    })
+  })
 })
