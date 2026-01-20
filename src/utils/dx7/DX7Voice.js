@@ -1241,7 +1241,7 @@ export class DX7Voice {
 
     // Transpose (-24 to +24 in JSON, 0-127 in unpacked where 24 = C0)
     const transpose = Number(json.global.transpose) || 0
-    setParam(DX7Voice.UNPACKED_TRANSPOSE, transpose + DX7Voice.TRANSPOSE_CENTER, "global.transpose", -24, 24)
+    setParam(DX7Voice.UNPACKED_TRANSPOSE, transpose + DX7Voice.TRANSPOSE_CENTER, "global.transpose", 0, 127)
 
     // Amp Mod Sensitivity (optional, defaults to 0)
     setParam(DX7Voice.UNPACKED_AMP_MOD_SENS, json.global.ampModSens || 0, "global.ampModSens", 0, 3)
