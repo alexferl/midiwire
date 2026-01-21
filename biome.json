@@ -21,17 +21,8 @@
       "complexity": {
         "noImportantStyles": "off"
       },
-      "style": {
-        "useConst": "error",
-        "useTemplate": "warn"
-      },
-      "correctness": {
-        "noUnusedVariables": "warn"
-      },
       "suspicious": {
-        "noConsole": "off",
-        "noExplicitAny": "off",
-        "noVar": "error"
+        "noConsole": "off"
       }
     }
   },
