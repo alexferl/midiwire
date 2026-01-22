@@ -166,7 +166,7 @@ describe("MIDIConnection", () => {
       connection.midiAccess.onstatechange({ port: mockPort })
 
       expect(connection.input).toBeNull()
-      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED, {
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.IN_DEV_DISCONNECTED, {
         device: mockPort,
       })
     })
@@ -193,7 +193,7 @@ describe("MIDIConnection", () => {
       connection.midiAccess.onstatechange({ port: mockPort })
 
       expect(connection.output).toBeNull()
-      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, {
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, {
         device: mockPort,
       })
     })
@@ -218,7 +218,7 @@ describe("MIDIConnection", () => {
 
       // Should emit devicechange and outputdisconnect (code emits for ALL disconnects)
       expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.DEVICE_CHANGE, expect.any(Object))
-      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, expect.any(Object))
+      expect(connection.emit).toHaveBeenCalledWith(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, expect.any(Object))
       expect(connection.output).not.toBeNull() // Still connected to original output
     })
 

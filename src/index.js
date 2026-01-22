@@ -5,10 +5,62 @@
  * Features declarative HTML binding via data attributes, programmatic APIs,
  * bidirectional MIDI communication, SysEx support, voice management, and more.
  *
- * Works with the Web MIDI API in Chrome, Firefox, and Opera.
+ * Works with the Web MIDI API in Chrome, Firefox, and Opera. Provides multiple
+ * integration approaches from fully declarative (HTML-only) to fully programmatic (JavaScript-only).
+ *
+ * ## Features
+ * - Declarative binding via data attributes (zero JavaScript)
+ * - Programmatic binding with full control
+ * - Bidirectional MIDI communication (send/receive)
+ * - SysEx support
+ * - Patch management (save/load presets)
+ * - Hotplug device detection
+ * - Comprehensive event system
+ * - DX7 voice/parameter management
  *
  * @module midiwire
- * @see {@link https://github.com/alexferl/midiwire} for documentation
+ * @see {@link https://github.com/alexferl/midiwire} for full documentation
+ * @see {@link https://github.com/alexferl/midiwire#quick-start} for quick start guide
+ *
+ * @example
+ * // Quick start - Auto-binding with data attributes
+ * import { createMIDIController } from 'midiwire';
+ *
+ * const midi = await createMIDIController({
+ *   channel: 1,
+ *   selector: '[data-midi-cc]',
+ *   watchDOM: true
+ * });
+ *
+ * // In your HTML:
+ * // <input type="range" min="0" max="127" data-midi-cc="74" data-midi-label="Filter">
+ * // <input type="range" min="0" max="127" data-midi-cc="7" data-midi-label="Volume">
+ *
+ * @example
+ * // Programmatic binding
+ * import { MIDIController } from 'midiwire';
+ *
+ * const midi = new MIDIController({ channel: 1 });
+ * await midi.init();
+ * await midi.connect('My Synth');
+ *
+ * const cutoff = document.getElementById('cutoff');
+ * midi.bind(cutoff, { cc: 74 });
+ *
+ * @example
+ * // Device manager with UI integration
+ * import { createMIDIDeviceManager } from 'midiwire';
+ *
+ * const deviceManager = await createMIDIDeviceManager({
+ *   onStatusUpdate: (message, state) => {
+ *     document.getElementById('status').textContent = message;
+ *   }
+ * });
+ *
+ * // Populate device dropdown
+ * const select = document.getElementById('device-select');
+ * deviceManager.populateDeviceList(select);
+ * deviceManager.connectDeviceSelection(select);
  */
 
 import { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
@@ -16,39 +68,85 @@ import { MIDIController } from "./core/MIDIController.js"
 import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
 
 /**
+ * Options for createMIDIController()
  * @typedef {Object} MIDIControlsOptions
- * @property {string} [selector="[data-midi-cc]"] - CSS selector for auto-binding
+ * @property {string} [selector="[data-midi-cc]"] - CSS selector for auto-binding elements that have data-midi-* attributes
  * @property {number} [channel=1] - Default MIDI channel (1-16)
- * @property {string|number} [output] - MIDI output device name, ID, or index
- * @property {boolean} [sysex=false] - Request SysEx access
- * @property {boolean} [autoConnect=true] - Auto-connect to first available output
- * @property {boolean} [watchDOM=false] - Automatically bind dynamically added elements
- * @property {Function} [onReady] - Callback when MIDI is ready
- * @property {Function} [onError] - Error handler
+ * @property {string|number} [output] - MIDI output device name, ID, or index to auto-connect to
+ * @property {boolean} [sysex=false] - Request SysEx access for sending/receiving system exclusive messages
+ * @property {boolean} [autoConnect=true] - Auto-connect to first available output device
+ * @property {boolean} [watchDOM=false] - Automatically bind dynamically added elements using MutationObserver
+ * @property {Function} [onReady] - Callback when MIDI is ready, receives (controller) as parameter
+ * @property {Function} [onError] - Error handler for MIDI access errors
+ * @property {string|number} [input] - MIDI input device name, ID, or index to connect to for receiving MIDI
+ *
+ * @example
+ * // Basic auto-binding
+ * const options = {
+ *   selector: '[data-midi-cc]',
+ *   channel: 1,
+ *   watchDOM: true
+ * };
+ *
+ * @example
+ * // Connect to specific device
+ * const options = {
+ *   output: 'My MIDI Keyboard',
+ *   channel: 2,
+ *   sysex: true
+ * };
  */
 
 /**
- * Create and initialize a MIDI controller
- * @param {MIDIControlsOptions} [options={}]
- * @returns {Promise<MIDIController>}
+ * Create and initialize a MIDI controller with optional auto-binding. This factory function
+ * creates a MIDIController instance, initializes it, and optionally sets up declarative binding
+ * using DataAttributeBinder. Perfect for getting started quickly or when using data attributes.
+ *
+ * @param {MIDIControlsOptions} [options={}] - Configuration options
+ * @returns {Promise<MIDIController>} A promise resolving to the initialized MIDIController instance
+ * @throws {MIDIAccessError} If MIDI access is denied or browser doesn't support Web MIDI API
  *
  * @example
- * // Auto-bind with data attributes
+ * // Quick start with auto-binding
  * const midi = await createMIDIController({
- *   channel: 1,
- *   output: "My Synth",
- *   selector: "[data-midi-cc]"
+ *   selector: '[data-midi-cc]',
+ *   watchDOM: true
  * });
  *
  * @example
- * // Programmatic binding
- * const midi = await createMIDIController({ autoConnect: false });
- * await midi.setOutput("My Synth");
- * midi.bind(document.querySelector("#cutoff"), { cc: 74 });
+ * // Auto-bind with specific device and channel
+ * const midi = await createMIDIController({
+ *   output: 'My Synth',
+ *   channel: 2,
+ *   selector: '[data-midi-cc]',
+ *   onReady: (controller) => {
+ *     console.log('MIDI ready!');
+ *   }
+ * });
+ *
+ * @example
+ * // Programmatic binding (no auto-bind)
+ * const midi = await createMIDIController({
+ *   autoConnect: false,
+ *   channel: 1
+ * });
+ * await midi.connectOutput('My Synth');
+ * const slider = document.getElementById('cutoff');
+ * midi.bind(slider, { cc: 74 });
+ *
+ * @example
+ * // With SysEx support
+ * const midi = await createMIDIController({
+ *   sysex: true,
+ *   onReady: (controller) => {
+ *     // Send SysEx after connection
+ *     controller.sendSysEx([0x41, 0x10, 0x42]);
+ *   }
+ * });
  */
 export async function createMIDIController(options = {}) {
   const controller = new MIDIController(options)
-  await controller.initialize()
+  await controller.init()
 
   const selector = options.selector || "[data-midi-cc]"
   if (selector) {
@@ -67,39 +165,100 @@ export async function createMIDIController(options = {}) {
 }
 
 /**
+ * Options for createMIDIDeviceManager()
  * @typedef {Object} MIDIDeviceManagerOptions
- * @property {Function} [onStatusUpdate] - Callback for status updates (message, state)
- * @property {Function} [onConnectionUpdate] - Callback when connection status changes
- * @property {number} [channel=1] - Default MIDI channel
- * @property {string} [output] - MIDI output device name, ID, or index
+ * @property {Function} [onStatusUpdate] - Callback for status updates (message: string, state: string)
+ * @property {Function} [onConnectionUpdate] - Callback when connection status changes (device: Object, midi: MIDIController)
+ * @property {number} [channel=1] - Default MIDI channel (1-16)
+ * @property {string|number} [output] - MIDI output device name, ID, or index to auto-connect to
  * @property {boolean} [sysex=false] - Request SysEx access
- * @property {Function} [onReady] - Callback when MIDI is ready (midi, deviceManager)
- * @property {Function} [onError] - Error handler
- * @property {string} [selector] - CSS selector for auto-binding controls
+ * @property {Function} [onReady] - Callback when MIDI is ready, receives (midi: MIDIController, deviceManager: MIDIDeviceManager)
+ * @property {Function} [onError] - Error handler for MIDI access errors
+ * @property {string} [selector="[data-midi-cc]"] - CSS selector for auto-binding controls
  * @property {boolean} [watchDOM=false] - Automatically bind dynamically added elements
+ * @property {string|number} [input] - MIDI input device name, ID, or index to connect to
+ *
+ * @example
+ * // Basic device manager setup
+ * const options = {
+ *   channel: 1,
+ *   onStatusUpdate: (message, state) => updateStatusUI(message, state)
+ * };
+ *
+ * @example
+ * // Full device manager with UI integration
+ * const options = {
+ *   output: 'My Synth',
+ *   channel: 2,
+ *   sysex: true,
+ *   selector: '[data-midi-cc]',
+ *   watchDOM: true,
+ *   onStatusUpdate: (message, state) => {
+ *     console.log(message);
+ *     document.getElementById('status').textContent = message;
+ *   },
+ *   onReady: (midi, deviceManager) => {
+ *     // Populate device dropdown
+ *     const select = document.getElementById('device-select');
+ *     deviceManager.populateDeviceList(select);
+ *     deviceManager.connectDeviceSelection(select);
+ *   }
+ * };
  */
 
 /**
- * Create a MIDIDeviceManager with an integrated MIDIController
- * @param {MIDIDeviceManagerOptions} [options={}]
- * @returns {Promise<MIDIDeviceManager>}
+ * Create a MIDIDeviceManager with an integrated MIDIController. This factory function creates a complete
+ * device management solution including MIDIController, auto-binding (optional), and device manager UI helpers.
+ * Perfect for applications that need device selection UI and status management.
+ *
+ * @param {MIDIDeviceManagerOptions} [options={}] - Configuration options
+ * @returns {Promise<MIDIDeviceManager>} A promise resolving to the initialized MIDIDeviceManager instance
+ * @throws {MIDIAccessError} If MIDI access is denied or browser doesn't support Web MIDI API
  *
  * @example
- * // Basic usage
+ * // Basic device manager
  * const deviceManager = await createMIDIDeviceManager({
  *   channel: 1,
- *   onStatusUpdate: (message, state) => console.log(message)
+ *   onStatusUpdate: (message, state) => {
+ *     console.log(message);
+ *   }
  * });
  *
  * // Access the MIDIController via deviceManager.midi
  * const midi = deviceManager.midi;
+ * midi.bind(document.getElementById('cutoff'), { cc: 74 });
  *
  * @example
- * // Auto-connect to a specific device
+ * // With auto-connect and status UI
  * const deviceManager = await createMIDIDeviceManager({
- *   output: "My Synth",
+ *   output: 'My Synth',
  *   channel: 2,
- *   onStatusUpdate: (message, state) => console.log(message)
+ *   selector: '[data-midi-cc]',
+ *   onStatusUpdate: (message, state) => {
+ *     const statusEl = document.getElementById('status');
+ *     statusEl.textContent = message;
+ *     statusEl.className = state;
+ *   }
+ * });
+ *
+ * @example
+ * // Complete UI integration with device dropdown
+ * const deviceManager = await createMIDIDeviceManager({
+ *   channel: 1,
+ *   sysex: true,
+ *   onStatusUpdate: (message, state) => {
+ *     document.getElementById('status').textContent = message;
+ *   },
+ *   onReady: async (midi, dm) => {
+ *     // Setup device selection
+ *     const deviceSelect = document.getElementById('device-select');
+ *     dm.populateDeviceList(deviceSelect);
+ *     dm.connectDeviceSelection(deviceSelect);
+ *
+ *     // Setup channel selection
+ *     const channelSelect = document.getElementById('channel-select');
+ *     dm.connectChannelSelection(channelSelect);
+ *   }
  * });
  */
 export async function createMIDIDeviceManager(options = {}) {
@@ -136,8 +295,8 @@ export async function createMIDIDeviceManager(options = {}) {
 
   if (output) {
     try {
-      await midi.setOutput(output)
-      deviceManager.currentDevice = midi.getCurrentOutput()
+      await midi.device.connectOutput(output)
+      deviceManager.currentDevice = midi.device.getCurrentOutput()
       deviceManager.updateConnectionStatus()
     } catch (err) {
       if (onError) onError(err)

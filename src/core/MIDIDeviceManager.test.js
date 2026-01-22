@@ -76,6 +76,27 @@ describe("MIDIDeviceManager", () => {
     })
   })
 
+  describe("getInputDevices", () => {
+    it("should return empty array when no MIDI connection", () => {
+      expect(deviceManager.getInputDevices()).toEqual([])
+    })
+
+    it("should return list of input devices from MIDI connection", () => {
+      const mockInputDevices = [
+        { id: "input-1", name: "Keyboard", manufacturer: "Company A" },
+        { id: "input-2", name: "Pad Controller", manufacturer: "Company B" },
+      ]
+      const mockMidi = {
+        connection: {
+          getInputs: () => mockInputDevices,
+        },
+      }
+      deviceManager.midi = mockMidi
+
+      expect(deviceManager.getInputDevices()).toEqual(mockInputDevices)
+    })
+  })
+
   describe("isDeviceConnected", () => {
     it("should return false when no MIDI connection", () => {
       expect(deviceManager.isDeviceConnected("Device 1")).toBe(false)
@@ -100,7 +121,7 @@ describe("MIDIDeviceManager", () => {
   describe("connectDeviceSelection", () => {
     it("should connect to selected device", async () => {
       const mockMidi = {
-        setOutput: vi.fn().mockResolvedValue(undefined),
+        connectOutput: vi.fn().mockResolvedValue(undefined),
         getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
         connection: {
           on: vi.fn(),
@@ -125,14 +146,14 @@ describe("MIDIDeviceManager", () => {
       // Wait for async operation
       await new Promise((resolve) => setTimeout(resolve, 10))
 
-      expect(mockMidi.setOutput).toHaveBeenCalledWith(0)
+      expect(mockMidi.connectOutput).toHaveBeenCalledWith(0)
       expect(connectedDevice).toEqual({ name: "Device 1" })
       expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
     })
 
     it("should disconnect when selecting empty option", async () => {
       const mockMidi = {
-        setOutput: vi.fn(),
+        connectOutput: vi.fn(),
         getCurrentOutput: vi.fn(),
         connection: {
           on: vi.fn(),
@@ -161,7 +182,7 @@ describe("MIDIDeviceManager", () => {
 
     it("should prevent concurrent connections", async () => {
       const mockMidi = {
-        setOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
+        connectOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
         getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
         connection: {
           on: vi.fn(),
@@ -293,9 +314,9 @@ describe("MIDIDeviceManager", () => {
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUTPUT_DEVICE_CONNECTED event
+      // Emit OUT_DEV_CONNECTED event
       const device = { name: "Device 1", id: "1" }
-      mockConnection.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_CONNECTED, { device })
+      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_CONNECTED, { device })
 
       expect(statusUpdates).toContainEqual({
         message: "Device connected: Device 1",
@@ -314,9 +335,9 @@ describe("MIDIDeviceManager", () => {
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUTPUT_DEVICE_DISCONNECTED event
+      // Emit OUT_DEV_DISCONNECTED event
       const device = { name: "Device 1", id: "1" }
-      mockConnection.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, { device })
+      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device })
 
       expect(statusUpdates).toContainEqual({
         message: "Device disconnected: Device 1",
@@ -336,9 +357,9 @@ describe("MIDIDeviceManager", () => {
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUTPUT_DEVICE_DISCONNECTED for different device
+      // Emit OUT_DEV_DISCONNECTED for different device
       const device = { name: "Device 2", id: "2" }
-      mockConnection.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, { device })
+      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device })
 
       expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
       expect(onDeviceListChange).toHaveBeenCalled()

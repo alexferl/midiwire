@@ -3,13 +3,28 @@ import { MIDIAccessError, MIDIConnectionError, MIDIDeviceError, MIDIValidationEr
 
 /**
  * Connection event constants
+ * @typedef {Object} CONNECTION_EVENTS
+ * @property {string} DEVICE_CHANGE - Emitted when any MIDI device state changes (connect/disconnect)
+ * @property {string} IN_DEV_CONNECTED - Emitted when an input device is connected
+ * @property {string} IN_DEV_DISCONNECTED - Emitted when an input device is disconnected
+ * @property {string} OUT_DEV_CONNECTED - Emitted when an output device is connected
+ * @property {string} OUT_DEV_DISCONNECTED - Emitted when an output device is disconnected
+ *
+ * @example
+ * connection.on(CONNECTION_EVENTS.DEVICE_CHANGE, ({ port, state, type, device }) => {
+ *   console.log(`${device.name} ${state}`);
+ * });
+ *
+ * connection.on(CONNECTION_EVENTS.OUT_DEV_CONNECTED, ({ device }) => {
+ *   console.log(`Output connected: ${device.name}`);
+ * });
  */
 export const CONNECTION_EVENTS = {
   DEVICE_CHANGE: "device-change",
-  INPUT_DEVICE_CONNECTED: "input-device-connected",
-  INPUT_DEVICE_DISCONNECTED: "input-device-disconnected",
-  OUTPUT_DEVICE_CONNECTED: "output-device-connected",
-  OUTPUT_DEVICE_DISCONNECTED: "output-device-disconnected",
+  IN_DEV_CONNECTED: "in-dev-connected",
+  IN_DEV_DISCONNECTED: "in-dev-disconnected",
+  OUT_DEV_CONNECTED: "out-dev-connected",
+  OUT_DEV_DISCONNECTED: "out-dev-disconnected",
 }
 
 /**
@@ -25,6 +40,19 @@ export const CONNECTION_EVENTS = {
  * NOTE: Typically used internally by MIDIController. Most applications
  * should use MIDIController instead for higher-level APIs.
  * @extends EventEmitter
+ *
+ * @example
+ * // Basic usage
+ * const connection = new MIDIConnection({ sysex: true });
+ * await connection.requestAccess();
+ * await connection.connect('My MIDI Device');
+ * connection.send([0x90, 60, 100]); // Note on
+ *
+ * @example
+ * // Listening for device changes
+ * connection.on(CONNECTION_EVENTS.DEVICE_CHANGE, ({ device, state }) => {
+ *   console.log(`${device.name} is now ${state}`);
+ * });
  */
 export class MIDIConnection extends EventEmitter {
   /**
@@ -44,9 +72,26 @@ export class MIDIConnection extends EventEmitter {
   }
 
   /**
-   * Request MIDI access from the browser
+   * Request MIDI access from the browser. Sets up hotplug detection and
+   * emits events when devices connect/disconnect.
+   *
    * @returns {Promise<void>}
    * @throws {MIDIAccessError} If MIDI is not supported or access is denied
+   *
+   * @emits CONNECTION_EVENTS.DEVICE_CHANGE - When any MIDI device state changes
+   * @emits CONNECTION_EVENTS.IN_DEV_CONNECTED - When an input device connects
+   * @emits CONNECTION_EVENTS.IN_DEV_DISCONNECTED - When an input device disconnects
+   * @emits CONNECTION_EVENTS.OUT_DEV_CONNECTED - When an output device connects
+   * @emits CONNECTION_EVENTS.OUT_DEV_DISCONNECTED - When an output device disconnects
+   *
+   * @example
+   * // Request basic MIDI access
+   * await connection.requestAccess();
+   *
+   * @example
+   * // Request with SysEx support
+   * const connection = new MIDIConnection({ sysex: true });
+   * await connection.requestAccess();
    */
   async requestAccess() {
     if (!navigator.requestMIDIAccess) {
@@ -79,13 +124,13 @@ export class MIDIConnection extends EventEmitter {
         if (state === "disconnected") {
           // Emit events for ALL device disconnects, not just current ones
           if (port.type === "input") {
-            this.emit(CONNECTION_EVENTS.INPUT_DEVICE_DISCONNECTED, { device: port })
+            this.emit(CONNECTION_EVENTS.IN_DEV_DISCONNECTED, { device: port })
             // Clear current input if it was this device
             if (this.input && this.input.id === port.id) {
               this.input = null
             }
           } else if (port.type === "output") {
-            this.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_DISCONNECTED, { device: port })
+            this.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device: port })
             // Clear current output if it was this device
             if (this.output && this.output.id === port.id) {
               this.output = null
@@ -93,9 +138,9 @@ export class MIDIConnection extends EventEmitter {
           }
         } else if (state === "connected") {
           if (port.type === "input") {
-            this.emit(CONNECTION_EVENTS.INPUT_DEVICE_CONNECTED, { device: port })
+            this.emit(CONNECTION_EVENTS.IN_DEV_CONNECTED, { device: port })
           } else if (port.type === "output") {
-            this.emit(CONNECTION_EVENTS.OUTPUT_DEVICE_CONNECTED, { device: port })
+            this.emit(CONNECTION_EVENTS.OUT_DEV_CONNECTED, { device: port })
           }
         }
       }
@@ -108,54 +153,28 @@ export class MIDIConnection extends EventEmitter {
   }
 
   /**
-   * Get all available MIDI outputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
-   */
-  getOutputs() {
-    if (!this.midiAccess) return []
-
-    const outputs = []
-    this.midiAccess.outputs.forEach((output) => {
-      // Only include connected devices
-      if (output.state === "connected") {
-        outputs.push({
-          id: output.id,
-          name: output.name,
-          manufacturer: output.manufacturer || "Unknown",
-        })
-      }
-    })
-
-    return outputs
-  }
-
-  /**
-   * Get all available MIDI inputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
-   */
-  getInputs() {
-    if (!this.midiAccess) return []
-
-    const inputs = []
-    this.midiAccess.inputs.forEach((input) => {
-      if (input.state === "connected") {
-        inputs.push({
-          id: input.id,
-          name: input.name,
-          manufacturer: input.manufacturer || "Unknown",
-        })
-      }
-    })
-
-    return inputs
-  }
-
-  /**
-   * Connect to a MIDI output device
+   * Connect to a MIDI output device. Can connect by index, name, or ID.
+   *
    * @param {string|number} [device] - Device name, ID, or index (defaults to first available)
    * @returns {Promise<void>}
    * @throws {MIDIConnectionError} If MIDI access not initialized
    * @throws {MIDIDeviceError} If device not found or index out of range
+   *
+   * @example
+   * // Connect to first available device
+   * await connection.connect();
+   *
+   * @example
+   * // Connect by index
+   * await connection.connect(0);
+   *
+   * @example
+   * // Connect by name
+   * await connection.connect('My MIDI Keyboard');
+   *
+   * @example
+   * // Connect by device ID
+   * await connection.connect('input-12345');
    */
   async connect(device) {
     if (!this.midiAccess) {
@@ -248,61 +267,28 @@ export class MIDIConnection extends EventEmitter {
   }
 
   /**
-   * Send a MIDI message
-   * @param {Uint8Array|Array<number>} message - MIDI message bytes
-   * @param {number} [timestamp=performance.now()] - Optional timestamp
+   * Disconnect from current output
    */
-  send(message, timestamp = null) {
-    if (!this.output) {
-      console.warn("No MIDI output connected. Call connect() first.")
-      return
-    }
-
-    try {
-      // Convert to Uint8Array for Web MIDI API
-      const data = new Uint8Array(message)
-
-      if (timestamp === null) {
-        this.output.send(data)
-      } else {
-        this.output.send(data, timestamp)
-      }
-    } catch (err) {
-      console.error("Failed to send MIDI message:", err)
-    }
+  disconnectOutput() {
+    this.output = null
   }
 
   /**
-   * Send a SysEx message
-   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
-   * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
+   * Disconnect from current input
    */
-  sendSysEx(data, includeWrapper = false) {
-    if (!this.options.sysex) {
-      console.warn("SysEx not enabled. Initialize with sysex: true")
-      return
-    }
-
-    let message
-    if (includeWrapper) {
-      // Add SysEx wrapper bytes
-      message = [0xf0, ...data, 0xf7]
-    } else {
-      message = data
-    }
-
-    this.send(message)
-  }
-
-  /**
-   * Disconnect from current output and input
-   */
-  disconnect() {
+  disconnectInput() {
     if (this.input) {
       this.input.onmidimessage = null
       this.input = null
     }
-    this.output = null
+  }
+
+  /**
+   * Disconnect from both output and input
+   */
+  disconnect() {
+    this.disconnectOutput()
+    this.disconnectInput()
   }
 
   /**
@@ -339,5 +325,120 @@ export class MIDIConnection extends EventEmitter {
       name: this.input.name,
       manufacturer: this.input.manufacturer || "Unknown",
     }
+  }
+
+  /**
+   * Get all available MIDI outputs
+   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   */
+  getOutputs() {
+    if (!this.midiAccess) return []
+
+    const outputs = []
+    this.midiAccess.outputs.forEach((output) => {
+      // Only include connected devices
+      if (output.state === "connected") {
+        outputs.push({
+          id: output.id,
+          name: output.name,
+          manufacturer: output.manufacturer || "Unknown",
+        })
+      }
+    })
+
+    return outputs
+  }
+
+  /**
+   * Get all available MIDI inputs
+   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   */
+  getInputs() {
+    if (!this.midiAccess) return []
+
+    const inputs = []
+    this.midiAccess.inputs.forEach((input) => {
+      if (input.state === "connected") {
+        inputs.push({
+          id: input.id,
+          name: input.name,
+          manufacturer: input.manufacturer || "Unknown",
+        })
+      }
+    })
+
+    return inputs
+  }
+
+  /**
+   * Send a MIDI message to the connected output. Automatically converts
+   * Arrays to Uint8Array for Web MIDI API compatibility.
+   *
+   * @param {Uint8Array|Array<number>} message - MIDI message bytes (e.g., [0x90, 60, 100])
+   * @param {number} [timestamp=performance.now()] - Optional timestamp for scheduled sending
+   * @returns {void}
+   *
+   * @example
+   * // Send a note on message (channel 1, note C4, velocity 100)
+   * connection.send([0x90, 60, 100]);
+   *
+   * @example
+   * // Send a note off message
+   * connection.send([0x80, 60, 0]);
+   *
+   * @example
+   * // Send a control change
+   * connection.send([0xB0, 7, 64]); // Volume to 64
+   */
+  send(message, timestamp = null) {
+    if (!this.output) {
+      console.warn("No MIDI output connected. Call connect() first.")
+      return
+    }
+
+    try {
+      // Convert to Uint8Array for Web MIDI API
+      const data = new Uint8Array(message)
+
+      if (timestamp === null) {
+        this.output.send(data)
+      } else {
+        this.output.send(data, timestamp)
+      }
+    } catch (err) {
+      console.error("Failed to send MIDI message:", err)
+    }
+  }
+
+  /**
+   * Send a System Exclusive (SysEx) message. Requires sysex: true in constructor options.
+   *
+   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
+   * @param {boolean} [includeWrapper=false] - If true, wraps data with F0/F7 bytes
+   * @returns {void}
+   *
+   * @example
+   * // Send a basic SysEx message (will be wrapped with F0/F7)
+   * connection.sendSysEx([0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F]);
+   *
+   * @example
+   * // Send pre-wrapped SysEx message
+   * connection.sendSysEx([0xF0, 0x41, 0x10, 0x42, 0xF7], false);
+   */
+  sendSysEx(data, includeWrapper = false) {
+    if (!this.options.sysex) {
+      console.warn("SysEx not enabled. Initialize with sysex: true")
+      return
+    }
+
+    let message
+    if (includeWrapper) {
+      // Add SysEx wrapper bytes
+      message = [0xf0, ...data, 0xf7]
+    } else {
+      message = data
+    }
+
+    this.send(message)
   }
 }

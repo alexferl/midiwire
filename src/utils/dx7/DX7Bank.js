@@ -2,8 +2,43 @@ import { DX7ParseError, DX7ValidationError } from "../../core/errors.js"
 import { DX7Voice } from "./DX7Voice.js"
 
 /**
- * DX7Bank - Represents a DX7 bank loaded from a SYX file
- * Contains 32 voices in the packed 128-byte format
+ * Represents a DX7 bank (collection of 32 voices) loaded from a SYX file.
+ * DX7 banks contain 32 voices in a packed 128-byte format with a 6-byte SysEx header,
+ * 4096 bytes of voice data, 1 byte checksum, and 0xF7 trailer. Provides methods for
+ * loading from files, converting to/from SysEx format, and manipulating voices.
+ *
+ * @example
+ * // Load from file
+ * const fileInput = document.getElementById('file-input');
+ * fileInput.addEventListener('change', async (e) => {
+ *   const file = e.target.files[0];
+ *   const bank = await DX7Bank.fromFile(file);
+ *   console.log(bank.getVoiceNames());
+ * });
+ *
+ * @example
+ * // Create from SysEx data
+ * const syxData = new Uint8Array([0xF0, 0x43, 0x00, 0x09, 0x20, 0x00, 0xF7]);
+ * const bank = DX7Bank.fromSysEx(syxData, 'My Bank');
+ *
+ * @example
+ * // Manipulate voices
+ * const bank = new DX7Bank();
+ * const voice = DX7Voice.fromName('BASS 1');
+ * bank.replaceVoice(0, voice); // Replace first voice
+ * console.log(bank.getVoice(0).name); // 'BASS 1'
+ *
+ * @example
+ * // Export to SysEx
+ * const bank = await DX7Bank.fromFile(file);
+ * const syxData = bank.toSysEx();
+ * download(syxData, 'my-bank.syx');
+ *
+ * @example
+ * // Convert to JSON for storage
+ * const bank = await DX7Bank.fromFile(file);
+ * const json = bank.toJSON();
+ * localStorage.setItem('dx7-bank', JSON.stringify(json));
  */
 export class DX7Bank {
   // SysEx header
@@ -35,9 +70,28 @@ export class DX7Bank {
   static MASK_7BIT = 0x7f
 
   /**
-   * Create a DX7Bank
-   * @param {Array<number>|ArrayBuffer|Uint8Array} data - Bank SYX data (optional)
-   * @param {string} name - Optional bank name (e.g., filename)
+   * Create a DX7Bank instance. Can be initialized with SYX data or created empty.
+   * When data is provided, it's validated and parsed. When no data is provided,
+   * the bank is initialized with 32 default "Init Voice" patches.
+   *
+   * @param {Array<number>|ArrayBuffer|Uint8Array} [data] - Bank SYX data (4104 bytes with SysEx wrapper or 4096 bytes raw)
+   * @param {string} [name=""] - Optional bank name (e.g., filename without extension)
+   * @returns {DX7Bank}
+   *
+   * @example
+   * // Create empty bank with default voices
+   * const bank = new DX7Bank();
+   * console.log(bank.getVoiceNames()); // ['Init Voice', 'Init Voice', ...]
+   *
+   * @example
+   * // Create from SysEx data
+   * const syxData = new Uint8Array([0xF0, 0x43, 0x00, 0x09, 0x20, 0x00, 0xF7]);
+   * const bank = new DX7Bank(syxData, 'My Bank');
+   *
+   * @example
+   * // Create from raw voice data (no SysEx wrapper)
+   * const voiceData = new Uint8Array(4096); // 32 voices × 128 bytes
+   * const bank = new DX7Bank(voiceData, 'Raw Bank');
    */
   constructor(data, name = "") {
     this.voices = new Array(DX7Bank.NUM_VOICES)
@@ -138,10 +192,27 @@ export class DX7Bank {
   }
 
   /**
-   * Replace a voice at the specified index
+   * Replace a voice at the specified index (0-31). Validates the index and creates a copy
+   * of the voice data to ensure the bank maintains its own independent copy.
+   *
    * @param {number} index - Voice index (0-31)
    * @param {DX7Voice} voice - Voice to insert
-   * @throws {DX7ValidationError} If index is out of range
+   * @returns {void}
+   * @throws {DX7ValidationError} If index is out of range (0-31)
+   *
+   * @example
+   * // Replace first voice with a custom voice
+   * const bank = await DX7Bank.fromFile(file);
+   * const customVoice = DX7Voice.fromName('LEAD 1');
+   * bank.replaceVoice(0, customVoice);
+   * console.log(bank.getVoice(0).name); // 'LEAD 1'
+   *
+   * @example
+   * // Swap voices between banks
+   * const bank1 = await DX7Bank.fromFile(file1);
+   * const bank2 = await DX7Bank.fromFile(file2);
+   * const voiceFromBank2 = bank2.getVoice(5);
+   * bank1.replaceVoice(0, voiceFromBank2); // Copy voice from bank2 to bank1
    */
   replaceVoice(index, voice) {
     if (index < 0 || index >= DX7Bank.NUM_VOICES) {
