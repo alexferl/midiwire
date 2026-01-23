@@ -18,7 +18,7 @@ A modern, declarative JavaScript library for creating browser-based MIDI control
 - 📦 **Zero dependencies** - Lightweight and fast
 - 🔧 **Flexible API** - Works with data attributes or programmatically
 - 🎨 **Framework agnostic** - Use with vanilla JS, React, Vue, or anything else
-- 📝 **Fully documented** - [Comprehensive API documentation](docs/API.md) with examples
+- 📝 **Fully documented** - [Comprehensive API documentation](https://alexferl.github.io/midiwire/module-midiwire.html) with examples
 
 ## Installation
 
@@ -92,7 +92,7 @@ midi.channel.sendCC(74, 64);
 
 ### Full API Documentation
 
-For complete API documentation with examples, see **[API.md](./docs/API.md)**.
+For complete API documentation with examples, see **[API Documentation](https://alexferl.github.io/midiwire/module-midiwire.html)**.
 
 ## Use Cases
 
