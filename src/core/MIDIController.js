@@ -6,6 +6,7 @@ import { MIDIConnection } from "./MIDIConnection.js"
 /**
  * Complete patch data structure for saving/loading controller state
  * @typedef {Object} PatchData
+ * @memberof MIDIController
  * @property {string} name - Patch/preset name
  * @property {string|null} device - Output device name (if saved with device)
  * @property {string} timestamp - ISO timestamp when patch was created
@@ -35,6 +36,7 @@ import { MIDIConnection } from "./MIDIConnection.js"
 /**
  * Channel-specific MIDI data
  * @typedef {Object} ChannelData
+ * @memberof MIDIController
  * @property {Object.<number, number>} ccs - Control Change values indexed by CC number (0-127)
  * @property {Object.<number, number>} notes - Note on/off states indexed by note number (0-127)
  * @property {number} [program] - Program change value for the channel (0-127)
@@ -46,6 +48,7 @@ import { MIDIConnection } from "./MIDIConnection.js"
 /**
  * Control binding settings
  * @typedef {Object} SettingData
+ * @memberof MIDIController
  * @property {number} min - Minimum input value
  * @property {number} max - Maximum input value
  * @property {boolean} invert - Whether to invert the value mapping
@@ -63,55 +66,55 @@ import { MIDIConnection } from "./MIDIConnection.js"
  * - System events (SYS_*)
  * - Patch events (PATCH_*)
  *
- * @typedef {Object} CONTROLLER_EVENTS
- * @property {string} READY - Emitted when controller is initialized and ready
- * @property {string} ERROR - Emitted on errors
- * @property {string} DESTROYED - Emitted when controller is destroyed
+ * @namespace CONTROLLER_EVENTS
+ * @property {string} READY="ready" - Emitted when controller is initialized and ready
+ * @property {string} ERROR="error" - Emitted on errors
+ * @property {string} DESTROYED="destroyed" - Emitted when controller is destroyed
  *
- * @property {string} DEV_OUT_CONNECTED - Emitted when output device is connected
- * @property {string} DEV_IN_CONNECTED - Emitted when input device is connected
+ * @property {string} DEV_OUT_CONNECTED="dev-out-connected" - Emitted when output device is connected
+ * @property {string} DEV_IN_CONNECTED="dev-in-connected" - Emitted when input device is connected
  *
- * @property {string} CH_CC_SEND - Emitted when sending control change
- * @property {string} CH_CC_RECV - Emitted when receiving control change
- * @property {string} CH_NOTE_ON_SEND - Emitted when sending note on
- * @property {string} CH_NOTE_ON_RECV - Emitted when receiving note on
- * @property {string} CH_NOTE_OFF_SEND - Emitted when sending note off
- * @property {string} CH_NOTE_OFF_RECV - Emitted when receiving note off
- * @property {string} CH_PC_SEND - Emitted when sending program change
- * @property {string} CH_PC_RECV - Emitted when receiving program change
- * @property {string} CH_PITCH_BEND_SEND - Emitted when sending pitch bend
- * @property {string} CH_PITCH_BEND_RECV - Emitted when receiving pitch bend
- * @property {string} CH_MONO_PRESS_SEND - Emitted when sending channel pressure
- * @property {string} CH_MONO_PRESS_RECV - Emitted when receiving channel pressure
- * @property {string} CH_POLY_PRESS_SEND - Emitted when sending polyphonic pressure
- * @property {string} CH_POLY_PRESS_RECV - Emitted when receiving polyphonic pressure
- * @property {string} CH_ALL_SOUNDS_OFF_SEND - Emitted when sending all sounds off
- * @property {string} CH_RESET_CONTROLLERS_SEND - Emitted when sending reset all controllers
- * @property {string} CH_LOCAL_CONTROL_SEND - Emitted when sending local control
- * @property {string} CH_ALL_NOTES_OFF_SEND - Emitted when sending all notes off
- * @property {string} CH_OMNI_OFF_SEND - Emitted when sending omni mode off
- * @property {string} CH_OMNI_ON_SEND - Emitted when sending omni mode on
- * @property {string} CH_MONO_ON_SEND - Emitted when sending mono mode on
- * @property {string} CH_POLY_ON_SEND - Emitted when sending poly mode on
+ * @property {string} CH_CC_SEND="ch-cc-send" - Emitted when sending control change
+ * @property {string} CH_CC_RECV="ch-cc-recv" - Emitted when receiving control change
+ * @property {string} CH_NOTE_ON_SEND="ch-note-on-send" - Emitted when sending note on
+ * @property {string} CH_NOTE_ON_RECV="ch-note-on-recv" - Emitted when receiving note on
+ * @property {string} CH_NOTE_OFF_SEND="ch-note-off-send" - Emitted when sending note off
+ * @property {string} CH_NOTE_OFF_RECV="ch-note-off-recv" - Emitted when receiving note off
+ * @property {string} CH_PC_SEND="ch-pc-send" - Emitted when sending program change
+ * @property {string} CH_PC_RECV="ch-pc-recv" - Emitted when receiving program change
+ * @property {string} CH_PITCH_BEND_SEND="ch-pitch-bend-send" - Emitted when sending pitch bend
+ * @property {string} CH_PITCH_BEND_RECV="ch-pitch-bend-recv" - Emitted when receiving pitch bend
+ * @property {string} CH_MONO_PRESS_SEND="ch-mono-press-send" - Emitted when sending channel pressure
+ * @property {string} CH_MONO_PRESS_RECV="ch-mono-press-recv" - Emitted when receiving channel pressure
+ * @property {string} CH_POLY_PRESS_SEND="ch-poly-press-send" - Emitted when sending polyphonic pressure
+ * @property {string} CH_POLY_PRESS_RECV="ch-poly-press-recv" - Emitted when receiving polyphonic pressure
+ * @property {string} CH_ALL_SOUNDS_OFF_SEND="ch-all-sounds-off-send" - Emitted when sending all sounds off
+ * @property {string} CH_RESET_CONTROLLERS_SEND="ch-reset-controllers-send" - Emitted when sending reset all controllers
+ * @property {string} CH_LOCAL_CONTROL_SEND="ch-local-control-send" - Emitted when sending local control
+ * @property {string} CH_ALL_NOTES_OFF_SEND="ch-all-notes-off-send" - Emitted when sending all notes off
+ * @property {string} CH_OMNI_OFF_SEND="ch-omni-off-send" - Emitted when sending omni mode off
+ * @property {string} CH_OMNI_ON_SEND="ch-omni-on-send" - Emitted when sending omni mode on
+ * @property {string} CH_MONO_ON_SEND="ch-mono-on-send" - Emitted when sending mono mode on
+ * @property {string} CH_POLY_ON_SEND="ch-poly-on-send" - Emitted when sending poly mode on
  *
- * @property {string} SYS_EX_SEND - Emitted when sending SysEx
- * @property {string} SYS_EX_RECV - Emitted when receiving SysEx
- * @property {string} SYS_CLOCK_RECV - Emitted when receiving MIDI clock
- * @property {string} SYS_START_RECV - Emitted when receiving start command
- * @property {string} SYS_CONTINUE_RECV - Emitted when receiving continue command
- * @property {string} SYS_STOP_RECV - Emitted when receiving stop command
- * @property {string} SYS_MTC_RECV - Emitted when receiving MTC
- * @property {string} SYS_SONG_POS_RECV - Emitted when receiving song position
- * @property {string} SYS_SONG_SEL_RECV - Emitted when receiving song selection
- * @property {string} SYS_TUNE_REQ_RECV - Emitted when receiving tune request
- * @property {string} SYS_ACT_SENSE_RECV - Emitted when receiving active sensing
- * @property {string} SYS_RESET_RECV - Emitted when receiving system reset
+ * @property {string} SYS_EX_SEND="sys-ex-send" - Emitted when sending SysEx
+ * @property {string} SYS_EX_RECV="sys-ex-recv" - Emitted when receiving SysEx
+ * @property {string} SYS_CLOCK_RECV="sys-clock-recv" - Emitted when receiving MIDI clock
+ * @property {string} SYS_START_RECV="sys-start-recv" - Emitted when receiving start command
+ * @property {string} SYS_CONTINUE_RECV="sys-continue-recv" - Emitted when receiving continue command
+ * @property {string} SYS_STOP_RECV="sys-stop-recv" - Emitted when receiving stop command
+ * @property {string} SYS_MTC_RECV="sys-mtc-recv" - Emitted when receiving MTC
+ * @property {string} SYS_SONG_POS_RECV="sys-song-pos-recv" - Emitted when receiving song position
+ * @property {string} SYS_SONG_SEL_RECV="sys-song-sel-recv" - Emitted when receiving song selection
+ * @property {string} SYS_TUNE_REQ_RECV="sys-tune-req-recv" - Emitted when receiving tune request
+ * @property {string} SYS_ACT_SENSE_RECV="sys-act-sense-recv" - Emitted when receiving active sensing
+ * @property {string} SYS_RESET_RECV="sys-reset-recv" - Emitted when receiving system reset
  *
- * @property {string} MIDI_RAW - Emitted for unhandled raw MIDI messages
+ * @property {string} MIDI_RAW="midi-raw" - Emitted for unhandled raw MIDI messages
  *
- * @property {string} PATCH_SAVED - Emitted when a patch is saved
- * @property {string} PATCH_LOADED - Emitted when a patch is loaded
- * @property {string} PATCH_DELETED - Emitted when a patch is deleted
+ * @property {string} PATCH_SAVED="patch-saved" - Emitted when a patch is saved
+ * @property {string} PATCH_LOADED="patch-loaded" - Emitted when a patch is loaded
+ * @property {string} PATCH_DELETED="patch-deleted" - Emitted when a patch is deleted
  *
  * @example
  * // Listen for controller ready

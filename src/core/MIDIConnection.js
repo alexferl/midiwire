@@ -2,13 +2,15 @@ import { EventEmitter } from "./EventEmitter.js"
 import { MIDIAccessError, MIDIConnectionError, MIDIDeviceError, MIDIValidationError } from "./errors.js"
 
 /**
- * Connection event constants
- * @typedef {Object} CONNECTION_EVENTS
- * @property {string} DEVICE_CHANGE - Emitted when any MIDI device state changes (connect/disconnect)
- * @property {string} IN_DEV_CONNECTED - Emitted when an input device is connected
- * @property {string} IN_DEV_DISCONNECTED - Emitted when an input device is disconnected
- * @property {string} OUT_DEV_CONNECTED - Emitted when an output device is connected
- * @property {string} OUT_DEV_DISCONNECTED - Emitted when an output device is disconnected
+ * Connection event constants for device connection/disconnection events.
+ * Use these constants when listening for MIDI device state changes.
+ *
+ * @namespace CONNECTION_EVENTS
+ * @property {string} DEVICE_CHANGE="device-change" - Emitted when any MIDI device state changes (connect/disconnect)
+ * @property {string} IN_DEV_CONNECTED="in-dev-connected" - Emitted when an input device is connected
+ * @property {string} IN_DEV_DISCONNECTED="in-dev-disconnected" - Emitted when an input device is disconnected
+ * @property {string} OUT_DEV_CONNECTED="out-dev-connected" - Emitted when an output device is connected
+ * @property {string} OUT_DEV_DISCONNECTED="out-dev-disconnected" - Emitted when an output device is disconnected
  *
  * @example
  * connection.on(CONNECTION_EVENTS.DEVICE_CHANGE, ({ port, state, type, device }) => {

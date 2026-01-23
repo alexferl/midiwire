@@ -25,6 +25,7 @@ import { DX7Bank } from "./DX7Bank.js"
 /**
  * JSON representation of a DX7 operator (human-readable)
  * @typedef {Object} DX7OperatorJSON
+ * @memberof DX7Voice
  * @property {number} id - Operator number (1-6)
  * @property {Object} osc - Oscillator parameters (frequency, detune)
  * @property {Object} eg - Envelope generator (rates and levels)
@@ -36,6 +37,7 @@ import { DX7Bank } from "./DX7Bank.js"
 /**
  * JSON representation of a DX7 voice (patch)
  * @typedef {Object} DX7VoiceJSON
+ * @memberof DX7Voice
  * @property {string} name - Voice/patch name (max 10 characters)
  * @property {DX7OperatorJSON[]} operators - Array of 6 operators
  * @property {Object} pitchEG - Pitch envelope generator (rates and levels)
@@ -46,6 +48,7 @@ import { DX7Bank } from "./DX7Bank.js"
 /**
  * JSON representation of a DX7 voice with bank index
  * @typedef {Object} DX7VoiceIndexJSON
+ * @memberof DX7Voice
  * @property {number} index - Voice index in bank (1-32)
  * @property {string} name - Voice/patch name
  * @property {DX7OperatorJSON[]} operators - Array of 6 operators
@@ -56,6 +59,7 @@ import { DX7Bank } from "./DX7Bank.js"
 
 /**
  * @typedef {Object} DX7BankJSON - JSON representation of a DX7 bank
+ * @memberof DX7Voice
  * @property {string} version - Version string (e.g., "1.0")
  * @property {string} name - Bank name (e.g., filename)
  * @property {DX7VoiceIndexJSON[]} voices - Array of 32 voices
