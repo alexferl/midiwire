@@ -350,8 +350,14 @@
     }
 
     window.sendPatch = (index, button) => {
-      if (!bank || !deviceManager?.midi?.connection?.output) {
+      if (!bank || !deviceManager?.currentDevice) {
         status.textContent = "Error: No bank loaded or MIDI not connected";
+        status.className = "status error";
+        return;
+      }
+
+      if (!deviceManager?.currentDevice) {
+        status.textContent = "Error: MIDI device disconnected";
         status.className = "status error";
         return;
       }
@@ -367,7 +373,7 @@
         const sysex = voice.toSysEx();
 
         // Note: toSysEx() already includes the 0xF0/0xF7 wrapper
-        deviceManager.midi.sendSysEx(sysex);
+        deviceManager.midi.system.sendEx(sysex, false);
 
         status.textContent = `Sent "${voice.name}" to DX7`;
         status.className = "status success";
@@ -522,7 +528,7 @@
      * @returns {Promise<DX7Voice>} A promise that resolves to the received voice
      */
     async function requestCurrentVoice() {
-      if (!deviceManager?.midi?.connection?.output) {
+      if (!deviceManager?.currentDevice) {
         throw new Error("MIDI not connected");
       }
 
@@ -534,37 +540,37 @@
             const voice = DX7Voice.fromSysEx(event.data);
 
             // Remove the handler immediately after receiving valid data
-            deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+            deviceManager.midi.off(CTRL.SYS_EX_RECV, sysExHandler);
 
             resolve(voice);
           } catch (err) {
             // Only remove handler and reject if it's a real error
             // (not just an invalid header which might be from another device)
             if (err.code !== "header") {
-              deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+              deviceManager.midi.off(CTRL.SYS_EX_RECV, sysExHandler);
               reject(err);
             }
           }
         };
 
         // Add the SysEx receive handler
-        deviceManager.midi.on(CTRL.SYSEX_RECV, sysExHandler);
+        deviceManager.midi.on(CTRL.SYS_EX_RECV, sysExHandler);
 
         // Send the request after a short delay to ensure handler is registered
         setTimeout(() => {
           try {
             // DX7 request current voice: F0 43 20 7F 1B 00 F7
             // Note: includeWrapper=true to add F0/F7 automatically
-            deviceManager.midi.sendSysEx([0x43, 0x20, 0x7F, 0x1B, 0x00], true);
+            deviceManager.midi.system.sendEx([0x43, 0x20, 0x7F, 0x1B, 0x00], true);
           } catch (err) {
-            deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+            deviceManager.midi.off(CTRL.SYS_EX_RECV, sysExHandler);
             reject(new Error(`Failed to send request: ${err.message}`));
           }
         }, 100);
 
         // Timeout after 5 seconds if no response
         setTimeout(() => {
-          deviceManager.midi.off(CTRL.SYSEX_RECV, sysExHandler);
+          deviceManager.midi.off(CTRL.SYS_EX_RECV, sysExHandler);
           reject(new Error("No response from DX7 (timeout)"));
         }, 5000);
       });

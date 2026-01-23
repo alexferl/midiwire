@@ -4,50 +4,189 @@ import { MIDIValidationError } from "./errors.js"
 import { MIDIConnection } from "./MIDIConnection.js"
 
 /**
+ * Complete patch data structure for saving/loading controller state
  * @typedef {Object} PatchData
- * @property {string} name - Patch name
- * @property {string|null} device - Output device name
- * @property {string} timestamp - ISO timestamp
- * @property {string} version - Patch format version
- * @property {Object.<number, ChannelData>} channels - Channel data indexed by channel number
- * @property {Object.<string, SettingData>} settings - Control settings indexed by setting key
+ * @property {string} name - Patch/preset name
+ * @property {string|null} device - Output device name (if saved with device)
+ * @property {string} timestamp - ISO timestamp when patch was created
+ * @property {string} version - Patch format version (e.g., "1.0")
+ * @property {Object.<number, ChannelData>} channels - Channel data indexed by channel number (1-16)
+ * @property {Object.<string, SettingData>} settings - Control settings indexed by control key
+ *
+ * @example
+ * const patch = {
+ *   name: "My Synth Patch",
+ *   device: "My MIDI Keyboard",
+ *   timestamp: "2024-01-15T10:30:00.000Z",
+ *   version: "1.0",
+ *   channels: {
+ *     1: {
+ *       ccs: { 7: 100, 74: 64 },
+ *       program: 5,
+ *       pitchBend: 8192
+ *     }
+ *   },
+ *   settings: {
+ *     cc7: { min: 0, max: 127, invert: false, is14Bit: false, label: "Volume" }
+ *   }
+ * };
  */
 
 /**
+ * Channel-specific MIDI data
  * @typedef {Object} ChannelData
- * @property {Object.<number, number>} ccs - CC values indexed by CC number
- * @property {Object.<number, number>} notes - Note velocities indexed by note number
+ * @property {Object.<number, number>} ccs - Control Change values indexed by CC number (0-127)
+ * @property {Object.<number, number>} notes - Note on/off states indexed by note number (0-127)
+ * @property {number} [program] - Program change value for the channel (0-127)
+ * @property {number} [pitchBend] - Pitch bend value for the channel (0-16383, center=8192)
+ * @property {number} [monoPressure] - Channel pressure/aftertouch value (0-127)
+ * @property {Object.<number, number>} [polyPressure] - Polyphonic pressure values indexed by note number
  */
 
 /**
+ * Control binding settings
  * @typedef {Object} SettingData
- * @property {number} min - Minimum value
- * @property {number} max - Maximum value
- * @property {boolean} invert - Invert flag
- * @property {boolean} is14Bit - 14-bit CC flag
- * @property {string|null} label - Optional label
- * @property {string|null} elementId - Element ID if available
+ * @property {number} min - Minimum input value
+ * @property {number} max - Maximum input value
+ * @property {boolean} invert - Whether to invert the value mapping
+ * @property {boolean} is14Bit - Whether this is a 14-bit CC control
+ * @property {string|null} label - Optional display label
+ * @property {string|null} elementId - Associated DOM element ID
  * @property {Function|null} onInput - Optional callback for value updates
  */
 
 /**
- * Controller event constants
+ * Controller event constants. Events are organized by category and follow a consistent naming pattern:
+ * - Core events (READY, ERROR, DESTROYED)
+ * - Device events (DEV_*)
+ * - Channel events (CH_*)
+ * - System events (SYS_*)
+ * - Patch events (PATCH_*)
+ *
+ * @typedef {Object} CONTROLLER_EVENTS
+ * @property {string} READY - Emitted when controller is initialized and ready
+ * @property {string} ERROR - Emitted on errors
+ * @property {string} DESTROYED - Emitted when controller is destroyed
+ *
+ * @property {string} DEV_OUT_CONNECTED - Emitted when output device is connected
+ * @property {string} DEV_IN_CONNECTED - Emitted when input device is connected
+ *
+ * @property {string} CH_CC_SEND - Emitted when sending control change
+ * @property {string} CH_CC_RECV - Emitted when receiving control change
+ * @property {string} CH_NOTE_ON_SEND - Emitted when sending note on
+ * @property {string} CH_NOTE_ON_RECV - Emitted when receiving note on
+ * @property {string} CH_NOTE_OFF_SEND - Emitted when sending note off
+ * @property {string} CH_NOTE_OFF_RECV - Emitted when receiving note off
+ * @property {string} CH_PC_SEND - Emitted when sending program change
+ * @property {string} CH_PC_RECV - Emitted when receiving program change
+ * @property {string} CH_PITCH_BEND_SEND - Emitted when sending pitch bend
+ * @property {string} CH_PITCH_BEND_RECV - Emitted when receiving pitch bend
+ * @property {string} CH_MONO_PRESS_SEND - Emitted when sending channel pressure
+ * @property {string} CH_MONO_PRESS_RECV - Emitted when receiving channel pressure
+ * @property {string} CH_POLY_PRESS_SEND - Emitted when sending polyphonic pressure
+ * @property {string} CH_POLY_PRESS_RECV - Emitted when receiving polyphonic pressure
+ * @property {string} CH_ALL_SOUNDS_OFF_SEND - Emitted when sending all sounds off
+ * @property {string} CH_RESET_CONTROLLERS_SEND - Emitted when sending reset all controllers
+ * @property {string} CH_LOCAL_CONTROL_SEND - Emitted when sending local control
+ * @property {string} CH_ALL_NOTES_OFF_SEND - Emitted when sending all notes off
+ * @property {string} CH_OMNI_OFF_SEND - Emitted when sending omni mode off
+ * @property {string} CH_OMNI_ON_SEND - Emitted when sending omni mode on
+ * @property {string} CH_MONO_ON_SEND - Emitted when sending mono mode on
+ * @property {string} CH_POLY_ON_SEND - Emitted when sending poly mode on
+ *
+ * @property {string} SYS_EX_SEND - Emitted when sending SysEx
+ * @property {string} SYS_EX_RECV - Emitted when receiving SysEx
+ * @property {string} SYS_CLOCK_RECV - Emitted when receiving MIDI clock
+ * @property {string} SYS_START_RECV - Emitted when receiving start command
+ * @property {string} SYS_CONTINUE_RECV - Emitted when receiving continue command
+ * @property {string} SYS_STOP_RECV - Emitted when receiving stop command
+ * @property {string} SYS_MTC_RECV - Emitted when receiving MTC
+ * @property {string} SYS_SONG_POS_RECV - Emitted when receiving song position
+ * @property {string} SYS_SONG_SEL_RECV - Emitted when receiving song selection
+ * @property {string} SYS_TUNE_REQ_RECV - Emitted when receiving tune request
+ * @property {string} SYS_ACT_SENSE_RECV - Emitted when receiving active sensing
+ * @property {string} SYS_RESET_RECV - Emitted when receiving system reset
+ *
+ * @property {string} MIDI_RAW - Emitted for unhandled raw MIDI messages
+ *
+ * @property {string} PATCH_SAVED - Emitted when a patch is saved
+ * @property {string} PATCH_LOADED - Emitted when a patch is loaded
+ * @property {string} PATCH_DELETED - Emitted when a patch is deleted
+ *
+ * @example
+ * // Listen for controller ready
+ * midi.on(midi.READY, (controller) => {
+ *   console.log("MIDI ready!");
+ * });
+ *
+ * @example
+ * // Listen for CC messages (both send and receive)
+ * midi.on(midi.CH_CC_SEND, ({ cc, value, channel }) => {
+ *   console.log(`Sent CC ${cc}: ${value} on channel ${channel}`);
+ * });
+ *
+ * midi.on(midi.CH_CC_RECV, ({ cc, value, channel }) => {
+ *   console.log(`Received CC ${cc}: ${value} on channel ${channel}`);
+ * });
+ *
+ * @example
+ * // Listen for device connections
+ * midi.on(midi.DEV_OUT_CONNECTED, (device) => {
+ *   console.log(`Output connected: ${device.name}`);
+ * });
  */
 export const CONTROLLER_EVENTS = {
+  // Core controller events
   READY: "ready",
   ERROR: "error",
-  CC_SEND: "cc-send",
-  CC_RECV: "cc-recv",
-  NOTE_ON_SEND: "note-on-send",
-  NOTE_ON_RECV: "note-on-recv",
-  NOTE_OFF_SEND: "note-off-send",
-  NOTE_OFF_RECV: "note-off-recv",
-  SYSEX_SEND: "sysex-send",
-  SYSEX_RECV: "sysex-recv",
-  OUTPUT_CHANGED: "output-changed",
-  INPUT_CONNECTED: "input-connected",
   DESTROYED: "destroyed",
-  MIDI_MSG: "midi-msg",
+
+  // Device events (midi.device.*)
+  DEV_OUT_CONNECTED: "dev-out-connected",
+  DEV_IN_CONNECTED: "dev-in-connected",
+
+  // Channel Voice Messages (midi.channel.*)
+  CH_CC_SEND: "ch-cc-send",
+  CH_CC_RECV: "ch-cc-recv",
+  CH_NOTE_ON_SEND: "ch-note-on-send",
+  CH_NOTE_ON_RECV: "ch-note-on-recv",
+  CH_NOTE_OFF_SEND: "ch-note-off-send",
+  CH_NOTE_OFF_RECV: "ch-note-off-recv",
+  CH_PC_SEND: "ch-pc-send",
+  CH_PC_RECV: "ch-pc-recv",
+  CH_PITCH_BEND_SEND: "ch-pitch-bend-send",
+  CH_PITCH_BEND_RECV: "ch-pitch-bend-recv",
+  CH_MONO_PRESS_SEND: "ch-mono-press-send",
+  CH_MONO_PRESS_RECV: "ch-mono-press-recv",
+  CH_POLY_PRESS_SEND: "ch-poly-press-send",
+  CH_POLY_PRESS_RECV: "ch-poly-press-recv",
+  CH_ALL_SOUNDS_OFF_SEND: "ch-all-sounds-off-send",
+  CH_RESET_CONTROLLERS_SEND: "ch-reset-controllers-send",
+  CH_LOCAL_CONTROL_SEND: "ch-local-control-send",
+  CH_ALL_NOTES_OFF_SEND: "ch-all-notes-off-send",
+  CH_OMNI_OFF_SEND: "ch-omni-off-send",
+  CH_OMNI_ON_SEND: "ch-omni-on-send",
+  CH_MONO_ON_SEND: "ch-mono-on-send",
+  CH_POLY_ON_SEND: "ch-poly-on-send",
+
+  // System Messages (midi.system.*)
+  SYS_EX_SEND: "sys-ex-send",
+  SYS_EX_RECV: "sys-ex-recv",
+  SYS_CLOCK_RECV: "sys-clock-recv",
+  SYS_START_RECV: "sys-start-recv",
+  SYS_CONTINUE_RECV: "sys-continue-recv",
+  SYS_STOP_RECV: "sys-stop-recv",
+  SYS_MTC_RECV: "sys-mtc-recv",
+  SYS_SONG_POS_RECV: "sys-song-pos-recv",
+  SYS_SONG_SEL_RECV: "sys-song-sel-recv",
+  SYS_TUNE_REQ_RECV: "sys-tune-req-recv",
+  SYS_ACT_SENSE_RECV: "sys-act-sense-recv",
+  SYS_RESET_RECV: "sys-reset-recv",
+
+  // Raw MIDI messages
+  MIDI_RAW: "midi-raw",
+
+  // Patch events (midi.patch.*)
   PATCH_SAVED: "patch-saved",
   PATCH_LOADED: "patch-loaded",
   PATCH_DELETED: "patch-deleted",
@@ -56,11 +195,39 @@ export const CONTROLLER_EVENTS = {
 /**
  * Main controller for browser-based MIDI operations. Provides APIs for:
  * - Device management (connect/disconnect, enumerate devices)
- * - Control binding (DOM elements ↔ MIDI CC)
+ * - Control binding (DOM elements <-> MIDI CC)
  * - MIDI messaging (send/receive CC, Note, SysEx)
  * - Patch management (save/load presets)
  * - Event handling (MIDI messages, connection changes, errors)
  * @extends EventEmitter
+ *
+ * @example
+ * // Basic initialization
+ * const midi = new MIDIController({ channel: 1 });
+ * await midi.init();
+ *
+ * @example
+ * // Bind UI controls to MIDI CCs
+ * const volumeSlider = document.getElementById("volume");
+ * midi.bind(volumeSlider, { cc: 7 }); // Bind CC 7 (volume)
+ *
+ * @example
+ * // Send MIDI messages
+ * midi.channel.sendCC(74, 64); // Send CC 74 (filter cutoff) value 64
+ * midi.channel.sendNoteOn(60, 100); // Play middle C with velocity 100
+ * midi.channel.sendNoteOff(60); // Stop middle C
+ *
+ * @example
+ * // Listen for MIDI events
+ * midi.on(midi.CH_CC_RECV, ({ cc, value, channel }) => {
+ *   console.log(`CC ${cc} received: ${value}`);
+ * });
+ *
+ * @example
+ * // Save and load patches
+ * const patch = midi.patch.get("My Patch");
+ * midi.patch.save("My Patch");
+ * midi.patch.load("My Patch");
  */
 export class MIDIController extends EventEmitter {
   /**
@@ -85,15 +252,55 @@ export class MIDIController extends EventEmitter {
 
     this.connection = null
     this.bindings = new Map()
-    this.state = new Map() // Track all CC values
+    this.state = {
+      controlChange: new Map(), // ${channel}:${cc} -> value
+      programChange: new Map(), // ${channel} -> program
+      pitchBend: new Map(), // ${channel} -> value (0-16383)
+      monoPressure: new Map(), // ${channel} -> pressure
+      polyPressure: new Map(), // ${channel}:${note} -> pressure
+    }
     this.initialized = false
+
+    // Initialize namespaces after all methods are defined
+    this._initNamespaces()
   }
 
   /**
-   * Initialize MIDI access
+   * Initialize MIDI access. Requests browser permission and connects to devices.
+   * Emits "ready" event on success, "error" event on failure.
+   *
    * @returns {Promise<void>}
+   * @throws {MIDIAccessError} If MIDI access is denied or browser doesn't support Web MIDI
+   *
+   * @emits CONTROLLER_EVENTS.READY - When initialization succeeds
+   * @emits CONTROLLER_EVENTS.ERROR - When initialization fails
+   *
+   * @example
+   * // Basic initialization
+   * const midi = new MIDIController();
+   * await midi.init();
+   *
+   * @example
+   * // Initialization with custom options
+   * const midi = new MIDIController({
+   *   channel: 2,
+   *   sysex: true,
+   *   autoConnect: false
+   * });
+   * await midi.init();
+   *
+   * @example
+   * // With event listeners
+   * const midi = new MIDIController();
+   * midi.on(midi.READY, (controller) => {
+   *   console.log("MIDI ready!");
+   * });
+   * midi.on(midi.ERROR, (error) => {
+   *   console.error("MIDI error:", error);
+   * });
+   * await midi.init();
    */
-  async initialize() {
+  async init() {
     if (this.initialized) {
       console.warn("MIDI Controller already initialized")
       return
@@ -112,7 +319,7 @@ export class MIDIController extends EventEmitter {
 
       // Connect input if specified
       if (this.options.input !== undefined) {
-        await this.connectInput(this.options.input)
+        await this._connectInput(this.options.input)
       }
 
       this.initialized = true
@@ -126,120 +333,130 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Connect to a MIDI input device for receiving messages
-   * @param {string|number} device - Device name, ID, or index
-   * @returns {Promise<void>}
+   * Initialize namespace bindings
+   * This must be called after all private methods are defined
+   * @private
    */
-  async connectInput(device) {
-    await this.connection.connectInput(device, (event) => {
-      this._handleMIDIMessage(event)
-    })
-    this.emit(CONTROLLER_EVENTS.INPUT_CONNECTED, this.connection.getCurrentInput())
-  }
-
-  /**
-   * Send a control change message
-   * @param {number} cc - CC number (0-127)
-   * @param {number} value - CC value (0-127)
-   * @param {number} [channel] - MIDI channel (defaults to controller channel)
-   */
-  sendCC(cc, value, channel = this.options.channel) {
-    if (!this.initialized) {
-      console.warn("MIDI not initialized. Call initialize() first.")
-      return
+  _initNamespaces() {
+    this.device = {
+      connect: this._connect.bind(this),
+      disconnect: this._disconnect.bind(this),
+      connectInput: this._connectInput.bind(this),
+      connectOutput: this._connectOutput.bind(this),
+      getCurrentOutput: this._getCurrentOutput.bind(this),
+      getCurrentInput: this._getCurrentInput.bind(this),
+      getOutputs: this._getOutputs.bind(this),
+      getInputs: this._getInputs.bind(this),
     }
 
-    // Validate inputs
-    cc = clamp(Math.round(cc), 0, 127)
-    value = clamp(Math.round(value), 0, 127)
-    channel = clamp(Math.round(channel), 1, 16)
+    this.channel = {
+      sendNoteOn: this._sendNoteOn.bind(this),
+      sendNoteOff: this._sendNoteOff.bind(this),
+      sendCC: this._sendCC.bind(this),
+      getCC: this._getCC.bind(this),
+      sendPC: this._sendPC.bind(this),
+      getPC: this._getPC.bind(this),
+      sendPitchBend: this._sendPitchBend.bind(this),
+      getPitchBend: this._getPitchBend.bind(this),
+      sendMonoPressure: this._sendMonoPressure.bind(this),
+      getMonoPressure: this._getMonoPressure.bind(this),
+      sendPolyPressure: this._sendPolyPressure.bind(this),
+      getPolyPressure: this._getPolyPressure.bind(this),
+      allSoundsOff: this._allSoundsOff.bind(this),
+      resetControllers: this._resetControllers.bind(this),
+      localControl: this._localControl.bind(this),
+      allNotesOff: this._allNotesOff.bind(this),
+      omniOff: this._omniOff.bind(this),
+      omniOn: this._omniOn.bind(this),
+      monoOn: this._monoOn.bind(this),
+      polyOn: this._polyOn.bind(this),
+    }
 
-    const status = 0xb0 + (channel - 1) // Control Change status
-    this.connection.send([status, cc, value])
+    this.system = {
+      sendEx: function (data, includeWrapper = false) {
+        return this._sendSysEx(data, includeWrapper)
+      }.bind(this),
+      sendClock: this._sendClock.bind(this),
+      start: this._sendStart.bind(this),
+      continue: this._sendContinue.bind(this),
+      stop: this._sendStop.bind(this),
+      sendMTC: this._sendMTC.bind(this),
+      sendSongPosition: this._sendSongPosition.bind(this),
+      sendSongSelect: this._sendSongSelect.bind(this),
+      sendTuneRequest: this._sendTuneRequest.bind(this),
+      sendActiveSensing: this._sendActiveSensing.bind(this),
+      sendSystemReset: this._sendSystemReset.bind(this),
+    }
 
-    // Update state
-    const key = `${channel}:${cc}`
-    this.state.set(key, value)
-
-    this.emit(CONTROLLER_EVENTS.CC_SEND, { cc, value, channel })
+    this.patch = {
+      get: this._getPatch.bind(this),
+      set: this._setPatch.bind(this),
+      save: this._savePatch.bind(this),
+      load: this._loadPatch.bind(this),
+      delete: this._deletePatch.bind(this),
+      list: this._listPatches.bind(this),
+    }
   }
 
   /**
-   * Send a SysEx message
-   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
-   * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
+   * Bind a DOM element to a MIDI CC for bidirectional control. Automatically handles
+   * value normalization based on element type (slider, knob, etc.) and MIDI range (0-127).
+   * Sends initial MIDI value when binding if controller is initialized.
    *
-   * @example
-   * // Send with wrapper included
-   * midi.sendSysEx([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true)
-   */
-  sendSysEx(data, includeWrapper = false) {
-    if (!this.initialized) {
-      console.warn("MIDI not initialized. Call initialize() first.")
-      return
-    }
-
-    if (!this.options.sysex) {
-      console.warn("SysEx not enabled. Initialize with sysex: true")
-      return
-    }
-
-    this.connection.sendSysEx(data, includeWrapper)
-    this.emit(CONTROLLER_EVENTS.SYSEX_SEND, { data, includeWrapper })
-  }
-
-  /**
-   * Send a note on message
-   * @param {number} note - Note number (0-127)
-   * @param {number} [velocity=64] - Note velocity (0-127)
-   * @param {number} [channel] - MIDI channel
-   */
-  sendNoteOn(note, velocity = 64, channel = this.options.channel) {
-    if (!this.initialized) return
-
-    note = clamp(Math.round(note), 0, 127)
-    velocity = clamp(Math.round(velocity), 0, 127)
-    channel = clamp(Math.round(channel), 1, 16)
-
-    const status = 0x90 + (channel - 1)
-    this.connection.send([status, note, velocity])
-
-    this.emit(CONTROLLER_EVENTS.NOTE_ON_SEND, { note, velocity, channel })
-  }
-
-  /**
-   * Send a note off message
-   * @param {number} note - Note number (0-127)
-   * @param {number} [channel] - MIDI channel
-   * @param {number} [velocity=0] - Release velocity (0-127)
-   */
-  sendNoteOff(note, channel = this.options.channel, velocity = 0) {
-    if (!this.initialized) return
-
-    note = clamp(Math.round(note), 0, 127)
-    velocity = clamp(Math.round(velocity), 0, 127)
-    channel = clamp(Math.round(channel), 1, 16)
-
-    // Use Note On with velocity 0 for better compatibility with some synths
-    const status = 0x90 + (channel - 1)
-    this.connection.send([status, note, velocity])
-
-    this.emit(CONTROLLER_EVENTS.NOTE_OFF_SEND, { note, channel, velocity })
-  }
-
-  /**
-   * Bind a control programmatically
-   * @param {HTMLElement} element - DOM element
+   * @param {HTMLElement} element - DOM element to bind (e.g., input range, number input)
    * @param {Object} config - Binding configuration
-   * @param {number} config.cc - CC number
-   * @param {number} [config.min=0] - Minimum input value
-   * @param {number} [config.max=127] - Maximum input value
-   * @param {number} [config.channel] - Override channel
-   * @param {boolean} [config.invert=false] - Invert the value
+   * @param {number} config.cc - CC number (0-127, e.g., 7 for volume, 74 for filter cutoff)
+   * @param {number} [config.min=0] - Minimum input value (auto-detected from element if available)
+   * @param {number} [config.max=127] - Maximum input value (auto-detected from element if available)
+   * @param {number} [config.channel] - MIDI channel (defaults to controller's default channel)
+   * @param {boolean} [config.invert=false] - Invert the value mapping
+   * @param {boolean} [config.is14Bit=false] - Use 14-bit CC (MSB + LSB, requires msb/lsb config)
+   * @param {number} [config.msb] - MSB CC number for 14-bit control
+   * @param {number} [config.lsb] - LSB CC number for 14-bit control
    * @param {Function} [config.onInput] - Optional callback for value updates (receives normalized element value)
    * @param {Object} [options={}] - Additional options
    * @param {number} [options.debounce=0] - Debounce delay in ms for high-frequency updates
-   * @returns {Function} Unbind function
+   * @returns {Function} Unbind function - Call to remove binding and cleanup event listeners
+   *
+   * @example
+   * // Basic slider binding
+   * const volumeSlider = document.getElementById("volume");
+   * const unbindVolume = midi.bind(volumeSlider, { cc: 7 }); // CC 7 = Channel Volume
+   *
+   * @example
+   * // Binding with custom range and inversion
+   * const filterKnob = document.getElementById("filter");
+   * midi.bind(filterKnob, {
+   *   cc: 74,        // CC 74 = Filter Cutoff
+   *   min: 0,        // Knob minimum value
+   *   max: 127,      // Knob maximum value
+   *   invert: true   // Invert value (useful for cutoff - higher CC = brighter)
+   * });
+   *
+   * @example
+   * // 14-bit high-resolution control
+   * const fineTune = document.getElementById("fine-tune");
+   * midi.bind(fineTune, {
+   *   is14Bit: true,
+   *   msb: 0,    // CC 0 = MSB
+   *   lsb: 32    // CC 32 = LSB
+   * });
+   *
+   * @example
+   * // With debouncing for high-frequency updates
+   * const lfoRate = document.getElementById("lfo-rate");
+   * midi.bind(lfoRate, { cc: 76 }, { debounce: 50 }); // 50ms debounce
+   *
+   * @example
+   * // Using callback to update display
+   * const pitchSlider = document.getElementById("pitch");
+   * const pitchDisplay = document.getElementById("pitch-value");
+   * midi.bind(pitchSlider, {
+   *   cc: 75,
+   *   onInput: (value) => {
+   *     pitchDisplay.textContent = Math.round(value);
+   *   }
+   * });
    */
   bind(element, config, options = {}) {
     if (!element) {
@@ -256,145 +473,6 @@ export class MIDIController extends EventEmitter {
     }
 
     return () => this.unbind(element)
-  }
-
-  /**
-   * Unbind a control
-   * @param {HTMLElement} element
-   */
-  unbind(element) {
-    const binding = this.bindings.get(element)
-    if (binding) {
-      binding.destroy()
-      this.bindings.delete(element)
-    }
-  }
-
-  /**
-   * Get current value of a CC
-   * @param {number} cc - CC number
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
-   */
-  getCC(cc, channel = this.options.channel) {
-    const key = `${channel}:${cc}`
-    return this.state.get(key)
-  }
-
-  /**
-   * Get all available MIDI outputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
-   */
-  getOutputs() {
-    return this.connection?.getOutputs() || []
-  }
-
-  /**
-   * Get all available MIDI inputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
-   */
-  getInputs() {
-    return this.connection?.getInputs() || []
-  }
-
-  /**
-   * Switch to a different output device
-   * @param {string|number} output - Device name, ID, or index
-   * @returns {Promise<void>}
-   */
-  async setOutput(output) {
-    await this.connection.connect(output)
-    this.emit(CONTROLLER_EVENTS.OUTPUT_CHANGED, this.connection.getCurrentOutput())
-  }
-
-  /**
-   * Get current output device
-   * @returns {Object|null}
-   */
-  getCurrentOutput() {
-    return this.connection?.getCurrentOutput() || null
-  }
-
-  /**
-   * Get current input device
-   * @returns {Object|null}
-   */
-  getCurrentInput() {
-    return this.connection?.getCurrentInput() || null
-  }
-
-  /**
-   * Clean up resources
-   */
-  destroy() {
-    for (const binding of this.bindings.values()) {
-      binding.destroy()
-    }
-    this.bindings.clear()
-    this.state.clear()
-    this.connection?.disconnect()
-    this.initialized = false
-    this.emit(CONTROLLER_EVENTS.DESTROYED)
-    this.removeAllListeners()
-  }
-
-  /**
-   * Handle incoming MIDI messages
-   * @private
-   */
-  _handleMIDIMessage(event) {
-    const [status, data1, data2] = event.data
-    const messageType = status & 0xf0
-    const channel = (status & 0x0f) + 1
-
-    // SysEx message
-    if (status === 0xf0) {
-      this.emit(CONTROLLER_EVENTS.SYSEX_RECV, {
-        data: Array.from(event.data),
-        timestamp: event.midiwire,
-      })
-      return
-    }
-
-    // Control Change
-    if (messageType === 0xb0) {
-      const key = `${channel}:${data1}`
-      this.state.set(key, data2)
-
-      this.emit(CONTROLLER_EVENTS.CC_RECV, {
-        cc: data1,
-        value: data2,
-        channel,
-      })
-      return
-    }
-
-    // Note On
-    if (messageType === 0x90 && data2 > 0) {
-      this.emit(CONTROLLER_EVENTS.NOTE_ON_RECV, {
-        note: data1,
-        velocity: data2,
-        channel,
-      })
-      return
-    }
-
-    // Note Off (either 0x80 or 0x90 with velocity 0)
-    if (messageType === 0x80 || (messageType === 0x90 && data2 === 0)) {
-      this.emit(CONTROLLER_EVENTS.NOTE_OFF_RECV, {
-        note: data1,
-        channel,
-      })
-      return
-    }
-
-    // Other messages
-    this.emit(CONTROLLER_EVENTS.MIDI_MSG, {
-      status,
-      data: [data1, data2],
-      channel,
-      timestamp: event.midiwire,
-    })
   }
 
   /**
@@ -438,8 +516,8 @@ export class MIDIController extends EventEmitter {
 
         // Send MSB and LSB using dynamic channel
         const channelToUse = channel || this.options.channel
-        this.sendCC(msb, msbValue, channelToUse)
-        this.sendCC(lsb, lsbValue, channelToUse)
+        this._sendCC(msb, msbValue, channelToUse)
+        this._sendCC(lsb, lsbValue, channelToUse)
       }
 
       // Add debouncing if specified
@@ -483,7 +561,7 @@ export class MIDIController extends EventEmitter {
 
       // Use dynamic channel from midi.options.channel
       const channelToUse = channel === undefined ? this.options.channel : channel
-      this.sendCC(cc, midiValue, channelToUse)
+      this._sendCC(cc, midiValue, channelToUse)
     }
 
     // Add debouncing if specified
@@ -515,14 +593,874 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
+   * Unbind a control
+   * @param {HTMLElement} element
+   */
+  unbind(element) {
+    const binding = this.bindings.get(element)
+    if (binding) {
+      binding.destroy()
+      this.bindings.delete(element)
+    }
+  }
+
+  /**
+   * Clean up resources
+   */
+  destroy() {
+    for (const binding of this.bindings.values()) {
+      binding.destroy()
+    }
+    this.bindings.clear()
+    this.state.controlChange.clear()
+    this.state.programChange.clear()
+    this.state.pitchBend.clear()
+    this.state.monoPressure.clear()
+    this.state.polyPressure.clear()
+    this.connection?.disconnect()
+    this.initialized = false
+    this.emit(CONTROLLER_EVENTS.DESTROYED)
+    this.removeAllListeners()
+  }
+
+  /**
+   * Connect to a MIDI output device
+   * @param {string|number} [device] - Device name, ID, or index. If not provided, uses options.output or auto-connects
+   * @returns {Promise<void>}
+   */
+  async _connect(device) {
+    if (device) {
+      await this.connection.connect(device)
+    } else if (this.options.output !== undefined) {
+      await this.connection.connect(this.options.output)
+    } else if (this.options.autoConnect) {
+      await this.connection.connect()
+    }
+  }
+
+  /**
+   * Disconnect from current MIDI device
+   * @returns {Promise<void>}
+   */
+  async _disconnect() {
+    this.connection.disconnect()
+  }
+
+  /**
+   * Connect to a MIDI input device for receiving messages
+   * @param {string|number} device - Device name, ID, or index
+   * @returns {Promise<void>}
+   */
+  async _connectInput(device) {
+    await this.connection.connectInput(device, (event) => {
+      this._handleMIDIMessage(event)
+    })
+    this.emit(CONTROLLER_EVENTS.DEV_IN_CONNECTED, this.connection.getCurrentInput())
+  }
+
+  /**
+   * Switch to a different output device
+   * @param {string|number} output - Device name, ID, or index
+   * @returns {Promise<void>}
+   */
+  async _connectOutput(output) {
+    await this.connection.connect(output)
+    this.emit(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, this.connection.getCurrentOutput())
+  }
+
+  /**
+   * Get current output device
+   * @returns {Object|null}
+   */
+  _getCurrentOutput() {
+    return this.connection?.getCurrentOutput() || null
+  }
+
+  /**
+   * Get current input device
+   * @returns {Object|null}
+   */
+  _getCurrentInput() {
+    return this.connection?.getCurrentInput() || null
+  }
+
+  /**
+   * Get all available MIDI outputs
+   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   */
+  _getOutputs() {
+    return this.connection?.getOutputs() || []
+  }
+
+  /**
+   * Get all available MIDI inputs
+   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   */
+  _getInputs() {
+    return this.connection?.getInputs() || []
+  }
+
+  /**
+   * Send raw MIDI data
+   * @param {Array<number>} data - MIDI message bytes
+   */
+  send(data) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+    this.connection.send(data)
+  }
+
+  /**
+   * Send a note on message
+   * @param {number} note - Note number (0-127)
+   * @param {number} [velocity=64] - Note velocity (0-127)
+   * @param {number} [channel] - MIDI channel
+   */
+  _sendNoteOn(note, velocity = 64, channel = this.options.channel) {
+    if (!this.initialized) return
+
+    note = clamp(Math.round(note), 0, 127)
+    velocity = clamp(Math.round(velocity), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0x90 + (channel - 1)
+    this.connection.send([status, note, velocity])
+
+    this.emit(CONTROLLER_EVENTS.CH_NOTE_ON_SEND, { note, velocity, channel })
+  }
+
+  /**
+   * Send a note off message
+   * @param {number} note - Note number (0-127)
+   * @param {number} [channel] - MIDI channel
+   * @param {number} [velocity=0] - Release velocity (0-127)
+   */
+  _sendNoteOff(note, channel = this.options.channel, velocity = 0) {
+    if (!this.initialized) return
+
+    note = clamp(Math.round(note), 0, 127)
+    velocity = clamp(Math.round(velocity), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    // Use Note On with velocity 0 for better compatibility with some synths
+    const status = 0x90 + (channel - 1)
+    this.connection.send([status, note, velocity])
+
+    this.emit(CONTROLLER_EVENTS.CH_NOTE_OFF_SEND, { note, channel, velocity })
+  }
+
+  /**
+   * Send a control change message
+   * @param {number} cc - CC number (0-127)
+   * @param {number} value - CC value (0-127)
+   * @param {number} [channel] - MIDI channel (defaults to controller channel)
+   */
+  _sendCC(cc, value, channel = this.options.channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    // Validate inputs
+    cc = clamp(Math.round(cc), 0, 127)
+    value = clamp(Math.round(value), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0xb0 + (channel - 1) // Control Change status
+    this.connection.send([status, cc, value])
+
+    const key = `${channel}:${cc}`
+    this.state.controlChange.set(key, value)
+
+    this.emit(CONTROLLER_EVENTS.CH_CC_SEND, { cc, value, channel })
+  }
+
+  /**
+   * Send a program change message
+   * @param {number} program - Program number (0-127)
+   * @param {number} [channel] - MIDI channel
+   */
+  _sendPC(program, channel = this.options.channel) {
+    if (!this.initialized) return
+
+    program = clamp(Math.round(program), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0xc0 + (channel - 1)
+    this.connection.send([status, program])
+
+    this.state.programChange.set(channel.toString(), program)
+
+    this.emit(CONTROLLER_EVENTS.CH_PC_SEND, { program, channel })
+  }
+
+  /**
+   * Get current program for a channel
+   * @param {number} [channel] - MIDI channel
+   * @returns {number|undefined}
+   */
+  _getPC(channel = this.options.channel) {
+    return this.state.programChange.get(channel.toString())
+  }
+
+  /**
+   * Get current value of a CC
+   * @param {number} cc - CC number
+   * @param {number} [channel] - MIDI channel
+   * @returns {number|undefined}
+   */
+  _getCC(cc, channel = this.options.channel) {
+    const key = `${channel}:${cc}`
+    return this.state.controlChange.get(key)
+  }
+
+  /**
+   * Send a pitch bend message
+   * @param {number} value - Pitch bend value (0-16383, center = 8192)
+   * @param {number} [channel] - MIDI channel
+   */
+  _sendPitchBend(value, channel = this.options.channel) {
+    if (!this.initialized) return
+
+    value = clamp(Math.round(value), 0, 16383)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0xe0 + (channel - 1)
+    const lsb = value & 0x7f // Least significant 7 bits
+    const msb = (value >> 7) & 0x7f // Most significant 7 bits
+    this.connection.send([status, lsb, msb])
+
+    this.state.pitchBend.set(channel.toString(), value)
+
+    this.emit(CONTROLLER_EVENTS.CH_PITCH_BEND_SEND, { value, channel })
+  }
+
+  /**
+   * Get current pitch bend value for a channel
+   * @param {number} [channel] - MIDI channel
+   * @returns {number|undefined}
+   */
+  _getPitchBend(channel = this.options.channel) {
+    return this.state.pitchBend.get(channel.toString())
+  }
+
+  /**
+   * Send a channel pressure (aftertouch) message
+   * @param {number} pressure - Pressure value (0-127)
+   * @param {number} [channel] - MIDI channel
+   */
+  _sendMonoPressure(pressure, channel = this.options.channel) {
+    if (!this.initialized) return
+
+    pressure = clamp(Math.round(pressure), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0xd0 + (channel - 1)
+    this.connection.send([status, pressure])
+
+    this.state.monoPressure.set(channel.toString(), pressure)
+
+    this.emit(CONTROLLER_EVENTS.CH_MONO_PRESS_SEND, { pressure, channel })
+  }
+
+  /**
+   * Get current channel pressure for a channel
+   * @param {number} [channel] - MIDI channel
+   * @returns {number|undefined}
+   */
+  _getMonoPressure(channel = this.options.channel) {
+    return this.state.monoPressure.get(channel.toString())
+  }
+
+  /**
+   * Send a polyphonic key pressure (polyphonic aftertouch) message
+   * @param {number} note - Note number (0-127)
+   * @param {number} pressure - Pressure value (0-127)
+   * @param {number} [channel] - MIDI channel
+   */
+  _sendPolyPressure(note, pressure, channel = this.options.channel) {
+    if (!this.initialized) return
+
+    note = clamp(Math.round(note), 0, 127)
+    pressure = clamp(Math.round(pressure), 0, 127)
+    channel = clamp(Math.round(channel), 1, 16)
+
+    const status = 0xa0 + (channel - 1)
+    this.connection.send([status, note, pressure])
+
+    const key = `${channel}:${note}`
+    this.state.polyPressure.set(key, pressure)
+
+    this.emit(CONTROLLER_EVENTS.CH_POLY_PRESS_SEND, { note, pressure, channel })
+  }
+
+  /**
+   * Get current polyphonic pressure for a note on a channel
+   * @param {number} note - Note number
+   * @param {number} [channel] - MIDI channel
+   * @returns {number|undefined}
+   */
+  _getPolyPressure(note, channel = this.options.channel) {
+    const key = `${channel}:${note}`
+    return this.state.polyPressure.get(key)
+  }
+
+  /**
+   * Send All Sounds Off message (CC 120, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _allSoundsOff(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      // Send to specific channel
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 120, 0])
+      this.emit(CONTROLLER_EVENTS.CH_ALL_SOUNDS_OFF_SEND, { channel })
+    } else {
+      // Broadcast to all channels
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 120, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_ALL_SOUNDS_OFF_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send Reset All Controllers message (CC 121, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _resetControllers(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      // Send to specific channel
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 121, 0])
+      this.emit(CONTROLLER_EVENTS.CH_RESET_CONTROLLERS_SEND, { channel })
+    } else {
+      // Broadcast to all channels
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 121, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_RESET_CONTROLLERS_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send Local Control On/Off message (CC 122)
+   * @param {boolean} enabled - true for on (value 127), false for off (value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _localControl(enabled, channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    const value = enabled ? 127 : 0
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 122, value])
+      this.emit(CONTROLLER_EVENTS.CH_LOCAL_CONTROL_SEND, { enabled, channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 122, value])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_LOCAL_CONTROL_SEND, { enabled, channel: null })
+    }
+  }
+
+  /**
+   * Send All Notes Off message (CC 123, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _allNotesOff(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 123, 0])
+      this.emit(CONTROLLER_EVENTS.CH_ALL_NOTES_OFF_SEND, { channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 123, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_ALL_NOTES_OFF_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send Omni Mode Off message (CC 124, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _omniOff(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 124, 0])
+      this.emit(CONTROLLER_EVENTS.CH_OMNI_OFF_SEND, { channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 124, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_OMNI_OFF_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send Omni Mode On message (CC 125, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _omniOn(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 125, 0])
+      this.emit(CONTROLLER_EVENTS.CH_OMNI_ON_SEND, { channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 125, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_OMNI_ON_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send Mono Mode On message (CC 126)
+   * @param {number} [channels=1] - Number of channels for mono mode (0-16, 0=omni)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _monoOn(channels = 1, channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    channels = Math.max(0, Math.min(16, Math.round(channels)))
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 126, channels])
+      this.emit(CONTROLLER_EVENTS.CH_MONO_ON_SEND, { channels, channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 126, channels])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_MONO_ON_SEND, { channels, channel: null })
+    }
+  }
+
+  /**
+   * Send Poly Mode On message (CC 127, value 0)
+   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   */
+  _polyOn(channel) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (channel !== undefined) {
+      channel = clamp(Math.round(channel), 1, 16)
+      const status = 0xb0 + (channel - 1)
+      this.connection.send([status, 127, 0])
+      this.emit(CONTROLLER_EVENTS.CH_POLY_ON_SEND, { channel })
+    } else {
+      for (let ch = 1; ch <= 16; ch++) {
+        const status = 0xb0 + (ch - 1)
+        this.connection.send([status, 127, 0])
+      }
+      this.emit(CONTROLLER_EVENTS.CH_POLY_ON_SEND, { channel: null })
+    }
+  }
+
+  /**
+   * Send a SysEx message (internal implementation)
+   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
+   * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
+   *
+   * @example
+   * // Send with wrapper included
+   * midi.system.sendEx([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true)
+   * @private
+   */
+  _sendSysEx(data, includeWrapper = false) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    if (!this.options.sysex) {
+      console.warn("SysEx not enabled. Initialize with sysex: true")
+      return
+    }
+
+    this.connection.sendSysEx(data, includeWrapper)
+    this.emit(CONTROLLER_EVENTS.SYS_EX_SEND, { data, includeWrapper })
+  }
+
+  /**
+   * Send a timing clock message
+   */
+  _sendClock() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+    this.connection.send([0xf8])
+  }
+
+  /**
+   * Send a start message
+   */
+  _sendStart() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    this.connection.send([0xfa])
+  }
+
+  /**
+   * Send a continue message
+   */
+  _sendContinue() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    this.connection.send([0xfb])
+  }
+
+  /**
+   * Send a stop message
+   */
+  _sendStop() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    this.connection.send([0xfc])
+  }
+
+  /**
+   * Send an MTC quarter frame message
+   * @param {number} data - MTC quarter frame data (0-127)
+   */
+  _sendMTC(data) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    data = clamp(Math.round(data), 0, 127)
+    this.connection.send([0xf1, data])
+  }
+
+  /**
+   * Send a song position pointer message
+   * @param {number} position - Song position in beats (0-16383)
+   */
+  _sendSongPosition(position) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    position = clamp(Math.round(position), 0, 16383)
+    const lsb = position & 0x7f
+    const msb = (position >> 7) & 0x7f
+    this.connection.send([0xf2, lsb, msb])
+  }
+
+  /**
+   * Send a song select message
+   * @param {number} song - Song number (0-127)
+   */
+  _sendSongSelect(song) {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+    song = clamp(Math.round(song), 0, 127)
+    this.connection.send([0xf3, song])
+  }
+
+  /**
+   * Send a tune request message
+   */
+  _sendTuneRequest() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    this.connection.send([0xf6])
+  }
+
+  /**
+   * Send an active sensing message
+   */
+  _sendActiveSensing() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+    this.connection.send([0xfe])
+  }
+
+  /**
+   * Send a system reset message
+   */
+  _sendSystemReset() {
+    if (!this.initialized) {
+      console.warn("MIDI not initialized. Call init() first.")
+      return
+    }
+
+    this.connection.send([0xff])
+  }
+
+  /**
+   * Handle incoming MIDI messages
+   * @private
+   */
+  _handleMIDIMessage(event) {
+    const [status, data1, data2] = event.data
+    const messageType = status & 0xf0
+    const channel = (status & 0x0f) + 1
+
+    // System Real-Time messages (0xF8-0xFF)
+    if (status === 0xf8) {
+      this.emit(CONTROLLER_EVENTS.SYS_CLOCK_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xfa) {
+      this.emit(CONTROLLER_EVENTS.SYS_START_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xfb) {
+      this.emit(CONTROLLER_EVENTS.SYS_CONTINUE_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xfc) {
+      this.emit(CONTROLLER_EVENTS.SYS_STOP_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xfe) {
+      this.emit(CONTROLLER_EVENTS.SYS_ACT_SENSE_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xff) {
+      this.emit(CONTROLLER_EVENTS.SYS_RESET_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    // SysEx message (0xF0)
+    if (status === 0xf0) {
+      this.emit(CONTROLLER_EVENTS.SYS_EX_RECV, {
+        data: Array.from(event.data),
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    // System Common messages (0xF1-0xF7)
+    if (status === 0xf1) {
+      this.emit(CONTROLLER_EVENTS.SYS_MTC_RECV, {
+        data: data1,
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xf2) {
+      const position = data1 + (data2 << 7)
+      this.emit(CONTROLLER_EVENTS.SYS_SONG_POS_RECV, {
+        position,
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xf3) {
+      this.emit(CONTROLLER_EVENTS.SYS_SONG_SEL_RECV, {
+        song: data1,
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xf6) {
+      this.emit(CONTROLLER_EVENTS.SYS_TUNE_REQ_RECV, {
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    if (status === 0xf7) {
+      // End of SysEx - emit raw message
+      this.emit(CONTROLLER_EVENTS.MIDI_RAW, {
+        status,
+        data: [data1, data2],
+        channel,
+        timestamp: event.midiwire,
+      })
+      return
+    }
+
+    // Control Change
+    if (messageType === 0xb0) {
+      const key = `${channel}:${data1}`
+      this.state.controlChange.set(key, data2)
+
+      this.emit(CONTROLLER_EVENTS.CH_CC_RECV, {
+        cc: data1,
+        value: data2,
+        channel,
+      })
+      return
+    }
+
+    // Program Change
+    if (messageType === 0xc0) {
+      this.state.programChange.set(channel.toString(), data1)
+
+      this.emit(CONTROLLER_EVENTS.CH_PC_RECV, {
+        program: data1,
+        channel,
+      })
+      return
+    }
+
+    // Pitch Bend
+    if (messageType === 0xe0) {
+      const value = data1 + (data2 << 7) // Combine LSB and MSB
+      this.state.pitchBend.set(channel.toString(), value)
+
+      this.emit(CONTROLLER_EVENTS.CH_PITCH_BEND_RECV, {
+        value,
+        channel,
+      })
+      return
+    }
+
+    // Channel Pressure (Aftertouch)
+    if (messageType === 0xd0) {
+      this.state.monoPressure.set(channel.toString(), data1)
+
+      this.emit(CONTROLLER_EVENTS.CH_MONO_PRESS_RECV, {
+        pressure: data1,
+        channel,
+      })
+      return
+    }
+
+    // Polyphonic Pressure (Polyphonic Aftertouch)
+    if (messageType === 0xa0) {
+      const key = `${channel}:${data1}`
+      this.state.polyPressure.set(key, data2)
+
+      this.emit(CONTROLLER_EVENTS.CH_POLY_PRESS_RECV, {
+        note: data1,
+        pressure: data2,
+        channel,
+      })
+      return
+    }
+
+    // Note On
+    if (messageType === 0x90 && data2 > 0) {
+      this.emit(CONTROLLER_EVENTS.CH_NOTE_ON_RECV, {
+        note: data1,
+        velocity: data2,
+        channel,
+      })
+      return
+    }
+
+    // Note Off (either 0x80 or 0x90 with velocity 0)
+    if (messageType === 0x80 || (messageType === 0x90 && data2 === 0)) {
+      this.emit(CONTROLLER_EVENTS.CH_NOTE_OFF_RECV, {
+        note: data1,
+        channel,
+      })
+      return
+    }
+
+    // Other messages
+    this.emit(CONTROLLER_EVENTS.MIDI_RAW, {
+      status,
+      data: [data1, data2],
+      channel,
+      timestamp: event.midiwire,
+    })
+  }
+
+  /**
    * Get current state as a patch object
    * @param {string} [name] - Optional patch name
    * @returns {Object} Patch object
    */
-  getPatch(name = "Unnamed Patch") {
+  _getPatch(name = "Unnamed Patch") {
     const patch = {
       name,
-      device: this.getCurrentOutput()?.name || null,
+      device: this._getCurrentOutput()?.name || null,
       timestamp: new Date().toISOString(),
       version: "1.0",
       channels: {},
@@ -530,12 +1468,52 @@ export class MIDIController extends EventEmitter {
     }
 
     // Collect CC values by channel
-    for (const [key, value] of this.state.entries()) {
+    for (const [key, value] of this.state.controlChange.entries()) {
       const [channel, cc] = key.split(":").map(Number)
       if (!patch.channels[channel]) {
         patch.channels[channel] = { ccs: {}, notes: {} }
       }
       patch.channels[channel].ccs[cc] = value
+    }
+
+    // Collect program changes by channel
+    for (const [channelStr, value] of this.state.programChange.entries()) {
+      const channel = parseInt(channelStr, 10)
+      if (!patch.channels[channel]) {
+        patch.channels[channel] = { ccs: {}, notes: {} }
+      }
+      patch.channels[channel].program = value
+    }
+
+    // Collect pitch bend values by channel
+    for (const [channelStr, value] of this.state.pitchBend.entries()) {
+      const channel = parseInt(channelStr, 10)
+      if (!patch.channels[channel]) {
+        patch.channels[channel] = { ccs: {}, notes: {} }
+      }
+      patch.channels[channel].pitchBend = value
+    }
+
+    // Collect channel pressure values by channel
+    for (const [channelStr, value] of this.state.monoPressure.entries()) {
+      const channel = parseInt(channelStr, 10)
+      if (!patch.channels[channel]) {
+        patch.channels[channel] = { ccs: {}, notes: {} }
+      }
+      patch.channels[channel].monoPressure = value
+    }
+
+    // Collect polyphonic pressure values by channel:note
+    for (const [key, value] of this.state.polyPressure.entries()) {
+      const [channelStr, note] = key.split(":").map(Number)
+      const channel = parseInt(channelStr, 10)
+      if (!patch.channels[channel]) {
+        patch.channels[channel] = { ccs: {}, notes: {} }
+      }
+      if (!patch.channels[channel].polyPressure) {
+        patch.channels[channel].polyPressure = {}
+      }
+      patch.channels[channel].polyPressure[note] = value
     }
 
     // Collect control settings
@@ -562,7 +1540,7 @@ export class MIDIController extends EventEmitter {
    * @param {PatchData} patch - Patch object
    * @returns {Promise<void>}
    */
-  async setPatch(patch) {
+  async _setPatch(patch) {
     if (!patch || !patch.channels) {
       throw new MIDIValidationError("Invalid patch format", "patch")
     }
@@ -594,7 +1572,30 @@ export class MIDIController extends EventEmitter {
       if (channelData.ccs) {
         for (const [ccStr, value] of Object.entries(channelData.ccs)) {
           const cc = parseInt(ccStr, 10)
-          this.sendCC(cc, value, channel)
+          this._sendCC(cc, value, channel)
+        }
+      }
+
+      // Apply program change
+      if (channelData.program !== undefined) {
+        this._sendPC(channelData.program, channel)
+      }
+
+      // Apply pitch bend
+      if (channelData.pitchBend !== undefined) {
+        this._sendPitchBend(channelData.pitchBend, channel)
+      }
+
+      // Apply channel pressure
+      if (channelData.monoPressure !== undefined) {
+        this._sendMonoPressure(channelData.monoPressure, channel)
+      }
+
+      // Apply polyphonic pressure
+      if (channelData.polyPressure) {
+        for (const [noteStr, pressure] of Object.entries(channelData.polyPressure)) {
+          const note = parseInt(noteStr, 10)
+          this._sendPolyPressure(note, pressure, channel)
         }
       }
 
@@ -603,9 +1604,9 @@ export class MIDIController extends EventEmitter {
         for (const [noteStr, velocity] of Object.entries(channelData.notes)) {
           const note = parseInt(noteStr, 10)
           if (velocity > 0) {
-            this.sendNoteOn(note, velocity, channel)
+            this._sendNoteOn(note, velocity, channel)
           } else {
-            this.sendNoteOff(note, channel)
+            this._sendNoteOff(note, channel)
           }
         }
       }
@@ -670,8 +1671,8 @@ export class MIDIController extends EventEmitter {
    * @param {Object} [patch] - Optional patch object (will use getPatch() if not provided)
    * @returns {string} Storage key used
    */
-  savePatch(name, patch = null) {
-    const patchToSave = patch || this.getPatch(name)
+  _savePatch(name, patch = null) {
+    const patchToSave = patch || this._getPatch(name)
     const key = `midiwire_patch_${name}`
 
     try {
@@ -689,7 +1690,7 @@ export class MIDIController extends EventEmitter {
    * @param {string} name - Patch name
    * @returns {Object|null} Patch object or null if not found
    */
-  loadPatch(name) {
+  _loadPatch(name) {
     const key = `midiwire_patch_${name}`
 
     try {
@@ -712,7 +1713,7 @@ export class MIDIController extends EventEmitter {
    * @param {string} name - Patch name
    * @returns {boolean} Success
    */
-  deletePatch(name) {
+  _deletePatch(name) {
     const key = `midiwire_patch_${name}`
 
     try {
@@ -729,7 +1730,7 @@ export class MIDIController extends EventEmitter {
    * List all saved patches
    * @returns {Array<Object>} Array of { name, patch }
    */
-  listPatches() {
+  _listPatches() {
     const patches = []
 
     try {
@@ -737,7 +1738,7 @@ export class MIDIController extends EventEmitter {
         const key = localStorage.key(i)
         if (key?.startsWith("midiwire_patch_")) {
           const name = key.replace("midiwire_patch_", "")
-          const patch = this.loadPatch(name)
+          const patch = this._loadPatch(name)
           if (patch) {
             patches.push({ name, patch })
           }

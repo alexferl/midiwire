@@ -135,17 +135,17 @@
 
               button.addEventListener("mousedown", () => {
                 console.log(`Note ON: ${noteName} (note ${note}, velocity 100, channel ${midi.options.channel})`);
-                midi.sendNoteOn(note, 100);
+                midi.channel.sendNoteOn(note, 100);
               });
 
               button.addEventListener("mouseup", () => {
                 console.log(`Note OFF: ${noteName} (note ${note}, channel ${midi.options.channel})`);
-                midi.sendNoteOff(note);
+                midi.channel.sendNoteOff(note);
               });
 
               button.addEventListener("mouseleave", () => {
                 console.log(`Note OFF: ${noteName} (note ${note}, channel ${midi.options.channel})`);
-                midi.sendNoteOff(note);
+                midi.channel.sendNoteOff(note);
               });
             });
 

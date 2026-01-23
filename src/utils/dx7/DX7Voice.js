@@ -1,5 +1,19 @@
 /**
- * DX7 Bank loader for parsing Yamaha DX7 SYX files
+ * DX7 Voice (patch) parser and manipulator for Yamaha DX7 SYX files
+ *
+ * Handles both the 128-byte packed format (DX7 internal format) and
+ * 169-byte unpacked format (full parameter set with all operators).
+ *
+ * Features:
+ * - Parse native DX7 voices from SYX banks or single voice files
+ * - Convert between packed (128-byte) and unpacked (169-byte) formats
+ * - Import/export JSON representation with human-readable parameters
+ * - Translate special DX7 characters for compatibility
+ * - Calculate checksums for SysEx validation
+ * - Support for algorithm configurations (1-32)
+ * - Per-operator parameter access (EG, scaling, frequency, output)
+ * - LFO and pitch envelope parameters
+ * - Global voice parameters (algorithm, feedback, transpose, etc.)
  *
  * Based on Dexed implementation by Pascal Gauthier
  * @see https://github.com/asb2m10/dexed
@@ -9,27 +23,30 @@ import { DX7ParseError, DX7ValidationError } from "../../core/errors.js"
 import { DX7Bank } from "./DX7Bank.js"
 
 /**
- * @typedef {Object} DX7OperatorJSON - JSON representation of a DX7 operator
+ * JSON representation of a DX7 operator (human-readable)
+ * @typedef {Object} DX7OperatorJSON
  * @property {number} id - Operator number (1-6)
- * @property {Object} osc - Oscillator parameters
- * @property {Object} eg - Envelope parameters
- * @property {Object} key - Key scaling parameters
- * @property {Object} output - Output parameters
- * @property {Object} scale - Keyboard scaling parameters
+ * @property {Object} osc - Oscillator parameters (frequency, detune)
+ * @property {Object} eg - Envelope generator (rates and levels)
+ * @property {Object} key - Key scaling parameters (break point, velocity)
+ * @property {Object} output - Output parameters (level, amp mod sensitivity)
+ * @property {Object} scale - Keyboard scaling (left/right curves and depths)
  */
 
 /**
- * @typedef {Object} DX7VoiceJSON - JSON representation of a DX7 voice
- * @property {string} name - Voice/patch name
+ * JSON representation of a DX7 voice (patch)
+ * @typedef {Object} DX7VoiceJSON
+ * @property {string} name - Voice/patch name (max 10 characters)
  * @property {DX7OperatorJSON[]} operators - Array of 6 operators
- * @property {Object} pitchEG - Pitch envelope parameters
- * @property {Object} lfo - LFO parameters
- * @property {Object} global - Global voice parameters
+ * @property {Object} pitchEG - Pitch envelope generator (rates and levels)
+ * @property {Object} lfo - Low frequency oscillator parameters
+ * @property {Object} global - Global voice parameters (algorithm, feedback, transpose, etc.)
  */
 
 /**
- * @typedef {Object} DX7VoiceIndexJSON - JSON representation of a DX7 voice with index
- * @property {number} index - Voice index (1-32)
+ * JSON representation of a DX7 voice with bank index
+ * @typedef {Object} DX7VoiceIndexJSON
+ * @property {number} index - Voice index in bank (1-32)
  * @property {string} name - Voice/patch name
  * @property {DX7OperatorJSON[]} operators - Array of 6 operators
  * @property {Object} pitchEG - Pitch envelope parameters
@@ -46,7 +63,50 @@ import { DX7Bank } from "./DX7Bank.js"
 
 /**
  * DX7 Voice (patch) structure
- * Each voice is 128 bytes in packed format
+ * Represents a single DX7 voice/patch with 6 operators, algorithm selection,
+ * LFO, pitch envelope, and global parameters.
+ *
+ * Supports two formats:
+ * - **Packed format (128 bytes)**: DX7 internal format with bit-packed parameters
+ * - **Unpacked format (169 bytes)**: Decompressed format with all parameters expanded
+ *
+ * Each voice contains:
+ * - 6 FM operators with individual EGs, frequency, output level, and scaling
+ * - Algorithm selection (1-32) for operator routing
+ * - Feedback loop (0-7) for algorithm feedback
+ * - LFO parameters (speed, delay, depth, wave shape)
+ * - Pitch envelope generator (4 rates, 4 levels)
+ * - Global parameters (transpose, pitch mod sensitivity, etc.)
+ * - 10-character voice name
+ *
+ * @example
+ * // Create a voice from packed DX7 bank data
+ * const bankData = new Uint8Array(...); // 4096 bytes for 32 voices
+ * const voiceIndex = 5; // 6th voice in bank
+ * const voiceData = bankData.subarray(voiceIndex * 128, (voiceIndex + 1) * 128);
+ * const voice = new DX7Voice(voiceData, voiceIndex);
+ * console.log(voice.name); // e.g., "BASS 1"
+ *
+ * @example
+ * // Load a voice from a single-voice SYX file
+ * const file = document.getElementById("voice-file").files[0];
+ * const voice = await DX7Voice.fromFile(file);
+ * console.log(voice.toJSON());
+ *
+ * @example
+ * // Create from JSON and export to SysEx
+ * const json = loadVoiceData();
+ * const voice = DX7Voice.fromJSON(json);
+ * const syxData = voice.toSysEx(); // For single voice synths like Volca FM
+ * const packed = voice.data; // 128 bytes for DX7 bank
+ *
+ * @example
+ * // Modify operator parameters
+ * const voice = await DX7Voice.fromFile(file);
+ * const unpacked = voice.unpack();
+ * unpacked[DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = 80; // Change OP1 output level
+ * unpacked[DX7Voice.UNPACKED_ALGORITHM] = 5; // Change to algorithm 6
+ * const modifiedVoice = DX7Voice.fromUnpacked(unpacked);
  */
 export class DX7Voice {
   // Packed format (128 bytes)
@@ -185,9 +245,9 @@ export class DX7Voice {
   static CHAR_YEN = 92 // Japanese Yen symbol (¥) maps to ASCII backslash
   static CHAR_ARROW_RIGHT = 126 // Right arrow (→) maps to ASCII tilde
   static CHAR_ARROW_LEFT = 127 // Left arrow (←) maps to ASCII DEL
-  static CHAR_REPLACEMENT_Y = 89 // Replace Yen symbol with 'Y'
-  static CHAR_REPLACEMENT_GT = 62 // Right arrow with '>'
-  static CHAR_REPLACEMENT_LT = 60 // Left arrow with '<'
+  static CHAR_REPLACEMENT_Y = 89 // Replace Yen symbol with "Y"
+  static CHAR_REPLACEMENT_GT = 62 // Right arrow with ">"
+  static CHAR_REPLACEMENT_LT = 60 // Left arrow with "<"
   static CHAR_SPACE = 32 // Standard space character
   static CHAR_MIN_PRINTABLE = 32 // Minimum ASCII printable character
   static CHAR_MAX_PRINTABLE = 126 // Maximum ASCII printable character

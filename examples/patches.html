@@ -235,7 +235,7 @@
       }
 
       try {
-        midi.savePatch(name);
+        midi.patch.save(name);
         document.getElementById("patch-name").value = "";
         refreshPatchList();
         document.getElementById("status").textContent = `Patch "${name}" saved!`;
@@ -252,13 +252,13 @@
       statusEl.textContent = `Loading patch "${name}"...`;
       statusEl.className = "status";
 
-      const patch = midi.loadPatch(name);
+      const patch = midi.patch.load(name);
       if (patch) {
         const hasOutput = midi.connection?.output;
 
         if (hasOutput) {
           // If we have an output, use setPatch to send MIDI and update UI
-          midi.setPatch(patch).then(() => {
+          midi.patch.set(patch).then(() => {
             // Update displays immediately after setPatch completes
             if (window.updateControlDisplays) {
               window.updateControlDisplays();
@@ -302,7 +302,7 @@
     window.deletePatch = (name) => {
       if (!midi || !confirm(`Delete patch "${name}"?`)) return;
 
-      midi.deletePatch(name);
+      midi.patch.delete(name);
       refreshPatchList();
       document.getElementById("status").textContent = `Patch "${name}" deleted`;
     };
@@ -310,7 +310,7 @@
     window.previewPatch = (name) => {
       if (!midi) return;
 
-      const patch = midi.loadPatch(name);
+      const patch = midi.patch.load(name);
       if (patch) {
         document.getElementById("patch-json").textContent = JSON.stringify(patch, null, 2);
         document.getElementById("patch-json-section").style.display = "block";
@@ -331,7 +331,7 @@
     window.downloadPatch = (name) => {
       if (!midi) return;
 
-      const patch = midi.loadPatch(name);
+      const patch = midi.patch.load(name);
       if (patch) {
         // Convert to pretty JSON
         const jsonStr = JSON.stringify(patch, null, 2);
@@ -390,12 +390,12 @@
           // Confirm loading
           if (confirm(`Load patch "${fileName}" from file and apply to controls?`)) {
             // Save to localStorage with the filename as the name
-            midi.savePatch(fileName, patch);
+            midi.patch.save(fileName, patch);
 
             // Apply the patch and update UI displays
             const hasOutput = midi.connection?.output;
             if (hasOutput) {
-              midi.setPatch(patch);
+              midi.patch.set(patch);
             } else {
               // Manually update UI controls without sending MIDI
               const channel = midi.options.channel;
@@ -440,10 +440,10 @@
     function refreshPatchList() {
       if (!midi) return;
 
-      const patchs = midi.listPatches();
+      const patches = midi.patch.list();
       const listEl = document.getElementById("patch-list");
 
-      if (patchs.length === 0) {
+      if (patches.length === 0) {
         listEl.innerHTML = `
           <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
             No patchs saved yet. Create your first patch!
@@ -452,7 +452,7 @@
         return;
       }
 
-      listEl.innerHTML = patchs.map(({ name, patch }) => {
+      listEl.innerHTML = patches.map(({ name, patch }) => {
         // Extract control labels for better readability
         const settings = patch.settings || {};
         const labels = Object.values(settings)

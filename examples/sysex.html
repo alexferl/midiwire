@@ -72,8 +72,8 @@
     const controlsContainer = document.getElementById("controls-container");
     const connectMessage = document.getElementById("connect-message");
 
-    const output = midi?.getCurrentOutput();
-    const input = midi?.getCurrentInput();
+    const output = midi?.device.getCurrentOutput();
+    const input = midi?.device.getCurrentInput();
 
     if (output || input) {
       controlsContainer.style.display = "block";
@@ -147,7 +147,7 @@
 
           // Set up output device selection
           const outputSelect = document.getElementById("device-select");
-          const outputs = midi.getOutputs();
+          const outputs = midi.device.getOutputs();
           if (outputs.length > 0) {
             outputSelect.innerHTML = '<option value="">Select a device</option>' +
               outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
@@ -155,8 +155,8 @@
             outputSelect.addEventListener("change", async (e) => {
               const index = e.target.value;
               if (index) {
-                const outputs = midi.getOutputs();
-                await midi.setOutput(outputs[index].id);
+                const outputs = midi.device.getOutputs();
+                await midi.device.connectOutput(outputs[index].id);
                 updateConnectionStatus();
               }
             });
@@ -166,7 +166,7 @@
 
           // Set up input device selection
           const inputSelect = document.getElementById("input-device-select");
-          const inputs = midi.getInputs();
+          const inputs = midi.device.getInputs();
           if (inputs.length > 0) {
             inputSelect.innerHTML = '<option value="">Select an input device</option>' +
               inputs.map((input, i) => `<option value="${i}">${input.name}</option>`).join("");
@@ -174,8 +174,8 @@
             inputSelect.addEventListener("change", async (e) => {
               const index = e.target.value;
               if (index) {
-                const inputs = midi.getInputs();
-                await midi.connectInput(inputs[index].id);
+                const inputs = midi.device.getInputs();
+                await midi.device.connectInput(inputs[index].id);
                 updateConnectionStatus();
               } else {
                 updateConnectionStatus();
@@ -186,8 +186,8 @@
           }
 
           // Listen for SysEx messages
-          midi.on(CTRL.SYSEX_RECV, handleSysExReceived);
-          midi.on(CTRL.SYSEX_SEND, handleSysExSent);
+          midi.on(CTRL.SYS_EX_RECV, handleSysExReceived);
+          midi.on(CTRL.SYS_EX_SEND, handleSysExSent);
 
           updateConnectionStatus();
         }
@@ -207,7 +207,7 @@
     }
     // Universal Device Inquiry
     // F0 7E 7F 06 01 F7 (Identity Request)
-    window.midi.sendSysEx([0x7E, 0x7F, 0x06, 0x01], true);
+    window.midi.system.sendEx([0x7E, 0x7F, 0x06, 0x01], true);
     logMessage("[SEND] Universal Device Inquiry", "send");
   });
 
@@ -232,7 +232,7 @@
       return;
     }
 
-    window.midi.sendSysEx([manufacturerId, ...payload]);
+    window.midi.system.sendEx([manufacturerId, ...payload], true);
     logMessage(`[SEND] Custom SysEx (Manufacturer: 0x${manufacturerId.toString(16).toUpperCase()})`, "send");
   });
 

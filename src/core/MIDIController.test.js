@@ -73,25 +73,30 @@ describe("MIDIController", () => {
       expect(controller.options.sysex).toBe(false)
     })
 
-    it("should track CC state", () => {
-      expect(midiController.state).toBeInstanceOf(Map)
+    it("should track state and bindings", () => {
+      expect(midiController.state).toBeInstanceOf(Object)
+      expect(midiController.state.controlChange).toBeInstanceOf(Map)
+      expect(midiController.state.programChange).toBeInstanceOf(Map)
+      expect(midiController.state.pitchBend).toBeInstanceOf(Map)
+      expect(midiController.state.monoPressure).toBeInstanceOf(Map)
+      expect(midiController.state.polyPressure).toBeInstanceOf(Map)
       expect(midiController.bindings).toBeInstanceOf(Map)
     })
   })
 
   describe("initialize", () => {
     it("should initialize MIDI access and connect", async () => {
-      await midiController.initialize()
+      await midiController.init()
       expect(midiController.initialized).toBe(true)
       expect(midiController.connection).toBeTruthy()
     })
 
     it("should warn if already initialized", async () => {
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-      await midiController.initialize()
+      await midiController.init()
 
       consoleSpy.mockClear()
-      await midiController.initialize()
+      await midiController.init()
 
       expect(consoleSpy).toHaveBeenCalledWith("MIDI Controller already initialized")
       consoleSpy.mockRestore()
@@ -103,8 +108,8 @@ describe("MIDIController", () => {
         autoConnect: false,
       })
 
-      await midiController.initialize()
-      expect(midiController.getCurrentInput()).toBeTruthy()
+      await midiController.init()
+      expect(midiController.device.getCurrentInput()).toBeTruthy()
     })
 
     it("should emit error on initialization failure", async () => {
@@ -115,21 +120,21 @@ describe("MIDIController", () => {
         onError: errorHandler,
       })
 
-      await expect(midiController.initialize()).rejects.toThrow("Access denied")
+      await expect(midiController.init()).rejects.toThrow("Access denied")
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error))
     })
   })
 
   describe("connectInput", () => {
     beforeEach(async () => {
-      await midiController.initialize()
+      await midiController.init()
     })
 
     it("should connect to input and emit event", async () => {
       const spy = vi.fn()
-      midiController.on("input-connected", spy)
+      midiController.on(CONTROLLER_EVENTS.DEV_IN_CONNECTED, spy)
 
-      await midiController.connectInput("Test Input")
+      await midiController.device.connectInput("Test Input")
 
       expect(spy).toHaveBeenCalledWith({
         id: "input-1",
@@ -139,7 +144,7 @@ describe("MIDIController", () => {
     })
 
     it("should handle incoming MIDI messages via callback", async () => {
-      await midiController.connectInput("Test Input")
+      await midiController.device.connectInput("Test Input")
 
       // Simulate a CC message through the input's onmidimessage handler
       const ccEvent = {
@@ -150,66 +155,66 @@ describe("MIDIController", () => {
       mockInput.onmidimessage(ccEvent)
 
       // Verify the CC value was stored (which happens in _handleMIDIMessage)
-      expect(midiController.getCC(74, 1)).toBe(100)
+      expect(midiController.channel.getCC(74, 1)).toBe(100)
     })
   })
 
   describe("sendCC", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should warn if not initialized", () => {
       const controller = new MIDIController()
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller.sendCC(7, 100)
+      controller.channel.sendCC(7, 100)
 
-      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
       consoleSpy.mockRestore()
     })
 
     it("should send CC with correct status", async () => {
-      midiController.sendCC(74, 100, 5)
+      midiController.channel.sendCC(74, 100, 5)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb4, 74, 100]))
     })
 
     it("should clamp cc value to valid range", async () => {
-      midiController.sendCC(200, 100)
-      midiController.sendCC(-50, 100)
+      midiController.channel.sendCC(200, 100)
+      midiController.channel.sendCC(-50, 100)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 127, 100]))
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 0, 100]))
     })
 
     it("should clamp value to valid range", async () => {
-      midiController.sendCC(7, 200)
-      midiController.sendCC(7, -50)
+      midiController.channel.sendCC(7, 200)
+      midiController.channel.sendCC(7, -50)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 7, 127]))
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb1, 7, 0]))
     })
 
     it("should clamp channel to valid range", async () => {
-      midiController.sendCC(7, 100, 22)
-      midiController.sendCC(7, 100, 0)
+      midiController.channel.sendCC(7, 100, 22)
+      midiController.channel.sendCC(7, 100, 0)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0, 7, 100]))
     })
 
     it("should store CC state", async () => {
-      midiController.sendCC(74, 100, 3)
+      midiController.channel.sendCC(74, 100, 3)
 
-      expect(midiController.getCC(74, 3)).toBe(100)
+      expect(midiController.channel.getCC(74, 3)).toBe(100)
     })
 
     it("should emit cc-send event", async () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.CC_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_CC_SEND, spy)
 
-      midiController.sendCC(74, 100, 2)
+      midiController.channel.sendCC(74, 100, 2)
 
       expect(spy).toHaveBeenCalledWith({
         cc: 74,
@@ -219,52 +224,408 @@ describe("MIDIController", () => {
     })
   })
 
-  describe("sendSysEx", () => {
+  describe("mode CC messages", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    describe("allSoundsOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.allSoundsOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send All Sounds Off (CC 120, value 0) to specific channel", () => {
+        midiController.channel.allSoundsOff(5)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb4, 120, 0]))
+      })
+
+      it("should send All Sounds Off to all 16 channels when no channel specified", () => {
+        midiController.channel.allSoundsOff()
+
+        // Verify 16 messages were sent, one for each channel
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        // Check each channel receives CC 120 with value 0
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 120, 0]))
+        }
+      })
+
+      it("should clamp channel to valid range", () => {
+        midiController.channel.allSoundsOff(22)
+        midiController.channel.allSoundsOff(0)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0, 120, 0]))
+      })
+
+      it("should emit ch-all-sounds-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_ALL_SOUNDS_OFF_SEND, spy)
+
+        midiController.channel.allSoundsOff(3)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 3,
+        })
+      })
+    })
+
+    describe("resetControllers", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.resetControllers()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Reset All Controllers (CC 121, value 0) to specific channel", () => {
+        midiController.channel.resetControllers(7)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb6, 121, 0]))
+      })
+
+      it("should send Reset All Controllers to all channels when no channel specified", () => {
+        midiController.channel.resetControllers()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 121, 0]))
+        }
+      })
+
+      it("should emit ch-reset-controllers-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_RESET_CONTROLLERS_SEND, spy)
+
+        midiController.channel.resetControllers(2)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 2,
+        })
+      })
+    })
+
+    describe("localControl", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.localControl(true)
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Local Control On (CC 122, value 127) when enabled is true", () => {
+        midiController.channel.localControl(true, 10)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb9, 122, 127]))
+      })
+
+      it("should send Local Control Off (CC 122, value 0) when enabled is false", () => {
+        midiController.channel.localControl(false, 10)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb9, 122, 0]))
+      })
+
+      it("should send Local Control to all channels when no channel specified", () => {
+        midiController.channel.localControl(true)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 122, 127]))
+        }
+      })
+
+      it("should emit ch-local-control-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_LOCAL_CONTROL_SEND, spy)
+
+        midiController.channel.localControl(false, 4)
+
+        expect(spy).toHaveBeenCalledWith({
+          enabled: false,
+          channel: 4,
+        })
+      })
+    })
+
+    describe("allNotesOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.allNotesOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send All Notes Off (CC 123, value 0) to specific channel", () => {
+        midiController.channel.allNotesOff(1)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0, 123, 0]))
+      })
+
+      it("should send All Notes Off to all channels when no channel specified", () => {
+        midiController.channel.allNotesOff()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 123, 0]))
+        }
+      })
+
+      it("should emit ch-all-notes-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_ALL_NOTES_OFF_SEND, spy)
+
+        midiController.channel.allNotesOff(8)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 8,
+        })
+      })
+    })
+
+    describe("omniOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.omniOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Omni Mode Off (CC 124, value 0) to specific channel", () => {
+        midiController.channel.omniOff(12)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbb, 124, 0]))
+      })
+
+      it("should send Omni Mode Off to all channels when no channel specified", () => {
+        midiController.channel.omniOff()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 124, 0]))
+        }
+      })
+
+      it("should emit ch-omni-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_OMNI_OFF_SEND, spy)
+
+        midiController.channel.omniOff(6)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 6,
+        })
+      })
+    })
+
+    describe("omniOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.omniOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Omni Mode On (CC 125, value 0) to specific channel", () => {
+        midiController.channel.omniOn(15)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbe, 125, 0]))
+      })
+
+      it("should send Omni Mode On to all channels when no channel specified", () => {
+        midiController.channel.omniOn()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 125, 0]))
+        }
+      })
+
+      it("should emit ch-omni-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_OMNI_ON_SEND, spy)
+
+        midiController.channel.omniOn(9)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 9,
+        })
+      })
+    })
+
+    describe("monoOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.monoOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Mono Mode On (CC 126, value 1) with default channels to specific channel", () => {
+        midiController.channel.monoOn(undefined, 5)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb4, 126, 1]))
+      })
+
+      it("should send Mono Mode On with specified number of channels", () => {
+        midiController.channel.monoOn(4, 8)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb7, 126, 4]))
+      })
+
+      it("should clamp channels value to 0-16 range", () => {
+        midiController.channel.monoOn(20, 3)
+        midiController.channel.monoOn(-5, 3)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 16]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 0]))
+      })
+
+      it("should round channels value to nearest integer", () => {
+        midiController.channel.monoOn(3.7, 3)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 4]))
+      })
+
+      it("should send Mono Mode On to all channels when no channel specified", () => {
+        midiController.channel.monoOn(2)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 126, 2]))
+        }
+      })
+
+      it("should emit ch-mono-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_MONO_ON_SEND, spy)
+
+        midiController.channel.monoOn(3, 11)
+
+        expect(spy).toHaveBeenCalledWith({
+          channels: 3,
+          channel: 11,
+        })
+      })
+    })
+
+    describe("polyOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.polyOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Poly Mode On (CC 127, value 0) to specific channel", () => {
+        midiController.channel.polyOn(16)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbf, 127, 0]))
+      })
+
+      it("should send Poly Mode On to all channels when no channel specified", () => {
+        midiController.channel.polyOn()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 127, 0]))
+        }
+      })
+
+      it("should emit ch-poly-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_POLY_ON_SEND, spy)
+
+        midiController.channel.polyOn(13)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 13,
+        })
+      })
+    })
+  })
+
+  describe("exclusive", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should warn if not initialized", () => {
       const controller = new MIDIController({ sysex: true })
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller.sendSysEx([0x42, 0x30])
+      controller.system.sendEx([0x42, 0x30])
 
-      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
       consoleSpy.mockRestore()
     })
 
     it("should warn if sysex not enabled", async () => {
       const controller = new MIDIController()
-      await controller.initialize()
+      await controller.init()
       await controller.connection.connect()
 
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller.sendSysEx([0x42, 0x30])
+      controller.system.sendEx([0x42, 0x30])
 
       expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
       consoleSpy.mockRestore()
     })
 
     it("should send SysEx message", async () => {
-      midiController.sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+      midiController.system.sendEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should send SysEx message with wrapper bytes", async () => {
-      midiController.sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+      midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should emit sysex-send event", async () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.SYSEX_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
 
-      midiController.sendSysEx([0x42, 0x30])
+      midiController.system.sendEx([0x42, 0x30])
 
       expect(spy).toHaveBeenCalledWith({
         data: [0x42, 0x30],
@@ -273,46 +634,359 @@ describe("MIDIController", () => {
     })
   })
 
+  describe("system namespace", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    describe("sys.exclusive", () => {
+      it("should send SysEx message with data as-is (no wrapper)", async () => {
+        midiController.system.sendEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(
+          new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
+        )
+      })
+
+      it("should send SysEx message with data as-is (default behavior)", async () => {
+        midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12])
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12]))
+      })
+
+      it("should send SysEx message with wrapper added when includeWrapper=true", async () => {
+        midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(
+          new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
+        )
+      })
+
+      it("should emit sysex-send event", async () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
+
+        midiController.system.sendEx([0x42, 0x30])
+
+        expect(spy).toHaveBeenCalledWith({
+          data: [0x42, 0x30],
+          includeWrapper: false,
+        })
+      })
+
+      it("should warn if sysex not enabled", async () => {
+        const controller = new MIDIController()
+        await controller.init()
+        await controller.connection.connect()
+
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendEx([0x42, 0x30])
+
+        expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
+        consoleSpy.mockRestore()
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController({ sysex: true })
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendEx([0x42, 0x30])
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendClock", () => {
+      it("should send timing clock message", async () => {
+        midiController.system.sendClock()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf8]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendClock()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.start", () => {
+      it("should send start message", async () => {
+        midiController.system.start()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xfa]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.start()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.continue", () => {
+      it("should send continue message", async () => {
+        midiController.system.continue()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xfb]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.continue()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.stop", () => {
+      it("should send stop message", async () => {
+        midiController.system.stop()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xfc]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.stop()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendMTC", () => {
+      it("should send MTC quarter frame message", async () => {
+        midiController.system.sendMTC(0x45)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf1, 0x45]))
+      })
+
+      it("should clamp MTC data to valid range", async () => {
+        midiController.system.sendMTC(150)
+        midiController.system.sendMTC(-20)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf1, 127]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf1, 0]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendMTC(0x45)
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendSongPosition", () => {
+      it("should send song position pointer message", async () => {
+        midiController.system.sendSongPosition(8192) // Halfway position
+
+        // 8192 = 0x00 + (0x40 << 7)
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf2, 0x00, 0x40]))
+      })
+
+      it("should send maximum song position", async () => {
+        midiController.system.sendSongPosition(16383)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf2, 0x7f, 0x7f]))
+      })
+
+      it("should send minimum song position", async () => {
+        midiController.system.sendSongPosition(0)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf2, 0x00, 0x00]))
+      })
+
+      it("should clamp position to valid range", async () => {
+        midiController.system.sendSongPosition(20000)
+        midiController.system.sendSongPosition(-5000)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf2, 0x7f, 0x7f]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf2, 0x00, 0x00]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendSongPosition(42)
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendSongSelect", () => {
+      it("should send song select message", async () => {
+        midiController.system.sendSongSelect(10)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf3, 10]))
+      })
+
+      it("should clamp song number to valid range", async () => {
+        midiController.system.sendSongSelect(150)
+        midiController.system.sendSongSelect(-20)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf3, 127]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf3, 0]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendSongSelect(10)
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendTuneRequest", () => {
+      it("should send tune request message", async () => {
+        midiController.system.sendTuneRequest()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf6]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendTuneRequest()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendActiveSensing", () => {
+      it("should send active sensing message", async () => {
+        midiController.system.sendActiveSensing()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xfe]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendActiveSensing()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe("sys.sendSystemReset", () => {
+      it("should send system reset message", async () => {
+        midiController.system.sendSystemReset()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xff]))
+      })
+
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.system.sendSystemReset()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+    })
+  })
+
+  describe("send (raw MIDI)", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    it("should send raw MIDI data", async () => {
+      midiController.send([0x90, 0x3c, 0x64]) // Note on C4
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x90, 0x3c, 0x64]))
+    })
+
+    it("should warn if not initialized", () => {
+      const controller = new MIDIController()
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+      controller.send([0x90, 0x3c, 0x64])
+
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+      consoleSpy.mockRestore()
+    })
+
+    it("should send multiple raw bytes correctly", async () => {
+      midiController.send([0xc0, 0x40]) // Program change
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc0, 0x40]))
+
+      midiController.send([0xe0, 0x00, 0x40]) // Pitch bend center
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe0, 0x00, 0x40]))
+    })
+  })
+
   describe("sendNoteOn", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should not send if not initialized", async () => {
       const controller = new MIDIController()
       // Note: controller is NOT initialized
 
-      controller.sendNoteOn(60, 100)
+      controller.channel.sendNoteOn(60, 100)
       // Should not throw, just return early
       expect(controller.initialized).toBe(false)
     })
 
     it("should send note on with correct status", async () => {
-      midiController.sendNoteOn(60, 100, 5)
+      midiController.channel.sendNoteOn(60, 100, 5)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x94, 60, 100]))
     })
 
     it("should clamp note to valid range", async () => {
-      midiController.sendNoteOn(200, 100)
-      midiController.sendNoteOn(-50, 100)
+      midiController.channel.sendNoteOn(200, 100)
+      midiController.channel.sendNoteOn(-50, 100)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x91, 127, 100]))
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x91, 0, 100]))
     })
 
     it("should use default velocity", async () => {
-      midiController.sendNoteOn(60)
+      midiController.channel.sendNoteOn(60)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x91, 60, 64]))
     })
 
     it("should emit note-on-send event", async () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.NOTE_ON_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_NOTE_ON_SEND, spy)
 
-      midiController.sendNoteOn(60, 100, 2)
+      midiController.channel.sendNoteOn(60, 100, 2)
 
       expect(spy).toHaveBeenCalledWith({
         note: 60,
@@ -324,36 +998,36 @@ describe("MIDIController", () => {
 
   describe("sendNoteOff", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should not send if not initialized", async () => {
       const controller = new MIDIController()
       // Note: controller is NOT initialized
 
-      controller.sendNoteOff(60)
+      controller.channel.sendNoteOff(60)
       // Should not throw, just return early
       expect(controller.initialized).toBe(false)
     })
 
     it("should send note off with correct status", async () => {
-      midiController.sendNoteOff(60, 2, 50)
+      midiController.channel.sendNoteOff(60, 2, 50)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x91, 60, 50]))
     })
 
     it("should use default velocity", async () => {
-      midiController.sendNoteOff(60, 5)
+      midiController.channel.sendNoteOff(60, 5)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x94, 60, 0]))
     })
 
     it("should emit note-off-send event", async () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_SEND, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_NOTE_OFF_SEND, spy)
 
-      midiController.sendNoteOff(60, 3, 40)
+      midiController.channel.sendNoteOff(60, 3, 40)
 
       expect(spy).toHaveBeenCalledWith({
         note: 60,
@@ -363,12 +1037,285 @@ describe("MIDIController", () => {
     })
   })
 
+  describe("sendPC", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    it("should not send if not initialized", async () => {
+      const controller = new MIDIController()
+      // Note: controller is NOT initialized
+
+      controller.channel.sendPC(60)
+      expect(controller.initialized).toBe(false)
+    })
+
+    it("should send program change with correct status", async () => {
+      midiController.channel.sendPC(64, 5)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc4, 64]))
+    })
+
+    it("should clamp program number to valid range", async () => {
+      midiController.channel.sendPC(140, 1)
+      midiController.channel.sendPC(-10, 1)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc0, 127])) // Program change status with program 127 (max)
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc0, 0])) // Program change status with program 0 (min)
+    })
+
+    it("should use default channel", async () => {
+      midiController.channel.sendPC(40)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc1, 40]))
+    })
+
+    it("should emit program-change-send event", async () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_PC_SEND, spy)
+
+      midiController.channel.sendPC(64, 3)
+
+      expect(spy).toHaveBeenCalledWith({
+        program: 64,
+        channel: 3,
+      })
+    })
+
+    it("should store program change state", async () => {
+      midiController.channel.sendPC(64, 4)
+
+      expect(midiController.channel.getPC(4)).toBe(64)
+    })
+
+    it("should return undefined for unknown program", () => {
+      expect(midiController.channel.getPC(5)).toBeUndefined()
+    })
+
+    it("should use default channel for getProgram", async () => {
+      midiController.channel.sendPC(32) // Sends on channel 2 (default)
+
+      expect(midiController.channel.getPC()).toBe(32)
+    })
+  })
+
+  describe("sendPitchBend", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    it("should not send if not initialized", async () => {
+      const controller = new MIDIController()
+
+      controller.channel.sendPitchBend(8192)
+      expect(controller.initialized).toBe(false)
+    })
+
+    it("should send pitch bend with correct LSB/MSB bytes", async () => {
+      midiController.channel.sendPitchBend(8192, 1) // Center position
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe0, 0x00, 0x40])) // LSB = 0x00, MSB = 0x40
+    })
+
+    it("should send maximum pitch bend", async () => {
+      midiController.channel.sendPitchBend(16383, 2) // Maximum
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe1, 0x7f, 0x7f])) // LSB = 0x7F, MSB = 0x7F
+    })
+
+    it("should send minimum pitch bend", async () => {
+      midiController.channel.sendPitchBend(0, 3) // Minimum
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe2, 0x00, 0x00])) // LSB = 0x00, MSB = 0x00
+    })
+
+    it("should clamp value to valid range", async () => {
+      midiController.channel.sendPitchBend(20000, 1)
+      midiController.channel.sendPitchBend(-5000, 1)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe0, 0x7f, 0x7f]))
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe0, 0x00, 0x00]))
+    })
+
+    it("should use default channel", async () => {
+      midiController.channel.sendPitchBend(10000) // Should use channel 2
+
+      // 10000 = 16 + (78 << 7) = 16 + 9984 = 10000
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xe1, 0x10, 0x4e])) // LSB = 0x10 (16), MSB = 0x4E (78)
+    })
+
+    it("should emit pitch-bend-send event", async () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_PITCH_BEND_SEND, spy)
+
+      midiController.channel.sendPitchBend(9000, 4)
+
+      expect(spy).toHaveBeenCalledWith({
+        value: 9000,
+        channel: 4,
+      })
+    })
+
+    it("should store pitch bend state", async () => {
+      midiController.channel.sendPitchBend(10000, 5)
+
+      expect(midiController.channel.getPitchBend(5)).toBe(10000)
+    })
+
+    it("should return undefined for unknown pitch bend value", () => {
+      expect(midiController.channel.getPitchBend(6)).toBeUndefined()
+    })
+
+    it("should use default channel for getPitchBend", async () => {
+      midiController.channel.sendPitchBend(12000)
+
+      expect(midiController.channel.getPitchBend()).toBe(12000)
+    })
+  })
+
+  describe("sendMonoPressure", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    it("should not send if not initialized", async () => {
+      const controller = new MIDIController()
+
+      controller.channel.sendMonoPressure(100)
+      expect(controller.initialized).toBe(false)
+    })
+
+    it("should send channel pressure with correct status", async () => {
+      midiController.channel.sendMonoPressure(127, 3)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xd2, 127]))
+    })
+
+    it("should clamp pressure to valid range", async () => {
+      midiController.channel.sendMonoPressure(140, 1)
+      midiController.channel.sendMonoPressure(-10, 1)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xd0, 127]))
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xd0, 0]))
+    })
+
+    it("should use default channel", async () => {
+      midiController.channel.sendMonoPressure(64)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xd1, 64]))
+    })
+
+    it("should emit channel-pressure-send event", async () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_MONO_PRESS_SEND, spy)
+
+      midiController.channel.sendMonoPressure(100, 5)
+
+      expect(spy).toHaveBeenCalledWith({
+        pressure: 100,
+        channel: 5,
+      })
+    })
+
+    it("should store channel pressure state", async () => {
+      midiController.channel.sendMonoPressure(80, 6)
+
+      expect(midiController.channel.getMonoPressure(6)).toBe(80)
+    })
+
+    it("should return undefined for unknown pressure", () => {
+      expect(midiController.channel.getMonoPressure(7)).toBeUndefined()
+    })
+
+    it("should use default channel for getMonoPressure", async () => {
+      midiController.channel.sendMonoPressure(90)
+
+      expect(midiController.channel.getMonoPressure()).toBe(90)
+    })
+  })
+
+  describe("sendPolyPressure", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    it("should not send if not initialized", async () => {
+      const controller = new MIDIController()
+
+      controller.channel.sendPolyPressure(60, 100)
+      expect(controller.initialized).toBe(false)
+    })
+
+    it("should send polyphonic pressure with correct status", async () => {
+      midiController.channel.sendPolyPressure(60, 100, 4)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xa3, 60, 100]))
+    })
+
+    it("should clamp note and pressure to valid ranges", async () => {
+      midiController.channel.sendPolyPressure(200, 140, 2)
+      midiController.channel.sendPolyPressure(-50, -10, 2)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xa1, 127, 127]))
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xa1, 0, 0]))
+    })
+
+    it("should use default channel", async () => {
+      midiController.channel.sendPolyPressure(64, 80)
+
+      expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xa1, 64, 80]))
+    })
+
+    it("should emit polyphonic-pressure-send event", async () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_POLY_PRESS_SEND, spy)
+
+      midiController.channel.sendPolyPressure(72, 110, 7)
+
+      expect(spy).toHaveBeenCalledWith({
+        note: 72,
+        pressure: 110,
+        channel: 7,
+      })
+    })
+
+    it("should store polyphonic pressure state", async () => {
+      midiController.channel.sendPolyPressure(60, 95, 5)
+
+      expect(midiController.channel.getPolyPressure(60, 5)).toBe(95)
+    })
+
+    it("should return undefined for unknown polyphonic pressure", () => {
+      expect(midiController.channel.getPolyPressure(60, 8)).toBeUndefined()
+    })
+
+    it("should use default channel for getPolyPressure", async () => {
+      midiController.channel.sendPolyPressure(72, 85)
+
+      expect(midiController.channel.getPolyPressure(72)).toBe(85)
+    })
+
+    it("should store different pressures for different notes", async () => {
+      midiController.channel.sendPolyPressure(60, 80, 3)
+      midiController.channel.sendPolyPressure(64, 90, 3)
+      midiController.channel.sendPolyPressure(67, 100, 3)
+
+      expect(midiController.channel.getPolyPressure(60, 3)).toBe(80)
+      expect(midiController.channel.getPolyPressure(64, 3)).toBe(90)
+      expect(midiController.channel.getPolyPressure(67, 3)).toBe(100)
+    })
+  })
+
   describe("bind and unbind", () => {
     let mockElement
 
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
 
       mockElement = {
         value: "64",
@@ -441,8 +1388,8 @@ describe("MIDIController", () => {
 
     describe("14-bit CC binding", () => {
       it("should bind 14-bit CC with handler that normalizes and sends MSB/LSB", async () => {
-        await midiController.initialize()
-        await midiController.connection.connect()
+        await midiController.init()
+        await midiController.device.connect()
 
         const element = {
           value: "64",
@@ -480,7 +1427,7 @@ describe("MIDIController", () => {
       })
 
       it("should handle NaN value in 14-bit binding", async () => {
-        await midiController.initialize()
+        await midiController.init()
 
         const element = {
           value: "invalid",
@@ -505,7 +1452,7 @@ describe("MIDIController", () => {
       })
 
       it("should handle NaN value in 7-bit binding", async () => {
-        await midiController.initialize()
+        await midiController.init()
 
         const element = {
           value: "invalid",
@@ -524,8 +1471,8 @@ describe("MIDIController", () => {
       })
 
       it("should send CC on default channel when not specified for 7-bit", async () => {
-        await midiController.initialize()
-        await midiController.connection.connect()
+        await midiController.init()
+        await midiController.device.connect()
 
         const element = {
           value: "100",
@@ -547,8 +1494,8 @@ describe("MIDIController", () => {
       })
 
       it("should handle inverted values for 14-bit CC", async () => {
-        await midiController.initialize()
-        await midiController.connection.connect()
+        await midiController.init()
+        await midiController.device.connect()
 
         const element = {
           value: "100",
@@ -579,7 +1526,7 @@ describe("MIDIController", () => {
       })
 
       it("should destroy 14-bit binding and remove event listeners", async () => {
-        await midiController.initialize()
+        await midiController.init()
 
         const element = {
           value: "64",
@@ -604,7 +1551,7 @@ describe("MIDIController", () => {
       })
 
       it("should use custom min/max values from config", async () => {
-        await midiController.initialize()
+        await midiController.init()
 
         const element = {
           value: "50",
@@ -627,8 +1574,8 @@ describe("MIDIController", () => {
       })
 
       it("should use default channel when not specified", async () => {
-        await midiController.initialize()
-        await midiController.connection.connect()
+        await midiController.init()
+        await midiController.device.connect()
 
         const element = {
           value: "100",
@@ -659,8 +1606,8 @@ describe("MIDIController", () => {
     })
 
     it("should call onInput callback when setPatch updates bound element", async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
 
       const onInputCallback = vi.fn()
       const element = {
@@ -699,7 +1646,7 @@ describe("MIDIController", () => {
         settings: {},
       }
 
-      await midiController.setPatch(patch)
+      await midiController.patch.set(patch)
 
       // onInput should have been called with the converted value
       expect(onInputCallback).toHaveBeenCalledTimes(1)
@@ -708,8 +1655,8 @@ describe("MIDIController", () => {
     })
 
     it("should not call onInput callback when setPatch runs on element without callback", async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
 
       const element = {
         value: "64",
@@ -748,7 +1695,7 @@ describe("MIDIController", () => {
         settings: {},
       }
 
-      await midiController.setPatch(patch)
+      await midiController.patch.set(patch)
 
       // element.value should be set directly (no onInput callback)
       expect(setValueSpy).toHaveBeenCalled()
@@ -761,8 +1708,8 @@ describe("MIDIController", () => {
     let _debounceElement
 
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
 
       _debounceElement = {
         value: "0",
@@ -929,8 +1876,8 @@ describe("MIDIController", () => {
 
   describe("getPatch with edge cases", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should collect settings from elements without getAttribute method", () => {
@@ -949,7 +1896,7 @@ describe("MIDIController", () => {
       })
 
       // Should not throw even though element has no getAttribute
-      const patch = midiController.getPatch()
+      const patch = midiController.patch.get()
       expect(patch.settings.cc74).toBeDefined()
       expect(patch.settings.cc74.label).toBeNull()
       expect(patch.settings.cc74.elementId).toBe("test-slider")
@@ -957,11 +1904,11 @@ describe("MIDIController", () => {
 
     it("should include all CC values in state", () => {
       // Send multiple CC messages on different channels
-      midiController.sendCC(74, 100, 1)
-      midiController.sendCC(75, 64, 2)
-      midiController.sendCC(76, 32, 3)
+      midiController.channel.sendCC(74, 100, 1)
+      midiController.channel.sendCC(75, 64, 2)
+      midiController.channel.sendCC(76, 32, 3)
 
-      const patch = midiController.getPatch()
+      const patch = midiController.patch.get()
 
       // Verify all CC values are collected
       expect(patch.channels[1].ccs[74]).toBe(100)
@@ -971,9 +1918,9 @@ describe("MIDIController", () => {
 
     it("should create channel objects as needed", () => {
       // Only send CC on channel 5
-      midiController.sendCC(74, 100, 5)
+      midiController.channel.sendCC(74, 100, 5)
 
-      const patch = midiController.getPatch()
+      const patch = midiController.patch.get()
 
       // Should create channel 5 object
       expect(patch.channels[5]).toBeDefined()
@@ -986,102 +1933,132 @@ describe("MIDIController", () => {
 
   describe("getCC", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should return undefined for unknown CC", () => {
-      expect(midiController.getCC(74, 2)).toBeUndefined()
+      expect(midiController.channel.getCC(74, 2)).toBeUndefined()
     })
 
     it("should return stored CC value", async () => {
-      midiController.sendCC(74, 100, 3)
-      expect(midiController.getCC(74, 3)).toBe(100)
+      midiController.channel.sendCC(74, 100, 3)
+      expect(midiController.channel.getCC(74, 3)).toBe(100)
     })
 
     it("should use default channel", () => {
-      midiController.sendCC(7, 64)
-      expect(midiController.getCC(7, 2)).toBe(64) // Default channel is 2
+      midiController.channel.sendCC(7, 64)
+      expect(midiController.channel.getCC(7, 2)).toBe(64) // Default channel is 2
     })
   })
 
   describe("getOutputs", () => {
     it("should return outputs from connection", async () => {
-      await midiController.initialize()
-      const outputs = midiController.getOutputs()
+      await midiController.init()
+      const outputs = midiController.device.getOutputs()
 
       expect(outputs).toHaveLength(2)
       expect(outputs[0].name).toBe("Test Output 1")
     })
 
     it("should return empty array if no connection", () => {
-      expect(midiController.getOutputs()).toEqual([])
+      expect(midiController.device.getOutputs()).toEqual([])
     })
   })
 
   describe("getInputs", () => {
     it("should return inputs from connection", async () => {
-      await midiController.initialize()
-      const inputs = midiController.getInputs()
+      await midiController.init()
+      const inputs = midiController.device.getInputs()
 
       expect(inputs).toHaveLength(1)
       expect(inputs[0].name).toBe("Test Input")
     })
 
     it("should return empty array if no connection", () => {
-      expect(midiController.getInputs()).toEqual([])
+      expect(midiController.device.getInputs()).toEqual([])
     })
   })
 
-  describe("setOutput", () => {
+  describe("connectOutput", () => {
     beforeEach(async () => {
-      await midiController.initialize()
+      await midiController.init()
     })
 
     it("should switch output and emit event", async () => {
       await midiController.connection.connect(0)
       const spy = vi.fn()
-      midiController.on("output-changed", spy)
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, spy)
 
-      await midiController.setOutput(1)
+      await midiController.device.connectOutput(1)
 
       expect(spy).toHaveBeenCalled()
-      expect(midiController.getCurrentOutput().id).toBe("output-2")
+      expect(midiController.device.getCurrentOutput().id).toBe("output-2")
     })
   })
 
   describe("getCurrentOutput", () => {
     it("should return current output", async () => {
-      await midiController.initialize()
+      await midiController.init()
       await midiController.connection.connect(0)
 
-      const output = midiController.getCurrentOutput()
+      const output = midiController.device.getCurrentOutput()
       expect(output.id).toBe("output-1")
     })
 
     it("should return null if no connection", () => {
-      expect(midiController.getCurrentOutput()).toBeNull()
+      expect(midiController.device.getCurrentOutput()).toBeNull()
     })
   })
 
   describe("getCurrentInput", () => {
     it("should return current input", async () => {
-      await midiController.initialize()
-      await midiController.connectInput(0)
+      await midiController.init()
+      await midiController.device.connectInput(0)
 
-      const input = midiController.getCurrentInput()
+      const input = midiController.device.getCurrentInput()
       expect(input.id).toBe("input-1")
     })
 
     it("should return null if no connection", () => {
-      expect(midiController.getCurrentInput()).toBeNull()
+      expect(midiController.device.getCurrentInput()).toBeNull()
+    })
+  })
+
+  describe("device.connect and device.disconnect", () => {
+    it("should connect to device using helper", async () => {
+      await midiController.init()
+      const spy = vi.spyOn(midiController.connection, "connect")
+
+      await midiController.device.connect()
+
+      expect(spy).toHaveBeenCalled()
+    })
+
+    it("should connect to specific device using helper", async () => {
+      await midiController.init()
+      const spy = vi.spyOn(midiController.connection, "connect")
+
+      await midiController.device.connect("Test Output 1")
+
+      expect(spy).toHaveBeenCalledWith("Test Output 1")
+    })
+
+    it("should disconnect using helper", async () => {
+      await midiController.init()
+      await midiController.device.connect()
+      const spy = vi.spyOn(midiController.connection, "disconnect")
+
+      await midiController.device.disconnect()
+
+      expect(spy).toHaveBeenCalled()
     })
   })
 
   describe("destroy", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     it("should clean up all bindings", () => {
@@ -1098,12 +2075,12 @@ describe("MIDIController", () => {
     })
 
     it("should clear state", () => {
-      midiController.state.set("1:7", 100)
-      expect(midiController.state.size).toBeGreaterThan(0)
+      midiController.state.controlChange.set("1:7", 100)
+      expect(midiController.state.controlChange.size).toBeGreaterThan(0)
 
       midiController.destroy()
 
-      expect(midiController.state.size).toBe(0)
+      expect(midiController.state.controlChange.size).toBe(0)
     })
 
     it("should disconnect connection", () => {
@@ -1126,7 +2103,7 @@ describe("MIDIController", () => {
 
     it("should emit destroyed event", () => {
       const spy = vi.fn()
-      midiController.on("destroyed", spy)
+      midiController.on(CONTROLLER_EVENTS.DESTROYED, spy)
 
       midiController.destroy()
 
@@ -1142,12 +2119,12 @@ describe("MIDIController", () => {
 
   describe("_handleMIDIMessage", () => {
     beforeEach(async () => {
-      await midiController.initialize()
+      await midiController.init()
     })
 
     it("should handle SysEx messages", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.SYSEX_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.SYS_EX_RECV, spy)
 
       const event = {
         data: new Uint8Array([0xf0, 0x42, 0x30, 0xf7]),
@@ -1164,7 +2141,7 @@ describe("MIDIController", () => {
 
     it("should handle CC messages", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.CC_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_CC_RECV, spy)
 
       const event = {
         data: new Uint8Array([0xb1, 74, 100]),
@@ -1177,12 +2154,12 @@ describe("MIDIController", () => {
         value: 100,
         channel: 2,
       })
-      expect(midiController.getCC(74, 2)).toBe(100)
+      expect(midiController.channel.getCC(74, 2)).toBe(100)
     })
 
     it("should handle Note On messages", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.NOTE_ON_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_NOTE_ON_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x91, 60, 100]),
@@ -1199,7 +2176,7 @@ describe("MIDIController", () => {
 
     it("should handle Note Off messages (0x80)", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_NOTE_OFF_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x81, 60, 0]),
@@ -1215,7 +2192,7 @@ describe("MIDIController", () => {
 
     it("should handle Note Off messages (0x90 with velocity 0)", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.NOTE_OFF_RECV, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_NOTE_OFF_RECV, spy)
 
       const event = {
         data: new Uint8Array([0x91, 60, 0]),
@@ -1229,21 +2206,281 @@ describe("MIDIController", () => {
       })
     })
 
-    it("should handle other MIDI messages", () => {
+    it("should handle Program Change messages", () => {
       const spy = vi.fn()
-      midiController.on(CONTROLLER_EVENTS.MIDI_MSG, spy)
+      midiController.on(CONTROLLER_EVENTS.CH_PC_RECV, spy)
 
       const event = {
-        data: new Uint8Array([0xe1, 0x00, 0x40]),
+        data: new Uint8Array([0xc1, 64]), // Program 64 on channel 2
+      }
+
+      midiController._handleMIDIMessage(event)
+
+      expect(spy).toHaveBeenCalledWith({
+        program: 64,
+        channel: 2,
+      })
+      expect(midiController.channel.getPC(2)).toBe(64)
+    })
+
+    it("should handle Pitch Bend messages", () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_PITCH_BEND_RECV, spy)
+
+      const event = {
+        data: new Uint8Array([0xe2, 0x20, 0x40]), // Pitch bend with LSB=0x20, MSB=0x40
+      }
+
+      midiController._handleMIDIMessage(event)
+
+      // Calculate expected value: 0x20 + (0x40 << 7) = 32 + 8192 = 8224
+      const expectedValue = 0x20 + (0x40 << 7)
+      expect(spy).toHaveBeenCalledWith({
+        value: expectedValue,
+        channel: 3,
+      })
+      expect(midiController.channel.getPitchBend(3)).toBe(expectedValue)
+    })
+
+    it("should handle Channel Pressure (Aftertouch) messages", () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_MONO_PRESS_RECV, spy)
+
+      const event = {
+        data: new Uint8Array([0xd3, 100]), // Channel pressure value 100 on channel 4
+      }
+
+      midiController._handleMIDIMessage(event)
+
+      expect(spy).toHaveBeenCalledWith({
+        pressure: 100,
+        channel: 4,
+      })
+      expect(midiController.channel.getMonoPressure(4)).toBe(100)
+    })
+
+    it("should handle Polyphonic Pressure (Polyphonic Aftertouch) messages", () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.CH_POLY_PRESS_RECV, spy)
+
+      const event = {
+        data: new Uint8Array([0xa4, 60, 110]), // Note 60, pressure 110 on channel 5
+      }
+
+      midiController._handleMIDIMessage(event)
+
+      expect(spy).toHaveBeenCalledWith({
+        note: 60,
+        pressure: 110,
+        channel: 5,
+      })
+      expect(midiController.channel.getPolyPressure(60, 5)).toBe(110)
+    })
+
+    describe("System Real-Time message handlers", () => {
+      it("should handle timing clock messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_CLOCK_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xf8]),
+          midiwire: 9999,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 9999,
+        })
+      })
+
+      it("should handle start messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_START_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xfa]),
+          midiwire: 8888,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 8888,
+        })
+      })
+
+      it("should handle continue messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_CONTINUE_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xfb]),
+          midiwire: 7777,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 7777,
+        })
+      })
+
+      it("should handle stop messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_STOP_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xfc]),
+          midiwire: 6666,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 6666,
+        })
+      })
+
+      it("should handle active sensing messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_ACT_SENSE_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xfe]),
+          midiwire: 5555,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 5555,
+        })
+      })
+
+      it("should handle system reset messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_RESET_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xff]),
+          midiwire: 4444,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 4444,
+        })
+      })
+    })
+
+    describe("System Common message handlers", () => {
+      it("should handle MTC quarter frame messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_MTC_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xf1, 0x45]),
+          midiwire: 3333,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          data: 0x45,
+          timestamp: 3333,
+        })
+      })
+
+      it("should handle song position pointer messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_SONG_POS_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xf2, 0x20, 0x40]),
+          midiwire: 2222,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        // Position = 0x20 + (0x40 << 7) = 32 + 8192 = 8224
+        expect(spy).toHaveBeenCalledWith({
+          position: 8224,
+          timestamp: 2222,
+        })
+      })
+
+      it("should handle song select messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_SONG_SEL_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xf3, 42]),
+          midiwire: 1111,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          song: 42,
+          timestamp: 1111,
+        })
+      })
+
+      it("should handle tune request messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.SYS_TUNE_REQ_RECV, spy)
+
+        const event = {
+          data: new Uint8Array([0xf6]),
+          midiwire: 1000,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          timestamp: 1000,
+        })
+      })
+
+      it("should handle end of SysEx messages", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.MIDI_RAW, spy)
+
+        const event = {
+          data: new Uint8Array([0xf7]),
+          midiwire: 1234,
+        }
+
+        midiController._handleMIDIMessage(event)
+
+        expect(spy).toHaveBeenCalledWith({
+          status: 0xf7,
+          data: [undefined, undefined],
+          channel: 8,
+          timestamp: 1234,
+        })
+      })
+    })
+
+    it("should handle other MIDI messages", () => {
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.MIDI_RAW, spy)
+
+      const event = {
+        data: new Uint8Array([0xf9]), // Undefined message - not handled specifically
         midiwire: 5678,
       }
 
       midiController._handleMIDIMessage(event)
 
       expect(spy).toHaveBeenCalledWith({
-        status: 0xe1,
-        data: [0x00, 0x40],
-        channel: 2,
+        status: 0xf9,
+        data: [undefined, undefined], // destructuring gives undefined for missing values
+        // Note: channel is calculated from status byte even for system messages
+        // In practice, system messages (0xF0-0xFF) shouldn't be used here
+        channel: 10,
         timestamp: 5678,
       })
     })
@@ -1251,13 +2488,13 @@ describe("MIDIController", () => {
 
   describe("Patch Management", () => {
     beforeEach(async () => {
-      await midiController.initialize()
-      await midiController.connection.connect()
+      await midiController.init()
+      await midiController.device.connect()
     })
 
     describe("getPatch", () => {
       it("should create patch with default name", () => {
-        const patch = midiController.getPatch()
+        const patch = midiController.patch.get()
 
         expect(patch).toHaveProperty("name", "Unnamed Patch")
         expect(patch).toHaveProperty("device")
@@ -1268,30 +2505,89 @@ describe("MIDIController", () => {
       })
 
       it("should create patch with custom name", () => {
-        const patch = midiController.getPatch("My Patch")
+        const patch = midiController.patch.get("My Patch")
 
         expect(patch.name).toBe("My Patch")
       })
 
       it("should include current CC values", () => {
-        midiController.sendCC(74, 100, 2)
-        midiController.sendCC(71, 64, 3)
+        midiController.channel.sendCC(74, 100, 2)
+        midiController.channel.sendCC(71, 64, 3)
 
-        const patch = midiController.getPatch()
+        const patch = midiController.patch.get()
 
         expect(patch.channels["2"].ccs["74"]).toBe(100)
         expect(patch.channels["3"].ccs["71"]).toBe(64)
       })
 
+      it("should include program change values", () => {
+        midiController.channel.sendPC(64, 2)
+        midiController.channel.sendPC(32, 5)
+
+        const patch = midiController.patch.get()
+
+        expect(patch.channels["2"].program).toBe(64)
+        expect(patch.channels["5"].program).toBe(32)
+      })
+
+      it("should include pitch bend values", () => {
+        midiController.channel.sendPitchBend(8192, 1)
+        midiController.channel.sendPitchBend(12000, 3)
+
+        const patch = midiController.patch.get()
+
+        expect(patch.channels["1"].pitchBend).toBe(8192)
+        expect(patch.channels["3"].pitchBend).toBe(12000)
+      })
+
+      it("should include channel pressure values", () => {
+        midiController.channel.sendMonoPressure(100, 2)
+        midiController.channel.sendMonoPressure(80, 4)
+
+        const patch = midiController.patch.get()
+
+        expect(patch.channels["2"].monoPressure).toBe(100)
+        expect(patch.channels["4"].monoPressure).toBe(80)
+      })
+
+      it("should include polyphonic pressure values", () => {
+        midiController.channel.sendPolyPressure(60, 100, 1)
+        midiController.channel.sendPolyPressure(64, 90, 1)
+        midiController.channel.sendPolyPressure(60, 80, 3)
+
+        const patch = midiController.patch.get()
+
+        expect(patch.channels["1"].polyPressure["60"]).toBe(100)
+        expect(patch.channels["1"].polyPressure["64"]).toBe(90)
+        expect(patch.channels["3"].polyPressure["60"]).toBe(80)
+      })
+
+      it("should include all state types in single patch", () => {
+        // Set all types of state
+        midiController.channel.sendCC(74, 100, 1)
+        midiController.channel.sendPC(64, 1)
+        midiController.channel.sendPitchBend(8192, 1)
+        midiController.channel.sendMonoPressure(90, 1)
+        midiController.channel.sendPolyPressure(60, 85, 1)
+
+        const patch = midiController.patch.get()
+
+        expect(patch.channels["1"].ccs["74"]).toBe(100)
+        expect(patch.channels["1"].program).toBe(64)
+        expect(patch.channels["1"].pitchBend).toBe(8192)
+        expect(patch.channels["1"].monoPressure).toBe(90)
+        expect(patch.channels["1"].polyPressure["60"]).toBe(85)
+      })
+
       it("should include device information", () => {
-        const patch = midiController.getPatch()
+        const patch = midiController.patch.get()
 
         expect(patch.device).toBe("Test Output 1")
       })
 
       it("should handle null device", async () => {
-        await midiController.connection.disconnect()
-        const patch = midiController.getPatch()
+        await midiController.device.disconnect()
+        const patch = midiController.patch.get()
 
         expect(patch.device).toBeNull()
       })
@@ -1316,7 +2612,7 @@ describe("MIDIController", () => {
           invert: false,
         })
 
-        const patch = midiController.getPatch()
+        const patch = midiController.patch.get()
 
         expect(patch.settings.cc74).toEqual({
           min: 20,
@@ -1343,16 +2639,16 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
-        expect(midiController.getCC(74, 1)).toBe(100)
-        expect(midiController.getCC(71, 1)).toBe(64)
+        expect(midiController.channel.getCC(74, 1)).toBe(100)
+        expect(midiController.channel.getCC(71, 1)).toBe(64)
         expect(mockOutputs[0].send).toHaveBeenCalled()
       })
 
       it("should throw error for invalid patch", async () => {
-        await expect(midiController.setPatch(null)).rejects.toThrow("Invalid patch format")
-        await expect(midiController.setPatch({})).rejects.toThrow("Invalid patch format")
+        await expect(midiController.patch.set(null)).rejects.toThrow("Invalid patch format")
+        await expect(midiController.patch.set({})).rejects.toThrow("Invalid patch format")
       })
 
       it("should apply notes from patch", async () => {
@@ -1368,10 +2664,121 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x90, 60, 100]))
         expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x90, 64, 0]))
+      })
+
+      it("should apply program change from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: {
+              program: 64,
+            },
+            5: {
+              program: 32,
+            },
+          },
+        }
+
+        await midiController.patch.set(patch)
+
+        expect(midiController.channel.getPC(2)).toBe(64)
+        expect(midiController.channel.getPC(5)).toBe(32)
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc1, 64]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xc4, 32]))
+      })
+
+      it("should apply pitch bend from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: {
+              pitchBend: 8192,
+            },
+            3: {
+              pitchBend: 12000,
+            },
+          },
+        }
+
+        await midiController.patch.set(patch)
+
+        expect(midiController.channel.getPitchBend(1)).toBe(8192)
+        expect(midiController.channel.getPitchBend(3)).toBe(12000)
+      })
+
+      it("should apply channel pressure from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            2: {
+              monoPressure: 100,
+            },
+            4: {
+              monoPressure: 80,
+            },
+          },
+        }
+
+        await midiController.patch.set(patch)
+
+        expect(midiController.channel.getMonoPressure(2)).toBe(100)
+        expect(midiController.channel.getMonoPressure(4)).toBe(80)
+      })
+
+      it("should apply polyphonic pressure from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: {
+              polyPressure: {
+                60: 100,
+                64: 90,
+              },
+            },
+            3: {
+              polyPressure: {
+                60: 80,
+              },
+            },
+          },
+        }
+
+        await midiController.patch.set(patch)
+
+        expect(midiController.channel.getPolyPressure(60, 1)).toBe(100)
+        expect(midiController.channel.getPolyPressure(64, 1)).toBe(90)
+        expect(midiController.channel.getPolyPressure(60, 3)).toBe(80)
+      })
+
+      it("should apply all state types from patch", async () => {
+        const patch = {
+          name: "Test Patch",
+          channels: {
+            1: {
+              ccs: {
+                74: 100,
+              },
+              program: 64,
+              pitchBend: 8192,
+              monoPressure: 90,
+              polyPressure: {
+                60: 85,
+              },
+            },
+          },
+        }
+
+        await midiController.patch.set(patch)
+
+        expect(midiController.channel.getCC(74, 1)).toBe(100)
+        expect(midiController.channel.getPC(1)).toBe(64)
+        expect(midiController.channel.getPitchBend(1)).toBe(8192)
+        expect(midiController.channel.getMonoPressure(1)).toBe(90)
+        expect(midiController.channel.getPolyPressure(60, 1)).toBe(85)
       })
 
       it("should emit PATCH_LOADED event", async () => {
@@ -1385,7 +2792,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         expect(spy).toHaveBeenCalledWith({ patch })
       })
@@ -1412,7 +2819,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         expect(element.min).toBe("10")
         expect(element.max).toBe("1000")
@@ -1441,7 +2848,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // MIDI value 63/127 ~ 0.496, so 20 + 0.496 * (20000-20) ≈ 9940
         const expectedValue = 20 + (63 / 127) * (20000 - 20)
@@ -1469,7 +2876,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // Inverted: 127 - (63/127)*(127-0) = 127 - 62.7 = 64.3
         const expectedValue = 127 - (63 / 127) * (127 - 0)
@@ -1496,7 +2903,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // With default min/max (0/127), MIDI value 100 should map to element value 100
         expect(parseFloat(element.value)).toBe(100)
@@ -1522,7 +2929,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // Element value should not change if CC is not in patch
         expect(parseFloat(element.value)).toBe(64)
@@ -1553,7 +2960,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // Should parse string values correctly: 100 + (100/127)*(1000-100) = 100 + 708.66 = 808.66
         expect(parseFloat(element.value)).toBeGreaterThan(500)
@@ -1602,7 +3009,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         expect(parseFloat(element1.value)).toBe(100)
         const expectedValue = 20 + (63 / 127) * (20000 - 20)
@@ -1636,7 +3043,7 @@ describe("MIDIController", () => {
           settings: {},
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // Should have accessed element attributes
         expect(element.getAttribute).toHaveBeenCalled()
@@ -1667,7 +3074,7 @@ describe("MIDIController", () => {
           },
         }
 
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
 
         // CC 74 binding should not be affected by cc75 settings
         expect(element.min).toBe("0") // Should remain unchanged
@@ -1681,8 +3088,8 @@ describe("MIDIController", () => {
           version: "1.0",
           channels: { 1: { ccs: { 74: 100 } } },
         }
-        await midiController.setPatch(patch)
-        expect(midiController.getCC(74, 1)).toBe(100)
+        await midiController.patch.set(patch)
+        expect(midiController.channel.getCC(74, 1)).toBe(100)
       })
 
       it("should warn on unknown version", async () => {
@@ -1691,7 +3098,7 @@ describe("MIDIController", () => {
           version: "99.0",
           channels: { 1: { ccs: { 74: 100 } } },
         }
-        await midiController.setPatch(patch)
+        await midiController.patch.set(patch)
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown patch version: 99.0"))
         consoleSpy.mockRestore()
       })
@@ -1700,8 +3107,8 @@ describe("MIDIController", () => {
         const patch = {
           channels: { 1: { ccs: { 74: 100 } } },
         }
-        await midiController.setPatch(patch)
-        expect(midiController.getCC(74, 1)).toBe(100)
+        await midiController.patch.set(patch)
+        expect(midiController.channel.getCC(74, 1)).toBe(100)
       })
     })
 
@@ -1723,16 +3130,16 @@ describe("MIDIController", () => {
 
       it("should save patch to localStorage", () => {
         const patch = { name: "Test Patch", channels: { 1: { ccs: { 74: 100 } } } }
-        const key = midiController.savePatch("Test Patch", patch)
+        const key = midiController.patch.save("Test Patch", patch)
 
         expect(key).toBe("midiwire_patch_Test Patch")
         expect(localStorage.setItem).toHaveBeenCalledWith("midiwire_patch_Test Patch", JSON.stringify(patch))
       })
 
       it("should use getPatch() if no patch provided", () => {
-        midiController.sendCC(74, 100, 1)
+        midiController.channel.sendCC(74, 100, 1)
 
-        midiController.savePatch("My Patch")
+        midiController.patch.save("My Patch")
 
         expect(localStorage.setItem).toHaveBeenCalled()
         const savedData = JSON.parse(localStorage.setItem.mock.calls[0][1])
@@ -1744,7 +3151,7 @@ describe("MIDIController", () => {
         const spy = vi.fn()
         midiController.on(CONTROLLER_EVENTS.PATCH_SAVED, spy)
 
-        midiController.savePatch("Test Patch")
+        midiController.patch.save("Test Patch")
 
         expect(spy).toHaveBeenCalled()
         expect(spy.mock.calls[0][0]).toHaveProperty("name", "Test Patch")
@@ -1755,7 +3162,7 @@ describe("MIDIController", () => {
           throw new Error("Quota exceeded")
         })
 
-        expect(() => midiController.savePatch("Test Patch")).toThrow("Quota exceeded")
+        expect(() => midiController.patch.save("Test Patch")).toThrow("Quota exceeded")
       })
     })
 
@@ -1779,7 +3186,7 @@ describe("MIDIController", () => {
         const patch = { name: "Test Patch", channels: { 1: { ccs: { 74: 100 } } } }
         localStorage.getItem = vi.fn().mockReturnValue(JSON.stringify(patch))
 
-        const loaded = midiController.loadPatch("Test Patch")
+        const loaded = midiController.patch.load("Test Patch")
 
         expect(loaded).toEqual(patch)
         expect(localStorage.getItem).toHaveBeenCalledWith("midiwire_patch_Test Patch")
@@ -1788,7 +3195,7 @@ describe("MIDIController", () => {
       it("should return null if patch not found", () => {
         localStorage.getItem = vi.fn().mockReturnValue(null)
 
-        const loaded = midiController.loadPatch("Nonexistent")
+        const loaded = midiController.patch.load("Nonexistent")
 
         expect(loaded).toBeNull()
       })
@@ -1800,7 +3207,7 @@ describe("MIDIController", () => {
         const spy = vi.fn()
         midiController.on(CONTROLLER_EVENTS.PATCH_LOADED, spy)
 
-        midiController.loadPatch("Test Patch")
+        midiController.patch.load("Test Patch")
 
         expect(spy).toHaveBeenCalledWith({ name: "Test Patch", patch })
       })
@@ -1809,7 +3216,7 @@ describe("MIDIController", () => {
         localStorage.getItem = vi.fn().mockReturnValue("invalid json")
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
-        const loaded = midiController.loadPatch("Test Patch")
+        const loaded = midiController.patch.load("Test Patch")
 
         expect(loaded).toBeNull()
         expect(consoleSpy).toHaveBeenCalled()
@@ -1835,7 +3242,7 @@ describe("MIDIController", () => {
       })
 
       it("should delete patch from localStorage", () => {
-        const result = midiController.deletePatch("Test Patch")
+        const result = midiController.patch.delete("Test Patch")
 
         expect(result).toBe(true)
         expect(localStorage.removeItem).toHaveBeenCalledWith("midiwire_patch_Test Patch")
@@ -1845,7 +3252,7 @@ describe("MIDIController", () => {
         const spy = vi.fn()
         midiController.on(CONTROLLER_EVENTS.PATCH_DELETED, spy)
 
-        midiController.deletePatch("Test Patch")
+        midiController.patch.delete("Test Patch")
 
         expect(spy).toHaveBeenCalledWith({ name: "Test Patch" })
       })
@@ -1856,7 +3263,7 @@ describe("MIDIController", () => {
         })
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
-        const result = midiController.deletePatch("Test Patch")
+        const result = midiController.patch.delete("Test Patch")
 
         expect(result).toBe(false)
         expect(consoleSpy).toHaveBeenCalled()
@@ -1894,7 +3301,7 @@ describe("MIDIController", () => {
           return null
         })
 
-        const patches = midiController.listPatches()
+        const patches = midiController.patch.list()
 
         expect(patches).toHaveLength(2)
         expect(patches[0].name).toBe("A")
@@ -1906,7 +3313,7 @@ describe("MIDIController", () => {
       it("should filter out invalid patches", () => {
         localStorage.getItem = vi.fn(() => null)
 
-        const patches = midiController.listPatches()
+        const patches = midiController.patch.list()
 
         expect(patches).toHaveLength(0)
       })
@@ -1921,7 +3328,7 @@ describe("MIDIController", () => {
           return null
         })
 
-        const patches = midiController.listPatches()
+        const patches = midiController.patch.list()
 
         expect(patches[0].name).toBe("A")
         expect(patches[1].name).toBe("B")
@@ -1937,7 +3344,7 @@ describe("MIDIController", () => {
           },
         })
 
-        const patches = midiController.listPatches()
+        const patches = midiController.patch.list()
 
         expect(consoleSpy).toHaveBeenCalledWith("Failed to list patches:", expect.any(Error))
         expect(patches).toEqual([]) // Should return empty array on error

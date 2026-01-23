@@ -110,8 +110,11 @@
   <div class="section">
     <h2>Console Access</h2>
     <pre>// The midi object is exposed to window for console access
-midi.sendCC(74, 100);  // Send CC
-midi.sendNoteOn(60, 100);  // Play note
+midi.channel.sendCC(74, 100);  // Send CC
+midi.channel.sendNoteOn(60, 100);  // Play note
+midi.channel.allNotesOff();  // All notes off (panic)
+midi.channel.resetControllers();  // Reset all controllers
+midi.channel.localControl(false);  // Disable local control
 midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
   </div>
 
@@ -379,13 +382,13 @@ document.body.appendChild(slider);`;
 
         console.log(`Playing Cmaj7 chord: notes ${chord.join(", ")}, velocity ${velocity}, channel ${channel}`);
         chord.forEach(note => {
-          window.midi.sendNoteOn(note, velocity, channel);
+          window.midi.channel.sendNoteOn(note, velocity, channel);
         });
 
         setTimeout(() => {
           console.log(`Releasing Cmaj7 chord: notes ${chord.join(", ")}, channel ${channel}`);
           chord.forEach(note => {
-            window.midi.sendNoteOff(note, channel);
+            window.midi.channel.sendNoteOff(note, channel);
           });
         }, 1000);
       });
@@ -409,7 +412,7 @@ document.body.appendChild(slider);`;
           if (step % 5 === 0) { // Log every 5th step to avoid spam
             console.log(`CC sweep: CC1 = ${value}`);
           }
-          window.midi.sendCC(1, value, channel);
+          window.midi.channel.sendCC(1, value, channel);
           step++;
 
           if (step > steps) {
@@ -431,7 +434,7 @@ document.body.appendChild(slider);`;
         console.log("Randomizing CC values for:", ccs);
         ccs.forEach(cc => {
           const value = Math.floor(Math.random() * 128);
-          window.midi.sendCC(cc, value, channel);
+          window.midi.channel.sendCC(cc, value, channel);
         });
         console.log("CC randomization complete");
       });
@@ -442,16 +445,14 @@ document.body.appendChild(slider);`;
           return;
         }
 
-        console.log("PANIC: Sending All Notes Off on all channels and all notes off");
+        console.log("PANIC: Sending All Notes Off on all channels");
 
-        // Send All Notes Off (CC 123) on all channels
-        for (let ch = 1; ch <= 16; ch++) {
-          window.midi.sendCC(123, 0, ch);
-        }
+        // Use the allNotesOff method (sends CC 123 to all channels)
+        window.midi.channel.allNotesOff();
 
-        // Also send note off for all notes
+        // Also send note off for all notes to ensure release
         for (let note = 0; note < 128; note++) {
-          window.midi.sendNoteOff(note);
+          window.midi.channel.sendNoteOff(note);
         }
 
         console.log("Panic complete: All notes stopped");
