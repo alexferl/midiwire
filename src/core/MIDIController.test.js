@@ -171,7 +171,7 @@ describe("MIDIController", () => {
 
       controller.channel.sendCC(7, 100)
 
-      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
       consoleSpy.mockRestore()
     })
 
@@ -224,6 +224,362 @@ describe("MIDIController", () => {
     })
   })
 
+  describe("mode CC messages", () => {
+    beforeEach(async () => {
+      await midiController.init()
+      await midiController.device.connect()
+    })
+
+    describe("allSoundsOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.allSoundsOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send All Sounds Off (CC 120, value 0) to specific channel", () => {
+        midiController.channel.allSoundsOff(5)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb4, 120, 0]))
+      })
+
+      it("should send All Sounds Off to all 16 channels when no channel specified", () => {
+        midiController.channel.allSoundsOff()
+
+        // Verify 16 messages were sent, one for each channel
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        // Check each channel receives CC 120 with value 0
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 120, 0]))
+        }
+      })
+
+      it("should clamp channel to valid range", () => {
+        midiController.channel.allSoundsOff(22)
+        midiController.channel.allSoundsOff(0)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0, 120, 0]))
+      })
+
+      it("should emit ch-all-sounds-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_ALL_SOUNDS_OFF_SEND, spy)
+
+        midiController.channel.allSoundsOff(3)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 3,
+        })
+      })
+    })
+
+    describe("resetControllers", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.resetControllers()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Reset All Controllers (CC 121, value 0) to specific channel", () => {
+        midiController.channel.resetControllers(7)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb6, 121, 0]))
+      })
+
+      it("should send Reset All Controllers to all channels when no channel specified", () => {
+        midiController.channel.resetControllers()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 121, 0]))
+        }
+      })
+
+      it("should emit ch-reset-controllers-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_RESET_CONTROLLERS_SEND, spy)
+
+        midiController.channel.resetControllers(2)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 2,
+        })
+      })
+    })
+
+    describe("localControl", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.localControl(true)
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Local Control On (CC 122, value 127) when enabled is true", () => {
+        midiController.channel.localControl(true, 10)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb9, 122, 127]))
+      })
+
+      it("should send Local Control Off (CC 122, value 0) when enabled is false", () => {
+        midiController.channel.localControl(false, 10)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb9, 122, 0]))
+      })
+
+      it("should send Local Control to all channels when no channel specified", () => {
+        midiController.channel.localControl(true)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 122, 127]))
+        }
+      })
+
+      it("should emit ch-local-control-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_LOCAL_CONTROL_SEND, spy)
+
+        midiController.channel.localControl(false, 4)
+
+        expect(spy).toHaveBeenCalledWith({
+          enabled: false,
+          channel: 4,
+        })
+      })
+    })
+
+    describe("allNotesOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.allNotesOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send All Notes Off (CC 123, value 0) to specific channel", () => {
+        midiController.channel.allNotesOff(1)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0, 123, 0]))
+      })
+
+      it("should send All Notes Off to all channels when no channel specified", () => {
+        midiController.channel.allNotesOff()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 123, 0]))
+        }
+      })
+
+      it("should emit ch-all-notes-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_ALL_NOTES_OFF_SEND, spy)
+
+        midiController.channel.allNotesOff(8)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 8,
+        })
+      })
+    })
+
+    describe("omniOff", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.omniOff()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Omni Mode Off (CC 124, value 0) to specific channel", () => {
+        midiController.channel.omniOff(12)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbb, 124, 0]))
+      })
+
+      it("should send Omni Mode Off to all channels when no channel specified", () => {
+        midiController.channel.omniOff()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 124, 0]))
+        }
+      })
+
+      it("should emit ch-omni-off-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_OMNI_OFF_SEND, spy)
+
+        midiController.channel.omniOff(6)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 6,
+        })
+      })
+    })
+
+    describe("omniOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.omniOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Omni Mode On (CC 125, value 0) to specific channel", () => {
+        midiController.channel.omniOn(15)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbe, 125, 0]))
+      })
+
+      it("should send Omni Mode On to all channels when no channel specified", () => {
+        midiController.channel.omniOn()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 125, 0]))
+        }
+      })
+
+      it("should emit ch-omni-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_OMNI_ON_SEND, spy)
+
+        midiController.channel.omniOn(9)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 9,
+        })
+      })
+    })
+
+    describe("monoOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.monoOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Mono Mode On (CC 126, value 1) with default channels to specific channel", () => {
+        midiController.channel.monoOn(undefined, 5)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb4, 126, 1]))
+      })
+
+      it("should send Mono Mode On with specified number of channels", () => {
+        midiController.channel.monoOn(4, 8)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb7, 126, 4]))
+      })
+
+      it("should clamp channels value to 0-16 range", () => {
+        midiController.channel.monoOn(20, 3)
+        midiController.channel.monoOn(-5, 3)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 16]))
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 0]))
+      })
+
+      it("should round channels value to nearest integer", () => {
+        midiController.channel.monoOn(3.7, 3)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb2, 126, 4]))
+      })
+
+      it("should send Mono Mode On to all channels when no channel specified", () => {
+        midiController.channel.monoOn(2)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 126, 2]))
+        }
+      })
+
+      it("should emit ch-mono-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_MONO_ON_SEND, spy)
+
+        midiController.channel.monoOn(3, 11)
+
+        expect(spy).toHaveBeenCalledWith({
+          channels: 3,
+          channel: 11,
+        })
+      })
+    })
+
+    describe("polyOn", () => {
+      it("should warn if not initialized", () => {
+        const controller = new MIDIController()
+        const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+        controller.channel.polyOn()
+
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
+        consoleSpy.mockRestore()
+      })
+
+      it("should send Poly Mode On (CC 127, value 0) to specific channel", () => {
+        midiController.channel.polyOn(16)
+
+        expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xbf, 127, 0]))
+      })
+
+      it("should send Poly Mode On to all channels when no channel specified", () => {
+        midiController.channel.polyOn()
+
+        expect(mockOutputs[0].send).toHaveBeenCalledTimes(16)
+
+        for (let ch = 1; ch <= 16; ch++) {
+          expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xb0 + (ch - 1), 127, 0]))
+        }
+      })
+
+      it("should emit ch-poly-on-send event", () => {
+        const spy = vi.fn()
+        midiController.on(CONTROLLER_EVENTS.CH_POLY_ON_SEND, spy)
+
+        midiController.channel.polyOn(13)
+
+        expect(spy).toHaveBeenCalledWith({
+          channel: 13,
+        })
+      })
+    })
+  })
+
   describe("exclusive", () => {
     beforeEach(async () => {
       await midiController.init()
@@ -234,9 +590,9 @@ describe("MIDIController", () => {
       const controller = new MIDIController({ sysex: true })
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller._sendSysEx([0x42, 0x30])
+      controller.system.sendEx([0x42, 0x30])
 
-      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
       consoleSpy.mockRestore()
     })
 
@@ -247,20 +603,20 @@ describe("MIDIController", () => {
 
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller._sendSysEx([0x42, 0x30])
+      controller.system.sendEx([0x42, 0x30])
 
       expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
       consoleSpy.mockRestore()
     })
 
     it("should send SysEx message", async () => {
-      midiController._sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+      midiController.system.sendEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should send SysEx message with wrapper bytes", async () => {
-      midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+      midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
@@ -269,7 +625,7 @@ describe("MIDIController", () => {
       const spy = vi.fn()
       midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
 
-      midiController._sendSysEx([0x42, 0x30])
+      midiController.system.sendEx([0x42, 0x30])
 
       expect(spy).toHaveBeenCalledWith({
         data: [0x42, 0x30],
@@ -286,7 +642,7 @@ describe("MIDIController", () => {
 
     describe("sys.exclusive", () => {
       it("should send SysEx message with data as-is (no wrapper)", async () => {
-        midiController._sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+        midiController.system.sendEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(
           new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
@@ -294,13 +650,13 @@ describe("MIDIController", () => {
       })
 
       it("should send SysEx message with data as-is (default behavior)", async () => {
-        midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12])
+        midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12])
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12]))
       })
 
       it("should send SysEx message with wrapper added when includeWrapper=true", async () => {
-        midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+        midiController.system.sendEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(
           new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
@@ -311,7 +667,7 @@ describe("MIDIController", () => {
         const spy = vi.fn()
         midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
 
-        midiController._sendSysEx([0x42, 0x30])
+        midiController.system.sendEx([0x42, 0x30])
 
         expect(spy).toHaveBeenCalledWith({
           data: [0x42, 0x30],
@@ -326,7 +682,7 @@ describe("MIDIController", () => {
 
         const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-        controller._sendSysEx([0x42, 0x30])
+        controller.system.sendEx([0x42, 0x30])
 
         expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
         consoleSpy.mockRestore()
@@ -336,9 +692,9 @@ describe("MIDIController", () => {
         const controller = new MIDIController({ sysex: true })
         const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-        controller._sendSysEx([0x42, 0x30])
+        controller.system.sendEx([0x42, 0x30])
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -356,7 +712,7 @@ describe("MIDIController", () => {
 
         controller.system.sendClock()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -374,7 +730,7 @@ describe("MIDIController", () => {
 
         controller.system.start()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -392,7 +748,7 @@ describe("MIDIController", () => {
 
         controller.system.continue()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -410,7 +766,7 @@ describe("MIDIController", () => {
 
         controller.system.stop()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -436,7 +792,7 @@ describe("MIDIController", () => {
 
         controller.system.sendMTC(0x45)
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -475,7 +831,7 @@ describe("MIDIController", () => {
 
         controller.system.sendSongPosition(42)
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -501,7 +857,7 @@ describe("MIDIController", () => {
 
         controller.system.sendSongSelect(10)
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -519,7 +875,7 @@ describe("MIDIController", () => {
 
         controller.system.sendTuneRequest()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -537,7 +893,7 @@ describe("MIDIController", () => {
 
         controller.system.sendActiveSensing()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -555,7 +911,7 @@ describe("MIDIController", () => {
 
         controller.system.sendSystemReset()
 
-        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+        expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
         consoleSpy.mockRestore()
       })
     })
@@ -578,7 +934,7 @@ describe("MIDIController", () => {
 
       controller.send([0x90, 0x3c, 0x64])
 
-      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
+      expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call init() first.")
       consoleSpy.mockRestore()
     })
 

@@ -43,7 +43,7 @@
  *
  * @example
  * // Manual binding with custom selector
- * const binder = new DataAttributeBinder(midi, '[data-midi-cc]');
+ * const binder = new DataAttributeBinder(midi, "[data-midi-cc]");
  * binder.bindAll();
  */
 export class DataAttributeBinder {
@@ -60,7 +60,7 @@ export class DataAttributeBinder {
    *
    * @example
    * // With custom selector
-   * const binder = new DataAttributeBinder(midi, '.midi-control');
+   * const binder = new DataAttributeBinder(midi, ".midi-control");
    *
    * @example
    * // Bind after MIDI is ready
@@ -89,7 +89,7 @@ export class DataAttributeBinder {
    *
    * @example
    * // Bind after DOM is loaded
-   * document.addEventListener('DOMContentLoaded', () => {
+   * document.addEventListener("DOMContentLoaded", () => {
    *   binder.bindAll();
    * });
    *
@@ -132,11 +132,11 @@ export class DataAttributeBinder {
    * // Add controls dynamically
    * binder.enableAutoBinding();
    * // Later, when you add new UI controls:
-   * const newSlider = document.createElement('input');
-   * newSlider.type = 'range';
-   * newSlider.setAttribute('data-midi-cc', '71');
-   * document.getElementById('controls').appendChild(newSlider);
-   * // Automatically bound! ✨
+   * const newSlider = document.createElement("input");
+   * newSlider.type = "range";
+   * newSlider.setAttribute("data-midi-cc", "71");
+   * document.getElementById("controls").appendChild(newSlider);
+   * // Automatically bound!
    */
   enableAutoBinding() {
     if (this.observer) return
@@ -316,7 +316,7 @@ export class DataAttributeBinder {
    *
    * @example
    * // Clean up in response to user action
-   * document.getElementById('cleanup-btn').addEventListener('click', () => {
+   * document.getElementById("cleanup-btn").addEventListener("click", () => {
    *   binder.destroy();
    * });
    */

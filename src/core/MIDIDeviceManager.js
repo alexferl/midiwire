@@ -17,8 +17,8 @@ import { CONNECTION_EVENTS } from "./MIDIConnection.js"
  * await midi.init();
  *
  * const manager = new MIDIDeviceManager({ midiController: midi });
- * const deviceSelect = document.getElementById('device-select');
- * const channelSelect = document.getElementById('channel-select');
+ * const deviceSelect = document.getElementById("device-select");
+ * const channelSelect = document.getElementById("channel-select");
  *
  * // Set up device list dropdown
  * manager.populateDeviceList(deviceSelect);
@@ -37,10 +37,10 @@ import { CONNECTION_EVENTS } from "./MIDIConnection.js"
  *   midiController: midi,
  *   onStatusUpdate: (message, state) => {
  *     console.log(`Status: ${message}`);
- *     document.getElementById('status').textContent = message;
+ *     document.getElementById("status").textContent = message;
  *   },
  *   onConnectionUpdate: (device, midi) => {
- *     console.log('Connection state changed');
+ *     console.log("Connection state changed");
  *   }
  * });
  */
@@ -58,7 +58,7 @@ export class MIDIDeviceManager {
    * const manager = new MIDIDeviceManager({
    *   midiController: midi,
    *   onStatusUpdate: (msg, state) => console.log(msg),
-   *   onConnectionUpdate: (device, midi) => console.log('Device changed')
+   *   onConnectionUpdate: (device, midi) => console.log("Device changed")
    * });
    *
    * @example
@@ -136,14 +136,14 @@ export class MIDIDeviceManager {
    * Update status message and trigger status callback
    *
    * @param {string} message - Status message to display
-   * @param {string} [state=''] - Status state (e.g., 'connected', 'error', 'warning')
+   * @param {string} [state=""] - Status state (e.g., "connected", "error", "warning")
    * @returns {void}
    *
    * @example
-   * manager.updateStatus('Connected to MIDI keyboard', 'connected');
+   * manager.updateStatus("Connected to MIDI keyboard", "connected");
    *
    * @example
-   * manager.updateStatus('Connection failed', 'error');
+   * manager.updateStatus("Connection failed", "error");
    */
   updateStatus(message, state = "") {
     this.onStatusUpdate(message, state)
@@ -196,7 +196,7 @@ export class MIDIDeviceManager {
    *
    * @example
    * // Basic device selection
-   * const deviceSelect = document.getElementById('device-select');
+   * const deviceSelect = document.getElementById("device-select");
    * manager.connectDeviceSelection(deviceSelect, (midi, device) => {
    *   console.log(`Connected to ${device.name}`);
    * });
@@ -255,13 +255,13 @@ export class MIDIDeviceManager {
    *
    * @example
    * // Setup channel selection
-   * const channelSelect = document.getElementById('channel-select');
+   * const channelSelect = document.getElementById("channel-select");
    * manager.connectChannelSelection(channelSelect);
    *
    * @example
    * // Combined with device selection
    * manager.connectDeviceSelection(deviceSelect, (midi, device) => {
-   *   console.log('Device connected');
+   *   console.log("Device connected");
    * });
    * manager.connectChannelSelection(channelSelect);
    */
@@ -287,13 +287,13 @@ export class MIDIDeviceManager {
    *
    * @example
    * // Basic population
-   * const deviceSelect = document.getElementById('device-select');
+   * const deviceSelect = document.getElementById("device-select");
    * manager.populateDeviceList(deviceSelect);
    *
    * @example
    * // With refresh callback
    * manager.populateDeviceList(deviceSelect, () => {
-   *   console.log('Device list updated');
+   *   console.log("Device list updated");
    * });
    *
    * @example

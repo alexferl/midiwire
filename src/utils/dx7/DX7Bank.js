@@ -9,8 +9,8 @@ import { DX7Voice } from "./DX7Voice.js"
  *
  * @example
  * // Load from file
- * const fileInput = document.getElementById('file-input');
- * fileInput.addEventListener('change', async (e) => {
+ * const fileInput = document.getElementById("file-input");
+ * fileInput.addEventListener("change", async (e) => {
  *   const file = e.target.files[0];
  *   const bank = await DX7Bank.fromFile(file);
  *   console.log(bank.getVoiceNames());
@@ -19,26 +19,26 @@ import { DX7Voice } from "./DX7Voice.js"
  * @example
  * // Create from SysEx data
  * const syxData = new Uint8Array([0xF0, 0x43, 0x00, 0x09, 0x20, 0x00, 0xF7]);
- * const bank = DX7Bank.fromSysEx(syxData, 'My Bank');
+ * const bank = DX7Bank.fromSysEx(syxData, "My Bank");
  *
  * @example
  * // Manipulate voices
  * const bank = new DX7Bank();
- * const voice = DX7Voice.fromName('BASS 1');
+ * const voice = DX7Voice.fromName("BASS 1");
  * bank.replaceVoice(0, voice); // Replace first voice
- * console.log(bank.getVoice(0).name); // 'BASS 1'
+ * console.log(bank.getVoice(0).name); // "BASS 1"
  *
  * @example
  * // Export to SysEx
  * const bank = await DX7Bank.fromFile(file);
  * const syxData = bank.toSysEx();
- * download(syxData, 'my-bank.syx');
+ * download(syxData, "my-bank.syx");
  *
  * @example
  * // Convert to JSON for storage
  * const bank = await DX7Bank.fromFile(file);
  * const json = bank.toJSON();
- * localStorage.setItem('dx7-bank', JSON.stringify(json));
+ * localStorage.setItem("dx7-bank", JSON.stringify(json));
  */
 export class DX7Bank {
   // SysEx header
@@ -81,17 +81,17 @@ export class DX7Bank {
    * @example
    * // Create empty bank with default voices
    * const bank = new DX7Bank();
-   * console.log(bank.getVoiceNames()); // ['Init Voice', 'Init Voice', ...]
+   * console.log(bank.getVoiceNames()); // ["Init Voice", "Init Voice", ...]
    *
    * @example
    * // Create from SysEx data
    * const syxData = new Uint8Array([0xF0, 0x43, 0x00, 0x09, 0x20, 0x00, 0xF7]);
-   * const bank = new DX7Bank(syxData, 'My Bank');
+   * const bank = new DX7Bank(syxData, "My Bank");
    *
    * @example
    * // Create from raw voice data (no SysEx wrapper)
    * const voiceData = new Uint8Array(4096); // 32 voices × 128 bytes
-   * const bank = new DX7Bank(voiceData, 'Raw Bank');
+   * const bank = new DX7Bank(voiceData, "Raw Bank");
    */
   constructor(data, name = "") {
     this.voices = new Array(DX7Bank.NUM_VOICES)
@@ -203,9 +203,9 @@ export class DX7Bank {
    * @example
    * // Replace first voice with a custom voice
    * const bank = await DX7Bank.fromFile(file);
-   * const customVoice = DX7Voice.fromName('LEAD 1');
+   * const customVoice = DX7Voice.fromName("LEAD 1");
    * bank.replaceVoice(0, customVoice);
-   * console.log(bank.getVoice(0).name); // 'LEAD 1'
+   * console.log(bank.getVoice(0).name); // "LEAD 1"
    *
    * @example
    * // Swap voices between banks

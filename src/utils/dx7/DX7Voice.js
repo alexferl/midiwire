@@ -89,7 +89,7 @@ import { DX7Bank } from "./DX7Bank.js"
  *
  * @example
  * // Load a voice from a single-voice SYX file
- * const file = document.getElementById('voice-file').files[0];
+ * const file = document.getElementById("voice-file").files[0];
  * const voice = await DX7Voice.fromFile(file);
  * console.log(voice.toJSON());
  *
@@ -245,9 +245,9 @@ export class DX7Voice {
   static CHAR_YEN = 92 // Japanese Yen symbol (¥) maps to ASCII backslash
   static CHAR_ARROW_RIGHT = 126 // Right arrow (→) maps to ASCII tilde
   static CHAR_ARROW_LEFT = 127 // Left arrow (←) maps to ASCII DEL
-  static CHAR_REPLACEMENT_Y = 89 // Replace Yen symbol with 'Y'
-  static CHAR_REPLACEMENT_GT = 62 // Right arrow with '>'
-  static CHAR_REPLACEMENT_LT = 60 // Left arrow with '<'
+  static CHAR_REPLACEMENT_Y = 89 // Replace Yen symbol with "Y"
+  static CHAR_REPLACEMENT_GT = 62 // Right arrow with ">"
+  static CHAR_REPLACEMENT_LT = 60 // Left arrow with "<"
   static CHAR_SPACE = 32 // Standard space character
   static CHAR_MIN_PRINTABLE = 32 // Minimum ASCII printable character
   static CHAR_MAX_PRINTABLE = 126 // Maximum ASCII printable character

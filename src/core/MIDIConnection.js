@@ -45,7 +45,7 @@ export const CONNECTION_EVENTS = {
  * // Basic usage
  * const connection = new MIDIConnection({ sysex: true });
  * await connection.requestAccess();
- * await connection.connect('My MIDI Device');
+ * await connection.connect("My MIDI Device");
  * connection.send([0x90, 60, 100]); // Note on
  *
  * @example
@@ -170,11 +170,11 @@ export class MIDIConnection extends EventEmitter {
    *
    * @example
    * // Connect by name
-   * await connection.connect('My MIDI Keyboard');
+   * await connection.connect("My MIDI Keyboard");
    *
    * @example
    * // Connect by device ID
-   * await connection.connect('input-12345');
+   * await connection.connect("input-12345");
    */
   async connect(device) {
     if (!this.midiAccess) {

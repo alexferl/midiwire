@@ -112,6 +112,9 @@
     <pre>// The midi object is exposed to window for console access
 midi.channel.sendCC(74, 100);  // Send CC
 midi.channel.sendNoteOn(60, 100);  // Play note
+midi.channel.allNotesOff();  // All notes off (panic)
+midi.channel.resetControllers();  // Reset all controllers
+midi.channel.localControl(false);  // Disable local control
 midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
   </div>
 
@@ -442,14 +445,12 @@ document.body.appendChild(slider);`;
           return;
         }
 
-        console.log("PANIC: Sending All Notes Off on all channels and all notes off");
+        console.log("PANIC: Sending All Notes Off on all channels");
 
-        // Send All Notes Off (CC 123) on all channels
-        for (let ch = 1; ch <= 16; ch++) {
-          window.midi.channel.sendCC(123, 0, ch);
-        }
+        // Use the allNotesOff method (sends CC 123 to all channels)
+        window.midi.channel.allNotesOff();
 
-        // Also send note off for all notes
+        // Also send note off for all notes to ensure release
         for (let note = 0; note < 128; note++) {
           window.midi.channel.sendNoteOff(note);
         }
