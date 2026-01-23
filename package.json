@@ -24,7 +24,7 @@
     "coverage": "vitest run --coverage",
     "coverage:ui": "vitest run --coverage && open coverage/index.html",
     "lint": "biome check --write",
-    "docs": "documentation build src/index.js -f md -o docs/API.md"
+    "docs": "documentation build src/index.js -f md -o docs/API.md --markdown-toc-max-depth 2"
   },
   "keywords": [
     "midiwire",

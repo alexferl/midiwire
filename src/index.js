@@ -24,11 +24,11 @@
  *
  * @example
  * // Quick start - Auto-binding with data attributes
- * import { createMIDIController } from 'midiwire';
+ * import { createMIDIController } from "midiwire";
  *
  * const midi = await createMIDIController({
  *   channel: 1,
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   watchDOM: true
  * });
  *
@@ -38,27 +38,27 @@
  *
  * @example
  * // Programmatic binding
- * import { MIDIController } from 'midiwire';
+ * import { MIDIController } from "midiwire";
  *
  * const midi = new MIDIController({ channel: 1 });
  * await midi.init();
- * await midi.connect('My Synth');
+ * await midi.connect("My Synth");
  *
- * const cutoff = document.getElementById('cutoff');
+ * const cutoff = document.getElementById("cutoff");
  * midi.bind(cutoff, { cc: 74 });
  *
  * @example
  * // Device manager with UI integration
- * import { createMIDIDeviceManager } from 'midiwire';
+ * import { createMIDIDeviceManager } from "midiwire";
  *
  * const deviceManager = await createMIDIDeviceManager({
  *   onStatusUpdate: (message, state) => {
- *     document.getElementById('status').textContent = message;
+ *     document.getElementById("status").textContent = message;
  *   }
  * });
  *
  * // Populate device dropdown
- * const select = document.getElementById('device-select');
+ * const select = document.getElementById("device-select");
  * deviceManager.populateDeviceList(select);
  * deviceManager.connectDeviceSelection(select);
  */
@@ -83,7 +83,7 @@ import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
  * @example
  * // Basic auto-binding
  * const options = {
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   channel: 1,
  *   watchDOM: true
  * };
@@ -91,7 +91,7 @@ import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
  * @example
  * // Connect to specific device
  * const options = {
- *   output: 'My MIDI Keyboard',
+ *   output: "My MIDI Keyboard",
  *   channel: 2,
  *   sysex: true
  * };
@@ -109,18 +109,18 @@ import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
  * @example
  * // Quick start with auto-binding
  * const midi = await createMIDIController({
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   watchDOM: true
  * });
  *
  * @example
  * // Auto-bind with specific device and channel
  * const midi = await createMIDIController({
- *   output: 'My Synth',
+ *   output: "My Synth",
  *   channel: 2,
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   onReady: (controller) => {
- *     console.log('MIDI ready!');
+ *     console.log("MIDI ready!");
  *   }
  * });
  *
@@ -130,8 +130,8 @@ import { MIDIDeviceManager } from "./core/MIDIDeviceManager.js"
  *   autoConnect: false,
  *   channel: 1
  * });
- * await midi.connectOutput('My Synth');
- * const slider = document.getElementById('cutoff');
+ * await midi.connectOutput("My Synth");
+ * const slider = document.getElementById("cutoff");
  * midi.bind(slider, { cc: 74 });
  *
  * @example
@@ -188,18 +188,18 @@ export async function createMIDIController(options = {}) {
  * @example
  * // Full device manager with UI integration
  * const options = {
- *   output: 'My Synth',
+ *   output: "My Synth",
  *   channel: 2,
  *   sysex: true,
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   watchDOM: true,
  *   onStatusUpdate: (message, state) => {
  *     console.log(message);
- *     document.getElementById('status').textContent = message;
+ *     document.getElementById("status").textContent = message;
  *   },
  *   onReady: (midi, deviceManager) => {
  *     // Populate device dropdown
- *     const select = document.getElementById('device-select');
+ *     const select = document.getElementById("device-select");
  *     deviceManager.populateDeviceList(select);
  *     deviceManager.connectDeviceSelection(select);
  *   }
@@ -226,16 +226,16 @@ export async function createMIDIController(options = {}) {
  *
  * // Access the MIDIController via deviceManager.midi
  * const midi = deviceManager.midi;
- * midi.bind(document.getElementById('cutoff'), { cc: 74 });
+ * midi.bind(document.getElementById("cutoff"), { cc: 74 });
  *
  * @example
  * // With auto-connect and status UI
  * const deviceManager = await createMIDIDeviceManager({
- *   output: 'My Synth',
+ *   output: "My Synth",
  *   channel: 2,
- *   selector: '[data-midi-cc]',
+ *   selector: "[data-midi-cc]",
  *   onStatusUpdate: (message, state) => {
- *     const statusEl = document.getElementById('status');
+ *     const statusEl = document.getElementById("status");
  *     statusEl.textContent = message;
  *     statusEl.className = state;
  *   }
@@ -247,16 +247,16 @@ export async function createMIDIController(options = {}) {
  *   channel: 1,
  *   sysex: true,
  *   onStatusUpdate: (message, state) => {
- *     document.getElementById('status').textContent = message;
+ *     document.getElementById("status").textContent = message;
  *   },
  *   onReady: async (midi, dm) => {
  *     // Setup device selection
- *     const deviceSelect = document.getElementById('device-select');
+ *     const deviceSelect = document.getElementById("device-select");
  *     dm.populateDeviceList(deviceSelect);
  *     dm.connectDeviceSelection(deviceSelect);
  *
  *     // Setup channel selection
- *     const channelSelect = document.getElementById('channel-select');
+ *     const channelSelect = document.getElementById("channel-select");
  *     dm.connectChannelSelection(channelSelect);
  *   }
  * });
