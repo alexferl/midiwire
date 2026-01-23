@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Namespace: channel</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Namespace: channel</h1>
+
+    
+
+
+
+
+<section>
+
+<header>
+    
+        <h2>
+            <span class="ancestors"><a href="MIDIController.html">MIDIController</a>#</span>channel</h2>
+        
+    
+</header>
+
+<article>
+    <div class="container-overview">
+    
+        
+            <div class="description">Channel-specific MIDI operations</div>
+        
+
+        
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line415">line 415</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+        
+    
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id=".allNotesOff"><span class="type-signature">(static) </span>allNotesOff<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send All Notes Off message (CC 123, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line573">line 573</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".allSoundsOff"><span class="type-signature">(static) </span>allSoundsOff<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send All Sounds Off message (CC 120, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line551">line 551</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Examples</h5>
+    
+    <pre class="prettyprint"><code>// Stop all sounds on channel 1
+midi.channel.allSoundsOff(1);</code></pre>
+
+    <pre class="prettyprint"><code>// Send to all channels
+midi.channel.allSoundsOff();</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".getCC"><span class="type-signature">(static) </span>getCC<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Get current value of a CC
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line468">line 468</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>const volume = midi.channel.getCC(7);
+if (volume !== undefined) {
+  console.log(`Current volume: ${volume}`);
+}</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".getMonoPressure"><span class="type-signature">(static) </span>getMonoPressure<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Get current channel pressure for a channel
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line520">line 520</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".getPC"><span class="type-signature">(static) </span>getPC<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Get current program for a channel
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line484">line 484</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".getPitchBend"><span class="type-signature">(static) </span>getPitchBend<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Get current pitch bend value for a channel
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line504">line 504</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".getPolyPressure"><span class="type-signature">(static) </span>getPolyPressure<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Get current polyphonic pressure for a note on a channel
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line538">line 538</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".localControl"><span class="type-signature">(static) </span>localControl<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Local Control On/Off message (CC 122)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line567">line 567</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>// Turn off local control on channel 1
+midi.channel.localControl(false, 1);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".monoOn"><span class="type-signature">(static) </span>monoOn<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Mono Mode On message (CC 126)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line592">line 592</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".omniOff"><span class="type-signature">(static) </span>omniOff<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Omni Mode Off message (CC 124, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line579">line 579</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".omniOn"><span class="type-signature">(static) </span>omniOn<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Omni Mode On message (CC 125, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line585">line 585</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".polyOn"><span class="type-signature">(static) </span>polyOn<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Poly Mode On message (CC 127, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line598">line 598</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".resetControllers"><span class="type-signature">(static) </span>resetControllers<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send Reset All Controllers message (CC 121, value 0)
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line557">line 557</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".sendCC"><span class="type-signature">(static) </span>sendCC<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a control change message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line456">line 456</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Examples</h5>
+    
+    <pre class="prettyprint"><code>// Set volume (CC 7) to 100 on default channel
+midi.channel.sendCC(7, 100);</code></pre>
+
+    <pre class="prettyprint"><code>// Set filter cutoff (CC 74) to 64 on channel 2
+midi.channel.sendCC(74, 64, 2);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendMonoPressure"><span class="type-signature">(static) </span>sendMonoPressure<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a channel pressure (aftertouch) message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line514">line 514</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>// Send channel pressure at max (127)
+midi.channel.sendMonoPressure(127);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendNoteOff"><span class="type-signature">(static) </span>sendNoteOff<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a note off message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line441">line 441</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>// Stop middle C
+midi.channel.sendNoteOff(60);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendNoteOn"><span class="type-signature">(static) </span>sendNoteOn<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a note on message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line430">line 430</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Examples</h5>
+    
+    <pre class="prettyprint"><code>// Play middle C (60) with velocity 100
+midi.channel.sendNoteOn(60, 100);</code></pre>
+
+    <pre class="prettyprint"><code>// Play note 64 (E4) on channel 5
+midi.channel.sendNoteOn(64, 80, 5);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendPC"><span class="type-signature">(static) </span>sendPC<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a program change message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line478">line 478</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>// Change to program 5 on default channel
+midi.channel.sendPC(5);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendPitchBend"><span class="type-signature">(static) </span>sendPitchBend<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a pitch bend message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line498">line 498</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Examples</h5>
+    
+    <pre class="prettyprint"><code>// Bend pitch up (value > 8192)
+midi.channel.sendPitchBend(10000);</code></pre>
+
+    <pre class="prettyprint"><code>// Return to center (no bend)
+midi.channel.sendPitchBend(8192);</code></pre>
+
+
+
+        
+            
+<h4 class="name" id=".sendPolyPressure"><span class="type-signature">(static) </span>sendPolyPressure<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Send a polyphonic key pressure (polyphonic aftertouch) message
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_MIDIController.js.html">core/MIDIController.js</a>, <a href="core_MIDIController.js.html#line531">line 531</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>// Send poly pressure for middle C
+midi.channel.sendPolyPressure(60, 100);</code></pre>
+
+
+
+        
+    
+
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-midiwire.html">midiwire</a></li></ul><h3>Namespaces</h3><ul><li><a href="MIDIController_channel.html">channel</a></li><li><a href="MIDIController_device.html">device</a></li><li><a href="MIDIController_patch.html">patch</a></li><li><a href="MIDIController_system.html">system</a></li></ul><h3>Classes</h3><ul><li><a href="DX7Bank.html">DX7Bank</a></li><li><a href="DX7Error.html">DX7Error</a></li><li><a href="DX7ParseError.html">DX7ParseError</a></li><li><a href="DX7ValidationError.html">DX7ValidationError</a></li><li><a href="DX7Voice.html">DX7Voice</a></li><li><a href="DataAttributeBinder.html">DataAttributeBinder</a></li><li><a href="EventEmitter.html">EventEmitter</a></li><li><a href="MIDIAccessError.html">MIDIAccessError</a></li><li><a href="MIDIConnection.html">MIDIConnection</a></li><li><a href="MIDIConnectionError.html">MIDIConnectionError</a></li><li><a href="MIDIController.html">MIDIController</a></li><li><a href="MIDIDeviceError.html">MIDIDeviceError</a></li><li><a href="MIDIDeviceManager.html">MIDIDeviceManager</a></li><li><a href="MIDIError.html">MIDIError</a></li><li><a href="MIDIValidationError.html">MIDIValidationError</a></li></ul><h3>Global</h3><ul><li><a href="global.html#clamp">clamp</a></li><li><a href="global.html#createSysEx">createSysEx</a></li><li><a href="global.html#decode14BitValue">decode14BitValue</a></li><li><a href="global.html#decode7Bit">decode7Bit</a></li><li><a href="global.html#denormalize14BitValue">denormalize14BitValue</a></li><li><a href="global.html#denormalizeValue">denormalizeValue</a></li><li><a href="global.html#encode14BitValue">encode14BitValue</a></li><li><a href="global.html#encode7Bit">encode7Bit</a></li><li><a href="global.html#frequencyToNote">frequencyToNote</a></li><li><a href="global.html#getCCName">getCCName</a></li><li><a href="global.html#isSysEx">isSysEx</a></li><li><a href="global.html#isValid14BitCC">isValid14BitCC</a></li><li><a href="global.html#isValidCC">isValidCC</a></li><li><a href="global.html#isValidChannel">isValidChannel</a></li><li><a href="global.html#isValidMIDIValue">isValidMIDIValue</a></li><li><a href="global.html#isValidNote">isValidNote</a></li><li><a href="global.html#isValidPitchBend">isValidPitchBend</a></li><li><a href="global.html#isValidPitchBendBytes">isValidPitchBendBytes</a></li><li><a href="global.html#isValidProgramChange">isValidProgramChange</a></li><li><a href="global.html#isValidVelocity">isValidVelocity</a></li><li><a href="global.html#normalize14BitValue">normalize14BitValue</a></li><li><a href="global.html#normalizeValue">normalizeValue</a></li><li><a href="global.html#noteNameToNumber">noteNameToNumber</a></li><li><a href="global.html#noteNumberToName">noteNumberToName</a></li><li><a href="global.html#noteToFrequency">noteToFrequency</a></li><li><a href="global.html#parseSysEx">parseSysEx</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Jan 22 2026 22:47:14 GMT-0500 (Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
