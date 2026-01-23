@@ -230,8 +230,8 @@ export class MIDIDeviceManager {
       this.isConnecting = true
 
       try {
-        await this.midi.connectOutput(parseInt(deviceIndex, 10))
-        this.currentDevice = this.midi.getCurrentOutput()
+        await this.midi.device.connectOutput(parseInt(deviceIndex, 10))
+        this.currentDevice = this.midi.device.getCurrentOutput()
         this.updateConnectionStatus()
 
         if (onConnect) {

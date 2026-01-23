@@ -234,7 +234,7 @@ describe("MIDIController", () => {
       const controller = new MIDIController({ sysex: true })
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller.system.ex([0x42, 0x30])
+      controller._sendSysEx([0x42, 0x30])
 
       expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
       consoleSpy.mockRestore()
@@ -247,20 +247,20 @@ describe("MIDIController", () => {
 
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      controller.system.ex([0x42, 0x30])
+      controller._sendSysEx([0x42, 0x30])
 
       expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
       consoleSpy.mockRestore()
     })
 
     it("should send SysEx message", async () => {
-      midiController.system.ex([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+      midiController._sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
 
     it("should send SysEx message with wrapper bytes", async () => {
-      midiController.system.ex([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+      midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
       expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]))
     })
@@ -269,7 +269,7 @@ describe("MIDIController", () => {
       const spy = vi.fn()
       midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
 
-      midiController.system.ex([0x42, 0x30])
+      midiController._sendSysEx([0x42, 0x30])
 
       expect(spy).toHaveBeenCalledWith({
         data: [0x42, 0x30],
@@ -286,7 +286,7 @@ describe("MIDIController", () => {
 
     describe("sys.exclusive", () => {
       it("should send SysEx message with data as-is (no wrapper)", async () => {
-        midiController.system.ex([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
+        midiController._sendSysEx([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7])
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(
           new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
@@ -294,13 +294,13 @@ describe("MIDIController", () => {
       })
 
       it("should send SysEx message with data as-is (default behavior)", async () => {
-        midiController.system.ex([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12])
+        midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12])
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(new Uint8Array([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12]))
       })
 
       it("should send SysEx message with wrapper added when includeWrapper=true", async () => {
-        midiController.system.ex([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
+        midiController._sendSysEx([0x42, 0x30, 0x00, 0x01, 0x2f, 0x12], true)
 
         expect(mockOutputs[0].send).toHaveBeenCalledWith(
           new Uint8Array([0xf0, 0x42, 0x30, 0x00, 0x01, 0x2f, 0x12, 0xf7]),
@@ -311,7 +311,7 @@ describe("MIDIController", () => {
         const spy = vi.fn()
         midiController.on(CONTROLLER_EVENTS.SYS_EX_SEND, spy)
 
-        midiController.system.ex([0x42, 0x30])
+        midiController._sendSysEx([0x42, 0x30])
 
         expect(spy).toHaveBeenCalledWith({
           data: [0x42, 0x30],
@@ -326,7 +326,7 @@ describe("MIDIController", () => {
 
         const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-        controller.system.ex([0x42, 0x30])
+        controller._sendSysEx([0x42, 0x30])
 
         expect(consoleSpy).toHaveBeenCalledWith("SysEx not enabled. Initialize with sysex: true")
         consoleSpy.mockRestore()
@@ -336,7 +336,7 @@ describe("MIDIController", () => {
         const controller = new MIDIController({ sysex: true })
         const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-        controller.system.ex([0x42, 0x30])
+        controller._sendSysEx([0x42, 0x30])
 
         expect(consoleSpy).toHaveBeenCalledWith("MIDI not initialized. Call initialize() first.")
         consoleSpy.mockRestore()

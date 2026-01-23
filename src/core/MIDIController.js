@@ -574,7 +574,7 @@ export class MIDIController extends EventEmitter {
     }
 
     this.system = {
-      ex: function (data, includeWrapper = false) {
+      sendEx: function (data, includeWrapper = false) {
         return this._sendSysEx(data, includeWrapper)
       }.bind(this),
       sendClock: this._sendClock.bind(this),
@@ -890,7 +890,7 @@ export class MIDIController extends EventEmitter {
    *
    * @example
    * // Send with wrapper included
-   * midi.system.ex([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true)
+   * midi.system.sendEx([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true)
    * @private
    */
   _sendSysEx(data, includeWrapper = false) {

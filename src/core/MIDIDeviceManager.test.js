@@ -121,8 +121,10 @@ describe("MIDIDeviceManager", () => {
   describe("connectDeviceSelection", () => {
     it("should connect to selected device", async () => {
       const mockMidi = {
-        connectOutput: vi.fn().mockResolvedValue(undefined),
-        getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+        device: {
+          connectOutput: vi.fn().mockResolvedValue(undefined),
+          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+        },
         connection: {
           on: vi.fn(),
           disconnect: vi.fn(),
@@ -146,14 +148,16 @@ describe("MIDIDeviceManager", () => {
       // Wait for async operation
       await new Promise((resolve) => setTimeout(resolve, 10))
 
-      expect(mockMidi.connectOutput).toHaveBeenCalledWith(0)
+      expect(mockMidi.device.connectOutput).toHaveBeenCalledWith(0)
       expect(connectedDevice).toEqual({ name: "Device 1" })
       expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
     })
 
     it("should disconnect when selecting empty option", async () => {
       const mockMidi = {
-        connectOutput: vi.fn(),
+        device: {
+          connectOutput: vi.fn(),
+        },
         getCurrentOutput: vi.fn(),
         connection: {
           on: vi.fn(),
@@ -182,8 +186,10 @@ describe("MIDIDeviceManager", () => {
 
     it("should prevent concurrent connections", async () => {
       const mockMidi = {
-        connectOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
-        getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+        device: {
+          connectOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
+          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+        },
         connection: {
           on: vi.fn(),
           disconnect: vi.fn(),
