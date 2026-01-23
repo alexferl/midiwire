@@ -33,6 +33,12 @@ jobs:
       - name: Build documentation
         run: npm run docs
 
+      - name: Copy custom index page
+        run: cp docs-index.html docs/index.html
+
+      - name: Copy examples to docs
+        run: cp -r examples docs/examples
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
