@@ -118,24 +118,30 @@ import { MIDIConnection } from "./MIDIConnection.js"
  *
  * @example
  * // Listen for controller ready
- * midi.on(midi.READY, (controller) => {
+ * midi.on(CONTROLLER_EVENTS.READY, (controller) => {
  *   console.log("MIDI ready!");
  * });
  *
  * @example
  * // Listen for CC messages (both send and receive)
- * midi.on(midi.CH_CC_SEND, ({ cc, value, channel }) => {
+ * midi.on(CONTROLLER_EVENTS.CH_CC_SEND, ({ cc, value, channel }) => {
  *   console.log(`Sent CC ${cc}: ${value} on channel ${channel}`);
  * });
  *
- * midi.on(midi.CH_CC_RECV, ({ cc, value, channel }) => {
+ * midi.on(CONTROLLER_EVENTS.CH_CC_RECV, ({ cc, value, channel }) => {
  *   console.log(`Received CC ${cc}: ${value} on channel ${channel}`);
  * });
  *
  * @example
  * // Listen for device connections
- * midi.on(midi.DEV_OUT_CONNECTED, (device) => {
+ * midi.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, (device) => {
  *   console.log(`Output connected: ${device.name}`);
+ * });
+ *
+ * @example
+ * // Using the short alias (CTRL)
+ * midi.on(CTRL.READY, (controller) => {
+ *   console.log("MIDI ready!");
  * });
  */
 export const CONTROLLER_EVENTS = {
@@ -222,7 +228,7 @@ export const CONTROLLER_EVENTS = {
  *
  * @example
  * // Listen for MIDI events
- * midi.on(midi.CH_CC_RECV, ({ cc, value, channel }) => {
+ * midi.on(CONTROLLER_EVENTS.CH_CC_RECV, ({ cc, value, channel }) => {
  *   console.log(`CC ${cc} received: ${value}`);
  * });
  *
@@ -295,10 +301,10 @@ export class MIDIController extends EventEmitter {
    * @example
    * // With event listeners
    * const midi = new MIDIController();
-   * midi.on(midi.READY, (controller) => {
+   * midi.on(CONTROLLER_EVENTS.READY, (controller) => {
    *   console.log("MIDI ready!");
    * });
-   * midi.on(midi.ERROR, (error) => {
+   * midi.on(CONTROLLER_EVENTS.ERROR, (error) => {
    *   console.error("MIDI error:", error);
    * });
    * await midi.init();

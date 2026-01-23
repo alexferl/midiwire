@@ -20,6 +20,12 @@ import { MIDIAccessError, MIDIConnectionError, MIDIDeviceError, MIDIValidationEr
  * connection.on(CONNECTION_EVENTS.OUT_DEV_CONNECTED, ({ device }) => {
  *   console.log(`Output connected: ${device.name}`);
  * });
+ *
+ * @example
+ * // Using the short alias (CONN)
+ * connection.on(CONN.DEVICE_CHANGE, ({ device, state }) => {
+ *   console.log(`${device.name} ${state}`);
+ * });
  */
 export const CONNECTION_EVENTS = {
   DEVICE_CHANGE: "device-change",
