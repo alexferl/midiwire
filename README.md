@@ -2,6 +2,8 @@
 
 A modern, declarative JavaScript library for creating browser-based MIDI controllers. Build synth patch editors, hardware controllers, and MIDI utilities with simple HTML data attributes or a powerful programmatic API.
 
+> **WARNING**: This library is pre-1.0 and the API may change at any time without notice.
+
 ## Features
 
 - 🎛️ **Declarative HTML binding** - Use `data-midi-cc` attributes for instant MIDI control
