@@ -26,11 +26,17 @@ A modern, declarative JavaScript library for creating browser-based MIDI control
 npm install midiwire
 ```
 
-Or use directly in the browser:
+Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.com/package/npm/midiwire):
 
 ```html
+<!-- Always gets the latest version -->
 <script type="module">
-  import { createMIDIController } from "./dist/midiwire.es.js";
+  import { createMIDIController } from 'https://cdn.jsdelivr.net/npm/midiwire/+esm';
+</script>
+
+<!-- Or specify a version if needed -->
+<script type="module">
+  import { createMIDIController } from 'https://cdn.jsdelivr.net/npm/midiwire@0.3.1/+esm';
 </script>
 ```
 
