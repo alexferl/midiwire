@@ -31,12 +31,12 @@ Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.c
 ```html
 <!-- Always gets the latest version -->
 <script type="module">
-  import { createMIDIController } from 'https://cdn.jsdelivr.net/npm/midiwire/+esm';
+  import { createMIDIController } from "https://cdn.jsdelivr.net/npm/midiwire/+esm";
 </script>
 
 <!-- Or specify a version if needed -->
 <script type="module">
-  import { createMIDIController } from 'https://cdn.jsdelivr.net/npm/midiwire@0.4.0/+esm';
+  import { createMIDIController } from "https://cdn.jsdelivr.net/npm/midiwire@0.4.0/+esm";
 </script>
 ```
 
