@@ -338,62 +338,420 @@ export class MIDIController extends EventEmitter {
    * @private
    */
   _initNamespaces() {
+    /**
+     * Device-related MIDI operations
+     * @namespace
+     */
     this.device = {
+      /**
+       * Connect to a MIDI output device
+       * @param {string|number} device - Device name, ID, or index
+       * @returns {Promise<void>}
+       * @example
+       * // Connect by device name
+       * await midi.device.connect("Korg minilogue xd");
+       *
+       * @example
+       * // Connect by device index
+       * await midi.device.connect(0);
+       */
       connect: this._connect.bind(this),
+      /**
+       * Disconnect from current MIDI device
+       * @returns {Promise<void>}
+       */
       disconnect: this._disconnect.bind(this),
+      /**
+       * Connect to a MIDI input device
+       * @param {string|number} device - Device name, ID, or index
+       * @returns {Promise<void>}
+       * @example
+       * // Connect to device by name
+       * await midi.device.connectInput("Korg microKEY");
+       */
       connectInput: this._connectInput.bind(this),
+      /**
+       * Switch to a different output device
+       * @param {string|number} output - New device name, ID, or index
+       * @returns {Promise<void>}
+       */
       connectOutput: this._connectOutput.bind(this),
+      /**
+       * Get current output device info
+       * @returns {Object|null} Device info with id, name, manufacturer
+       * @example
+       * const device = midi.device.getCurrentOutput();
+       * if (device) {
+       *   console.log(`Connected to ${device.name}`);
+       * }
+       */
       getCurrentOutput: this._getCurrentOutput.bind(this),
+      /**
+       * Get current input device info
+       * @returns {Object|null} Device info with id, name, manufacturer
+       */
       getCurrentInput: this._getCurrentInput.bind(this),
+      /**
+       * List all available MIDI output devices
+       * @returns {Array<{id: string, name: string, manufacturer: string}>}
+       * @example
+       * const outputs = midi.device.getOutputs();
+       * outputs.forEach(device => {
+       *   console.log(`${device.name} by ${device.manufacturer}`);
+       * });
+       */
       getOutputs: this._getOutputs.bind(this),
+      /**
+       * List all available MIDI input devices
+       * @returns {Array<{id: string, name: string, manufacturer: string}>}
+       */
       getInputs: this._getInputs.bind(this),
     }
 
+    /**
+     * Channel-specific MIDI operations
+     * @namespace
+     */
     this.channel = {
+      /**
+       * Send a note on message
+       * @param {number} note - Note number (0-127)
+       * @param {number} [velocity=64] - Note velocity (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Play middle C (60) with velocity 100
+       * midi.channel.sendNoteOn(60, 100);
+       *
+       * @example
+       * // Play note 64 (E4) on channel 5
+       * midi.channel.sendNoteOn(64, 80, 5);
+       */
       sendNoteOn: this._sendNoteOn.bind(this),
+      /**
+       * Send a note off message
+       * @param {number} note - Note number (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @param {number} [velocity=0] - Release velocity (0-127)
+       * @returns {void}
+       * @example
+       * // Stop middle C
+       * midi.channel.sendNoteOff(60);
+       */
       sendNoteOff: this._sendNoteOff.bind(this),
+      /**
+       * Send a control change message
+       * @param {number} cc - CC number (0-127, e.g., 7 for volume, 74 for filter cutoff)
+       * @param {number} value - CC value (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Set volume (CC 7) to 100 on default channel
+       * midi.channel.sendCC(7, 100);
+       *
+       * @example
+       * // Set filter cutoff (CC 74) to 64 on channel 2
+       * midi.channel.sendCC(74, 64, 2);
+       */
       sendCC: this._sendCC.bind(this),
+      /**
+       * Get current value of a CC
+       * @param {number} cc - CC number (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {number|undefined} Current CC value or undefined if not set
+       * @example
+       * const volume = midi.channel.getCC(7);
+       * if (volume !== undefined) {
+       *   console.log(`Current volume: ${volume}`);
+       * }
+       */
       getCC: this._getCC.bind(this),
+      /**
+       * Send a program change message
+       * @param {number} program - Program number (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Change to program 5 on default channel
+       * midi.channel.sendPC(5);
+       */
       sendPC: this._sendPC.bind(this),
+      /**
+       * Get current program for a channel
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {number|undefined} Current program or undefined if not set
+       */
       getPC: this._getPC.bind(this),
+      /**
+       * Send a pitch bend message
+       * @param {number} value - Pitch bend value (0-16383, center = 8192)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Bend pitch up (value > 8192)
+       * midi.channel.sendPitchBend(10000);
+       *
+       * @example
+       * // Return to center (no bend)
+       * midi.channel.sendPitchBend(8192);
+       */
       sendPitchBend: this._sendPitchBend.bind(this),
+      /**
+       * Get current pitch bend value for a channel
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {number|undefined} Current pitch bend value or undefined if not set
+       */
       getPitchBend: this._getPitchBend.bind(this),
+      /**
+       * Send a channel pressure (aftertouch) message
+       * @param {number} pressure - Pressure value (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Send channel pressure at max (127)
+       * midi.channel.sendMonoPressure(127);
+       */
       sendMonoPressure: this._sendMonoPressure.bind(this),
+      /**
+       * Get current channel pressure for a channel
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {number|undefined} Current pressure value or undefined if not set
+       */
       getMonoPressure: this._getMonoPressure.bind(this),
+      /**
+       * Send a polyphonic key pressure (polyphonic aftertouch) message
+       * @param {number} note - Note number (0-127)
+       * @param {number} pressure - Pressure value (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {void}
+       * @example
+       * // Send poly pressure for middle C
+       * midi.channel.sendPolyPressure(60, 100);
+       */
       sendPolyPressure: this._sendPolyPressure.bind(this),
+      /**
+       * Get current polyphonic pressure for a note on a channel
+       * @param {number} note - Note number (0-127)
+       * @param {number} [channel] - MIDI channel (defaults to controller's default channel)
+       * @returns {number|undefined} Current pressure value or undefined if not set
+       */
       getPolyPressure: this._getPolyPressure.bind(this),
+      /**
+       * Send All Sounds Off message (CC 120, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       * @example
+       * // Stop all sounds on channel 1
+       * midi.channel.allSoundsOff(1);
+       *
+       * @example
+       * // Send to all channels
+       * midi.channel.allSoundsOff();
+       */
       allSoundsOff: this._allSoundsOff.bind(this),
+      /**
+       * Send Reset All Controllers message (CC 121, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       resetControllers: this._resetControllers.bind(this),
+      /**
+       * Send Local Control On/Off message (CC 122)
+       * @param {boolean} enabled - true for on (value 127), false for off (value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       * @example
+       * // Turn off local control on channel 1
+       * midi.channel.localControl(false, 1);
+       */
       localControl: this._localControl.bind(this),
+      /**
+       * Send All Notes Off message (CC 123, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       allNotesOff: this._allNotesOff.bind(this),
+      /**
+       * Send Omni Mode Off message (CC 124, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       omniOff: this._omniOff.bind(this),
+      /**
+       * Send Omni Mode On message (CC 125, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       omniOn: this._omniOn.bind(this),
+      /**
+       * Send Mono Mode On message (CC 126)
+       * @param {number} [channels=1] - Number of channels for mono mode (0-16, 0=omni)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       monoOn: this._monoOn.bind(this),
+      /**
+       * Send Poly Mode On message (CC 127, value 0)
+       * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+       * @returns {void}
+       */
       polyOn: this._polyOn.bind(this),
     }
 
+    /**
+     * System-level MIDI operations
+     * @namespace
+     */
     this.system = {
+      /**
+       * Send a SysEx message
+       * @param {Array<number>} data - SysEx data bytes (0-127)
+       * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
+       * @returns {void}
+       * @throws {Error} If SysEx not enabled in controller options
+       * @example
+       * // Send data with wrapper
+       * midi.system.sendEx([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true);
+       *
+       * @example
+       * // Send data without wrapper (wrapper added automatically)
+       * midi.system.sendEx([0x42, 0x30, 0x00, 0x7F]);
+       */
       sendEx: function (data, includeWrapper = false) {
         return this._sendSysEx(data, includeWrapper)
       }.bind(this),
+      /**
+       * Send a timing clock message (0xF8)
+       * Typically used for synchronizing tempo-dependent devices
+       * @returns {void}
+       * @example
+       * // Send clock pulse (usually 24 pulses per quarter note)
+       * midi.system.sendClock();
+       */
       sendClock: this._sendClock.bind(this),
+      /**
+       * Send a start message (0xFA)
+       * Indicates start of playback from beginning of song
+       * @returns {void}
+       */
       start: this._sendStart.bind(this),
+      /**
+       * Send a continue message (0xFB)
+       * Indicates resume playback from current position
+       * @returns {void}
+       */
       continue: this._sendContinue.bind(this),
+      /**
+       * Send a stop message (0xFC)
+       * Indicates stop playback
+       * @returns {void}
+       */
       stop: this._sendStop.bind(this),
+      /**
+       * Send an MTC quarter frame message
+       * @param {number} data - MTC quarter frame data (0-127)
+       * @returns {void}
+       * @example
+       * midi.system.sendMTC(0x00); // First quarter frame
+       */
       sendMTC: this._sendMTC.bind(this),
+      /**
+       * Send a song position pointer message
+       * @param {number} position - Song position in beats (0-16383)
+       * @returns {void}
+       * @example
+       * midi.system.sendSongPosition(0); // Beginning of song
+       */
       sendSongPosition: this._sendSongPosition.bind(this),
+      /**
+       * Send a song select message
+       * @param {number} song - Song/sequence number (0-127)
+       * @returns {void}
+       * @example
+       * midi.system.sendSongSelect(0); // Select first song
+       */
       sendSongSelect: this._sendSongSelect.bind(this),
+      /**
+       * Send a tune request message (0xF6)
+       * Requests analog synthesizers to tune themselves
+       * @returns {void}
+       */
       sendTuneRequest: this._sendTuneRequest.bind(this),
+      /**
+       * Send an active sensing message (0xFE)
+       * Used to indicate controller is still active
+       * @returns {void}
+       */
       sendActiveSensing: this._sendActiveSensing.bind(this),
+      /**
+       * Send a system reset message (0xFF)
+       * Resets all devices to power-up default state
+       * @returns {void}
+       */
       sendSystemReset: this._sendSystemReset.bind(this),
     }
 
+    /**
+     * Patch management operations
+     * @namespace
+     */
     this.patch = {
+      /**
+       * Get current state as a patch object
+       * @param {string} [name="Unnamed Patch"] - Patch name
+       * @returns {PatchData} Patch data object
+       * @example
+       * const patch = midi.patch.get("My Patch");
+       * console.log(patch.channels);
+       */
       get: this._getPatch.bind(this),
+      /**
+       * Apply a patch to the controller
+       * @param {PatchData} patch - Patch object to apply
+       * @returns {Promise<void>}
+       * @throws {MIDIValidationError} If patch format is invalid
+       * @example
+       * const patch = { name: "My Patch", channels: { 1: { ccs: { 7: 100 } } } };
+       * await midi.patch.set(patch);
+       */
       set: this._setPatch.bind(this),
+      /**
+       * Save a patch to localStorage
+       * @param {string} name - Patch name
+       * @param {Object} [patch] - Optional patch object (will use get() if not provided)
+       * @returns {string} Storage key used
+       * @example
+       * midi.patch.save("My Favorite Settings");
+       */
       save: this._savePatch.bind(this),
+      /**
+       * Load a patch from localStorage
+       * @param {string} name - Patch name
+       * @returns {PatchData|null} Patch object or null if not found
+       * @example
+       * const patch = midi.patch.load("My Patch");
+       * if (patch) {
+       *   await midi.patch.set(patch);
+       * }
+       */
       load: this._loadPatch.bind(this),
+      /**
+       * Delete a patch from localStorage
+       * @param {string} name - Patch name
+       * @returns {boolean} Success
+       * @example
+       * const success = midi.patch.delete("Old Patch");
+       */
       delete: this._deletePatch.bind(this),
+      /**
+       * List all saved patches
+       * @returns {Array<{name: string, patch: PatchData}>} Array of patch objects with name and data
+       * @example
+       * const patches = midi.patch.list();
+       * patches.forEach(p => {
+       *   console.log(p.name);
+       * });
+       */
       list: this._listPatches.bind(this),
     }
   }
@@ -624,9 +982,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Connect to a MIDI output device
-   * @param {string|number} [device] - Device name, ID, or index. If not provided, uses options.output or auto-connects
-   * @returns {Promise<void>}
+   * @private
    */
   async _connect(device) {
     if (device) {
@@ -639,17 +995,14 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Disconnect from current MIDI device
-   * @returns {Promise<void>}
+   * @private
    */
   async _disconnect() {
     this.connection.disconnect()
   }
 
   /**
-   * Connect to a MIDI input device for receiving messages
-   * @param {string|number} device - Device name, ID, or index
-   * @returns {Promise<void>}
+   * @private
    */
   async _connectInput(device) {
     await this.connection.connectInput(device, (event) => {
@@ -659,9 +1012,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Switch to a different output device
-   * @param {string|number} output - Device name, ID, or index
-   * @returns {Promise<void>}
+   * @private
    */
   async _connectOutput(output) {
     await this.connection.connect(output)
@@ -669,32 +1020,28 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current output device
-   * @returns {Object|null}
+   * @private
    */
   _getCurrentOutput() {
     return this.connection?.getCurrentOutput() || null
   }
 
   /**
-   * Get current input device
-   * @returns {Object|null}
+   * @private
    */
   _getCurrentInput() {
     return this.connection?.getCurrentInput() || null
   }
 
   /**
-   * Get all available MIDI outputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   * @private
    */
   _getOutputs() {
     return this.connection?.getOutputs() || []
   }
 
   /**
-   * Get all available MIDI inputs
-   * @returns {Array<{id: string, name: string, manufacturer: string}>}
+   * @private
    */
   _getInputs() {
     return this.connection?.getInputs() || []
@@ -713,10 +1060,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a note on message
-   * @param {number} note - Note number (0-127)
-   * @param {number} [velocity=64] - Note velocity (0-127)
-   * @param {number} [channel] - MIDI channel
+   * @private
    */
   _sendNoteOn(note, velocity = 64, channel = this.options.channel) {
     if (!this.initialized) return
@@ -732,10 +1076,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a note off message
-   * @param {number} note - Note number (0-127)
-   * @param {number} [channel] - MIDI channel
-   * @param {number} [velocity=0] - Release velocity (0-127)
+   * @private
    */
   _sendNoteOff(note, channel = this.options.channel, velocity = 0) {
     if (!this.initialized) return
@@ -752,10 +1093,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a control change message
-   * @param {number} cc - CC number (0-127)
-   * @param {number} value - CC value (0-127)
-   * @param {number} [channel] - MIDI channel (defaults to controller channel)
+   * @private
    */
   _sendCC(cc, value, channel = this.options.channel) {
     if (!this.initialized) {
@@ -778,9 +1116,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a program change message
-   * @param {number} program - Program number (0-127)
-   * @param {number} [channel] - MIDI channel
+   * @private
    */
   _sendPC(program, channel = this.options.channel) {
     if (!this.initialized) return
@@ -797,19 +1133,14 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current program for a channel
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
+   * @private
    */
   _getPC(channel = this.options.channel) {
     return this.state.programChange.get(channel.toString())
   }
 
   /**
-   * Get current value of a CC
-   * @param {number} cc - CC number
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
+   * @private
    */
   _getCC(cc, channel = this.options.channel) {
     const key = `${channel}:${cc}`
@@ -817,9 +1148,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a pitch bend message
-   * @param {number} value - Pitch bend value (0-16383, center = 8192)
-   * @param {number} [channel] - MIDI channel
+   * @private
    */
   _sendPitchBend(value, channel = this.options.channel) {
     if (!this.initialized) return
@@ -838,18 +1167,14 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current pitch bend value for a channel
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
+   * @private
    */
   _getPitchBend(channel = this.options.channel) {
     return this.state.pitchBend.get(channel.toString())
   }
 
   /**
-   * Send a channel pressure (aftertouch) message
-   * @param {number} pressure - Pressure value (0-127)
-   * @param {number} [channel] - MIDI channel
+   * @private
    */
   _sendMonoPressure(pressure, channel = this.options.channel) {
     if (!this.initialized) return
@@ -866,19 +1191,14 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current channel pressure for a channel
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
+   * @private
    */
   _getMonoPressure(channel = this.options.channel) {
     return this.state.monoPressure.get(channel.toString())
   }
 
   /**
-   * Send a polyphonic key pressure (polyphonic aftertouch) message
-   * @param {number} note - Note number (0-127)
-   * @param {number} pressure - Pressure value (0-127)
-   * @param {number} [channel] - MIDI channel
+   * @private
    */
   _sendPolyPressure(note, pressure, channel = this.options.channel) {
     if (!this.initialized) return
@@ -897,10 +1217,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current polyphonic pressure for a note on a channel
-   * @param {number} note - Note number
-   * @param {number} [channel] - MIDI channel
-   * @returns {number|undefined}
+   * @private
    */
   _getPolyPressure(note, channel = this.options.channel) {
     const key = `${channel}:${note}`
@@ -908,8 +1225,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send All Sounds Off message (CC 120, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _allSoundsOff(channel) {
     if (!this.initialized) {
@@ -934,8 +1250,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Reset All Controllers message (CC 121, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _resetControllers(channel) {
     if (!this.initialized) {
@@ -960,9 +1275,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Local Control On/Off message (CC 122)
-   * @param {boolean} enabled - true for on (value 127), false for off (value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _localControl(enabled, channel) {
     if (!this.initialized) {
@@ -987,8 +1300,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send All Notes Off message (CC 123, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _allNotesOff(channel) {
     if (!this.initialized) {
@@ -1011,8 +1323,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Omni Mode Off message (CC 124, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _omniOff(channel) {
     if (!this.initialized) {
@@ -1035,8 +1346,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Omni Mode On message (CC 125, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _omniOn(channel) {
     if (!this.initialized) {
@@ -1059,9 +1369,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Mono Mode On message (CC 126)
-   * @param {number} [channels=1] - Number of channels for mono mode (0-16, 0=omni)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _monoOn(channels = 1, channel) {
     if (!this.initialized) {
@@ -1086,8 +1394,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send Poly Mode On message (CC 127, value 0)
-   * @param {number} [channel] - MIDI channel (1-16). If not provided, sends to all channels
+   * @private
    */
   _polyOn(channel) {
     if (!this.initialized) {
@@ -1110,13 +1417,6 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a SysEx message (internal implementation)
-   * @param {Array<number>} data - SysEx data bytes (without F0/F7 wrapper)
-   * @param {boolean} [includeWrapper=false] - If true, data already includes F0/F7
-   *
-   * @example
-   * // Send with wrapper included
-   * midi.system.sendEx([0xF0, 0x42, 0x30, 0x00, 0x01, 0x2F, 0x12, 0xF7], true)
    * @private
    */
   _sendSysEx(data, includeWrapper = false) {
@@ -1135,7 +1435,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a timing clock message
+   * @private
    */
   _sendClock() {
     if (!this.initialized) {
@@ -1146,7 +1446,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a start message
+   * @private
    */
   _sendStart() {
     if (!this.initialized) {
@@ -1158,7 +1458,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a continue message
+   * @private
    */
   _sendContinue() {
     if (!this.initialized) {
@@ -1170,7 +1470,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a stop message
+   * @private
    */
   _sendStop() {
     if (!this.initialized) {
@@ -1182,8 +1482,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send an MTC quarter frame message
-   * @param {number} data - MTC quarter frame data (0-127)
+   * @private
    */
   _sendMTC(data) {
     if (!this.initialized) {
@@ -1196,8 +1495,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a song position pointer message
-   * @param {number} position - Song position in beats (0-16383)
+   * @private
    */
   _sendSongPosition(position) {
     if (!this.initialized) {
@@ -1212,8 +1510,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a song select message
-   * @param {number} song - Song number (0-127)
+   * @private
    */
   _sendSongSelect(song) {
     if (!this.initialized) {
@@ -1225,7 +1522,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a tune request message
+   * @private
    */
   _sendTuneRequest() {
     if (!this.initialized) {
@@ -1237,7 +1534,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send an active sensing message
+   * @private
    */
   _sendActiveSensing() {
     if (!this.initialized) {
@@ -1248,7 +1545,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Send a system reset message
+   * @private
    */
   _sendSystemReset() {
     if (!this.initialized) {
@@ -1453,9 +1750,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Get current state as a patch object
-   * @param {string} [name] - Optional patch name
-   * @returns {Object} Patch object
+   * @private
    */
   _getPatch(name = "Unnamed Patch") {
     const patch = {
@@ -1536,9 +1831,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Apply a patch to the controller
-   * @param {PatchData} patch - Patch object
-   * @returns {Promise<void>}
+   * @private
    */
   async _setPatch(patch) {
     if (!patch || !patch.channels) {
@@ -1559,9 +1852,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Apply v1.0 patch format
    * @private
-   * @param {PatchData} patch
    */
   async _applyPatchV1(patch) {
     // Apply CC values
@@ -1666,10 +1957,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Save a patch to localStorage
-   * @param {string} name - Patch name
-   * @param {Object} [patch] - Optional patch object (will use getPatch() if not provided)
-   * @returns {string} Storage key used
+   * @private
    */
   _savePatch(name, patch = null) {
     const patchToSave = patch || this._getPatch(name)
@@ -1686,9 +1974,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Load a patch from localStorage
-   * @param {string} name - Patch name
-   * @returns {Object|null} Patch object or null if not found
+   * @private
    */
   _loadPatch(name) {
     const key = `midiwire_patch_${name}`
@@ -1709,9 +1995,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * Delete a patch from localStorage
-   * @param {string} name - Patch name
-   * @returns {boolean} Success
+   * @private
    */
   _deletePatch(name) {
     const key = `midiwire_patch_${name}`
@@ -1727,8 +2011,7 @@ export class MIDIController extends EventEmitter {
   }
 
   /**
-   * List all saved patches
-   * @returns {Array<Object>} Array of { name, patch }
+   * @private
    */
   _listPatches() {
     const patches = []

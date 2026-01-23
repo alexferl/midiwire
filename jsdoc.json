@@ -1,0 +1,15 @@
+{
+  "source": {
+    "include": ["./src/"],
+    "includePattern": "\\.(js)$",
+    "exclude": ["**/*.test.js"]
+  },
+  "opts": {
+    "destination": "./docs/",
+    "recurse": true
+  },
+  "templates": {
+    "cleverLinks": false,
+    "monospaceLinks": false
+  }
+}

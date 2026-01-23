@@ -50,7 +50,7 @@ export class DataAttributeBinder {
   /**
    * Create a new DataAttributeBinder instance for declarative MIDI binding
    *
-   * @param {import("../core/MIDIController.js").MIDIController} controller - MIDIController instance to bind elements to
+   * @param {MIDIController} controller - MIDIController instance to bind elements to
    * @param {string} [selector="[data-midi-cc]"] - CSS selector for elements to bind. Defaults to looking for data-midi-cc or data-midi-msb/lmb attributes
    *
    * @example
