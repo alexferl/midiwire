@@ -86,221 +86,237 @@
         *   [Parameters][82]
     *   [\_getPolyPressure][83]
         *   [Parameters][84]
-    *   [\_sendClock][85]
-    *   [\_sendStart][86]
-    *   [\_sendContinue][87]
-    *   [\_sendStop][88]
-    *   [\_sendMTC][89]
+    *   [\_allSoundsOff][85]
+        *   [Parameters][86]
+    *   [\_resetControllers][87]
+        *   [Parameters][88]
+    *   [\_localControl][89]
         *   [Parameters][90]
-    *   [\_sendSongPosition][91]
+    *   [\_allNotesOff][91]
         *   [Parameters][92]
-    *   [\_sendSongSelect][93]
+    *   [\_omniOff][93]
         *   [Parameters][94]
-    *   [\_sendTuneRequest][95]
-    *   [\_sendActiveSensing][96]
-    *   [\_sendSystemReset][97]
-    *   [\_getPatch][98]
-        *   [Parameters][99]
-    *   [\_setPatch][100]
-        *   [Parameters][101]
-    *   [\_savePatch][102]
-        *   [Parameters][103]
-    *   [\_loadPatch][104]
-        *   [Parameters][105]
-    *   [\_deletePatch][106]
-        *   [Parameters][107]
-    *   [\_listPatches][108]
-*   [MIDIDeviceManager][109]
-    *   [Parameters][110]
-    *   [Examples][111]
-    *   [setMIDI][112]
-        *   [Parameters][113]
-    *   [setupDeviceListeners][114]
+    *   [\_omniOn][95]
+        *   [Parameters][96]
+    *   [\_monoOn][97]
+        *   [Parameters][98]
+    *   [\_polyOn][99]
+        *   [Parameters][100]
+    *   [\_sendClock][101]
+    *   [\_sendStart][102]
+    *   [\_sendContinue][103]
+    *   [\_sendStop][104]
+    *   [\_sendMTC][105]
+        *   [Parameters][106]
+    *   [\_sendSongPosition][107]
+        *   [Parameters][108]
+    *   [\_sendSongSelect][109]
+        *   [Parameters][110]
+    *   [\_sendTuneRequest][111]
+    *   [\_sendActiveSensing][112]
+    *   [\_sendSystemReset][113]
+    *   [\_getPatch][114]
         *   [Parameters][115]
-        *   [Examples][116]
-    *   [updateStatus][117]
-        *   [Parameters][118]
-        *   [Examples][119]
-    *   [updateConnectionStatus][120]
-    *   [getOutputDevices][121]
-    *   [getInputDevices][122]
-    *   [isDeviceConnected][123]
-        *   [Parameters][124]
-    *   [connectDeviceSelection][125]
-        *   [Parameters][126]
-        *   [Examples][127]
-    *   [connectChannelSelection][128]
+    *   [\_setPatch][116]
+        *   [Parameters][117]
+    *   [\_savePatch][118]
+        *   [Parameters][119]
+    *   [\_loadPatch][120]
+        *   [Parameters][121]
+    *   [\_deletePatch][122]
+        *   [Parameters][123]
+    *   [\_listPatches][124]
+*   [MIDIDeviceManager][125]
+    *   [Parameters][126]
+    *   [Examples][127]
+    *   [setMIDI][128]
         *   [Parameters][129]
-        *   [Examples][130]
-    *   [populateDeviceList][131]
-        *   [Parameters][132]
-        *   [Examples][133]
-*   [EventEmitter][134]
-    *   [on][135]
-        *   [Parameters][136]
-    *   [once][137]
-        *   [Parameters][138]
-    *   [off][139]
+    *   [setupDeviceListeners][130]
+        *   [Parameters][131]
+        *   [Examples][132]
+    *   [updateStatus][133]
+        *   [Parameters][134]
+        *   [Examples][135]
+    *   [updateConnectionStatus][136]
+    *   [getOutputDevices][137]
+    *   [getInputDevices][138]
+    *   [isDeviceConnected][139]
         *   [Parameters][140]
-    *   [emit][141]
+    *   [connectDeviceSelection][141]
         *   [Parameters][142]
-    *   [removeAllListeners][143]
-        *   [Parameters][144]
-*   [MIDIError][145]
-    *   [Parameters][146]
-*   [MIDIAccessError][147]
-    *   [Parameters][148]
-*   [MIDIConnectionError][149]
-    *   [Parameters][150]
-*   [MIDIDeviceError][151]
-    *   [Parameters][152]
-*   [MIDIValidationError][153]
-    *   [Parameters][154]
-*   [DX7Error][155]
-    *   [Parameters][156]
-*   [DX7ParseError][157]
-    *   [Parameters][158]
-*   [DX7ParseError][159]
-*   [DX7ValidationError][160]
-    *   [Parameters][161]
-*   [CONNECTION\_EVENTS][162]
-    *   [Properties][163]
-    *   [Examples][164]
-*   [MIDIConnection][165]
+        *   [Examples][143]
+    *   [connectChannelSelection][144]
+        *   [Parameters][145]
+        *   [Examples][146]
+    *   [populateDeviceList][147]
+        *   [Parameters][148]
+        *   [Examples][149]
+*   [EventEmitter][150]
+    *   [on][151]
+        *   [Parameters][152]
+    *   [once][153]
+        *   [Parameters][154]
+    *   [off][155]
+        *   [Parameters][156]
+    *   [emit][157]
+        *   [Parameters][158]
+    *   [removeAllListeners][159]
+        *   [Parameters][160]
+*   [MIDIError][161]
+    *   [Parameters][162]
+*   [MIDIAccessError][163]
+    *   [Parameters][164]
+*   [MIDIConnectionError][165]
     *   [Parameters][166]
-    *   [Examples][167]
-    *   [requestAccess][168]
-        *   [Examples][169]
-    *   [connect][170]
-        *   [Parameters][171]
-        *   [Examples][172]
-    *   [connectInput][173]
-        *   [Parameters][174]
-    *   [disconnectOutput][175]
-    *   [disconnectInput][176]
-    *   [disconnect][177]
-    *   [isConnected][178]
-    *   [getCurrentOutput][179]
-    *   [getCurrentInput][180]
-    *   [getOutputs][181]
-    *   [getInputs][182]
-    *   [send][183]
-        *   [Parameters][184]
+*   [MIDIDeviceError][167]
+    *   [Parameters][168]
+*   [MIDIValidationError][169]
+    *   [Parameters][170]
+*   [DX7Error][171]
+    *   [Parameters][172]
+*   [DX7ParseError][173]
+    *   [Parameters][174]
+*   [DX7ParseError][175]
+*   [DX7ValidationError][176]
+    *   [Parameters][177]
+*   [CONNECTION\_EVENTS][178]
+    *   [Properties][179]
+    *   [Examples][180]
+*   [MIDIConnection][181]
+    *   [Parameters][182]
+    *   [Examples][183]
+    *   [requestAccess][184]
         *   [Examples][185]
-    *   [sendSysEx][186]
+    *   [connect][186]
         *   [Parameters][187]
         *   [Examples][188]
-*   [DX7Bank][189]
-    *   [Parameters][190]
-    *   [Examples][191]
-    *   [replaceVoice][192]
-        *   [Parameters][193]
-        *   [Examples][194]
-    *   [addVoice][195]
-        *   [Parameters][196]
-    *   [getVoices][197]
-    *   [getVoice][198]
-        *   [Parameters][199]
-    *   [getVoiceNames][200]
-    *   [findVoiceByName][201]
-        *   [Parameters][202]
-    *   [toSysEx][203]
-    *   [toJSON][204]
-    *   [fromFile][205]
-        *   [Parameters][206]
-    *   [fromSysEx][207]
-        *   [Parameters][208]
-    *   [fromJSON][209]
-        *   [Parameters][210]
-*   [DX7OperatorJSON][211]
-    *   [Properties][212]
-*   [DX7VoiceJSON][213]
-    *   [Properties][214]
-*   [DX7VoiceIndexJSON][215]
-    *   [Properties][216]
-*   [DX7BankJSON][217]
-    *   [Properties][218]
-*   [DX7Voice][219]
-    *   [Parameters][220]
-    *   [Examples][221]
-    *   [getParameter][222]
-        *   [Parameters][223]
-    *   [getUnpackedParameter][224]
-        *   [Parameters][225]
-    *   [setParameter][226]
-        *   [Parameters][227]
-    *   [unpack][228]
-    *   [toSysEx][229]
-    *   [toJSON][230]
-    *   [pack][231]
-        *   [Parameters][232]
-    *   [createDefault][233]
-        *   [Parameters][234]
-    *   [fromUnpacked][235]
-        *   [Parameters][236]
-    *   [fromFile][237]
-        *   [Parameters][238]
-    *   [fromSysEx][239]
-        *   [Parameters][240]
-    *   [fromJSON][241]
-        *   [Parameters][242]
-*   [clamp][243]
-    *   [Parameters][244]
-*   [normalizeValue][245]
-    *   [Parameters][246]
-*   [denormalizeValue][247]
-    *   [Parameters][248]
-*   [noteNameToNumber][249]
-    *   [Parameters][250]
-*   [noteNumberToName][251]
-    *   [Parameters][252]
-*   [frequencyToNote][253]
-    *   [Parameters][254]
-*   [noteToFrequency][255]
-    *   [Parameters][256]
-*   [getCCName][257]
-    *   [Parameters][258]
-*   [encode14BitValue][259]
+    *   [connectInput][189]
+        *   [Parameters][190]
+    *   [disconnectOutput][191]
+    *   [disconnectInput][192]
+    *   [disconnect][193]
+    *   [isConnected][194]
+    *   [getCurrentOutput][195]
+    *   [getCurrentInput][196]
+    *   [getOutputs][197]
+    *   [getInputs][198]
+    *   [send][199]
+        *   [Parameters][200]
+        *   [Examples][201]
+    *   [sendSysEx][202]
+        *   [Parameters][203]
+        *   [Examples][204]
+*   [DX7Bank][205]
+    *   [Parameters][206]
+    *   [Examples][207]
+    *   [replaceVoice][208]
+        *   [Parameters][209]
+        *   [Examples][210]
+    *   [addVoice][211]
+        *   [Parameters][212]
+    *   [getVoices][213]
+    *   [getVoice][214]
+        *   [Parameters][215]
+    *   [getVoiceNames][216]
+    *   [findVoiceByName][217]
+        *   [Parameters][218]
+    *   [toSysEx][219]
+    *   [toJSON][220]
+    *   [fromFile][221]
+        *   [Parameters][222]
+    *   [fromSysEx][223]
+        *   [Parameters][224]
+    *   [fromJSON][225]
+        *   [Parameters][226]
+*   [DX7OperatorJSON][227]
+    *   [Properties][228]
+*   [DX7VoiceJSON][229]
+    *   [Properties][230]
+*   [DX7VoiceIndexJSON][231]
+    *   [Properties][232]
+*   [DX7BankJSON][233]
+    *   [Properties][234]
+*   [DX7Voice][235]
+    *   [Parameters][236]
+    *   [Examples][237]
+    *   [getParameter][238]
+        *   [Parameters][239]
+    *   [getUnpackedParameter][240]
+        *   [Parameters][241]
+    *   [setParameter][242]
+        *   [Parameters][243]
+    *   [unpack][244]
+    *   [toSysEx][245]
+    *   [toJSON][246]
+    *   [pack][247]
+        *   [Parameters][248]
+    *   [createDefault][249]
+        *   [Parameters][250]
+    *   [fromUnpacked][251]
+        *   [Parameters][252]
+    *   [fromFile][253]
+        *   [Parameters][254]
+    *   [fromSysEx][255]
+        *   [Parameters][256]
+    *   [fromJSON][257]
+        *   [Parameters][258]
+*   [clamp][259]
     *   [Parameters][260]
-*   [decode14BitValue][261]
+*   [normalizeValue][261]
     *   [Parameters][262]
-*   [normalize14BitValue][263]
+*   [denormalizeValue][263]
     *   [Parameters][264]
-*   [denormalize14BitValue][265]
+*   [noteNameToNumber][265]
     *   [Parameters][266]
-*   [parseSysEx][267]
+*   [noteNumberToName][267]
     *   [Parameters][268]
-*   [createSysEx][269]
+*   [frequencyToNote][269]
     *   [Parameters][270]
-*   [isSysEx][271]
+*   [noteToFrequency][271]
     *   [Parameters][272]
-*   [encode7Bit][273]
+*   [getCCName][273]
     *   [Parameters][274]
-*   [decode7Bit][275]
+*   [encode14BitValue][275]
     *   [Parameters][276]
-*   [isValidChannel][277]
+*   [decode14BitValue][277]
     *   [Parameters][278]
-*   [isValidCC][279]
+*   [normalize14BitValue][279]
     *   [Parameters][280]
-*   [isValid14BitCC][281]
+*   [denormalize14BitValue][281]
     *   [Parameters][282]
-*   [isValidMIDIValue][283]
+*   [parseSysEx][283]
     *   [Parameters][284]
-*   [isValidNote][285]
+*   [createSysEx][285]
     *   [Parameters][286]
-*   [isValidVelocity][287]
+*   [isSysEx][287]
     *   [Parameters][288]
-*   [isValidProgramChange][289]
+*   [encode7Bit][289]
     *   [Parameters][290]
-*   [isValidPitchBend][291]
+*   [decode7Bit][291]
     *   [Parameters][292]
-*   [isValidPitchBendBytes][293]
+*   [isValidChannel][293]
     *   [Parameters][294]
+*   [isValidCC][295]
+    *   [Parameters][296]
+*   [isValid14BitCC][297]
+    *   [Parameters][298]
+*   [isValidMIDIValue][299]
+    *   [Parameters][300]
+*   [isValidNote][301]
+    *   [Parameters][302]
+*   [isValidVelocity][303]
+    *   [Parameters][304]
+*   [isValidProgramChange][305]
+    *   [Parameters][306]
+*   [isValidPitchBend][307]
+    *   [Parameters][308]
+*   [isValidPitchBendBytes][309]
+    *   [Parameters][310]
 
 ## midiwire
 
-*   **See**: [https://github.com/alexferl/midiwire][295] for full documentation
-*   **See**: [https://github.com/alexferl/midiwire#quick-start][296] for quick start guide
+*   **See**: [https://github.com/alexferl/midiwire][311] for full documentation
+*   **See**: [https://github.com/alexferl/midiwire#quick-start][312] for quick start guide
 
 midiwire - Browser-based MIDI controller framework
 
@@ -371,19 +387,19 @@ deviceManager.connectDeviceSelection(select);
 
 Options for createMIDIController()
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `selector` **[string][298]?** CSS selector for auto-binding elements that have data-midi-\* attributes
-*   `channel` **[number][299]?** Default MIDI channel (1-16)
-*   `output` **([string][298] | [number][299])?** MIDI output device name, ID, or index to auto-connect to
-*   `sysex` **[boolean][300]?** Request SysEx access for sending/receiving system exclusive messages
-*   `autoConnect` **[boolean][300]?** Auto-connect to first available output device
-*   `watchDOM` **[boolean][300]?** Automatically bind dynamically added elements using MutationObserver
-*   `onReady` **[Function][301]?** Callback when MIDI is ready, receives (controller) as parameter
-*   `onError` **[Function][301]?** Error handler for MIDI access errors
-*   `input` **([string][298] | [number][299])?** MIDI input device name, ID, or index to connect to for receiving MIDI
+*   `selector` **[string][314]?** CSS selector for auto-binding elements that have data-midi-\* attributes
+*   `channel` **[number][315]?** Default MIDI channel (1-16)
+*   `output` **([string][314] | [number][315])?** MIDI output device name, ID, or index to auto-connect to
+*   `sysex` **[boolean][316]?** Request SysEx access for sending/receiving system exclusive messages
+*   `autoConnect` **[boolean][316]?** Auto-connect to first available output device
+*   `watchDOM` **[boolean][316]?** Automatically bind dynamically added elements using MutationObserver
+*   `onReady` **[Function][317]?** Callback when MIDI is ready, receives (controller) as parameter
+*   `onError` **[Function][317]?** Error handler for MIDI access errors
+*   `input` **([string][314] | [number][315])?** MIDI input device name, ID, or index to connect to for receiving MIDI
 
 ### Examples
 
@@ -459,28 +475,28 @@ const midi = await createMIDIController({
 });
 ```
 
-*   Throws **[MIDIAccessError][147]** If MIDI access is denied or browser doesn't support Web MIDI API
+*   Throws **[MIDIAccessError][163]** If MIDI access is denied or browser doesn't support Web MIDI API
 
-Returns **[Promise][302]<[MIDIController][37]>** A promise resolving to the initialized MIDIController instance
+Returns **[Promise][318]<[MIDIController][37]>** A promise resolving to the initialized MIDIController instance
 
 ## MIDIDeviceManagerOptions
 
 Options for createMIDIDeviceManager()
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `onStatusUpdate` **[Function][301]?** Callback for status updates (message: string, state: string)
-*   `onConnectionUpdate` **[Function][301]?** Callback when connection status changes (device: Object, midi: MIDIController)
-*   `channel` **[number][299]?** Default MIDI channel (1-16)
-*   `output` **([string][298] | [number][299])?** MIDI output device name, ID, or index to auto-connect to
-*   `sysex` **[boolean][300]?** Request SysEx access
-*   `onReady` **[Function][301]?** Callback when MIDI is ready, receives (midi: MIDIController, deviceManager: MIDIDeviceManager)
-*   `onError` **[Function][301]?** Error handler for MIDI access errors
-*   `selector` **[string][298]?** CSS selector for auto-binding controls
-*   `watchDOM` **[boolean][300]?** Automatically bind dynamically added elements
-*   `input` **([string][298] | [number][299])?** MIDI input device name, ID, or index to connect to
+*   `onStatusUpdate` **[Function][317]?** Callback for status updates (message: string, state: string)
+*   `onConnectionUpdate` **[Function][317]?** Callback when connection status changes (device: Object, midi: MIDIController)
+*   `channel` **[number][315]?** Default MIDI channel (1-16)
+*   `output` **([string][314] | [number][315])?** MIDI output device name, ID, or index to auto-connect to
+*   `sysex` **[boolean][316]?** Request SysEx access
+*   `onReady` **[Function][317]?** Callback when MIDI is ready, receives (midi: MIDIController, deviceManager: MIDIDeviceManager)
+*   `onError` **[Function][317]?** Error handler for MIDI access errors
+*   `selector` **[string][314]?** CSS selector for auto-binding controls
+*   `watchDOM` **[boolean][316]?** Automatically bind dynamically added elements
+*   `input` **([string][314] | [number][315])?** MIDI input device name, ID, or index to connect to
 
 ### Examples
 
@@ -574,9 +590,9 @@ const deviceManager = await createMIDIDeviceManager({
 });
 ```
 
-*   Throws **[MIDIAccessError][147]** If MIDI access is denied or browser doesn't support Web MIDI API
+*   Throws **[MIDIAccessError][163]** If MIDI access is denied or browser doesn't support Web MIDI API
 
-Returns **[Promise][302]<[MIDIDeviceManager][109]>** A promise resolving to the initialized MIDIDeviceManager instance
+Returns **[Promise][318]<[MIDIDeviceManager][125]>** A promise resolving to the initialized MIDIDeviceManager instance
 
 ## DataAttributeBinder
 
@@ -599,7 +615,7 @@ Features:
 ### Parameters
 
 *   `controller` &#x20;
-*   `selector` **[string][298]** CSS selector for elements to bind. Defaults to looking for data-midi-cc or data-midi-msb/lmb attributes (optional, default `"[data-midi-cc]"`)
+*   `selector` **[string][314]** CSS selector for elements to bind. Defaults to looking for data-midi-cc or data-midi-msb/lmb attributes (optional, default `"[data-midi-cc]"`)
 
 ### Examples
 
@@ -637,7 +653,7 @@ binder.enableAutoBinding();
 
 ```javascript
 // Manual binding with custom selector
-const binder = new DataAttributeBinder(midi, '[data-midi-cc]');
+const binder = new DataAttributeBinder(midi, "[data-midi-cc]");
 binder.bindAll();
 ```
 
@@ -656,7 +672,7 @@ binder.bindAll();
 
 ```javascript
 // Bind after DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   binder.bindAll();
 });
 ```
@@ -687,11 +703,11 @@ binder.enableAutoBinding();
 // Add controls dynamically
 binder.enableAutoBinding();
 // Later, when you add new UI controls:
-const newSlider = document.createElement('input');
-newSlider.type = 'range';
-newSlider.setAttribute('data-midi-cc', '71');
-document.getElementById('controls').appendChild(newSlider);
-// Automatically bound! ✨
+const newSlider = document.createElement("input");
+newSlider.type = "range";
+newSlider.setAttribute("data-midi-cc", "71");
+document.getElementById("controls").appendChild(newSlider);
+// Automatically bound!
 ```
 
 Returns **void**&#x20;
@@ -740,7 +756,7 @@ binder.destroy();
 
 ```javascript
 // Clean up in response to user action
-document.getElementById('cleanup-btn').addEventListener('click', () => {
+document.getElementById("cleanup-btn").addEventListener("click", () => {
   binder.destroy();
 });
 ```
@@ -751,16 +767,16 @@ Returns **void**&#x20;
 
 Complete patch data structure for saving/loading controller state
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `name` **[string][298]** Patch/preset name
-*   `device` **([string][298] | null)** Output device name (if saved with device)
-*   `timestamp` **[string][298]** ISO timestamp when patch was created
-*   `version` **[string][298]** Patch format version (e.g., "1.0")
-*   `channels` **[Object][297]<[number][299], [ChannelData][30]>** Channel data indexed by channel number (1-16)
-*   `settings` **[Object][297]<[string][298], [SettingData][32]>** Control settings indexed by control key
+*   `name` **[string][314]** Patch/preset name
+*   `device` **([string][314] | null)** Output device name (if saved with device)
+*   `timestamp` **[string][314]** ISO timestamp when patch was created
+*   `version` **[string][314]** Patch format version (e.g., "1.0")
+*   `channels` **[Object][313]<[number][315], [ChannelData][30]>** Channel data indexed by channel number (1-16)
+*   `settings` **[Object][313]<[string][314], [SettingData][32]>** Control settings indexed by control key
 
 ### Examples
 
@@ -787,32 +803,32 @@ const patch = {
 
 Channel-specific MIDI data
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `ccs` **[Object][297]<[number][299], [number][299]>** Control Change values indexed by CC number (0-127)
-*   `notes` **[Object][297]<[number][299], [number][299]>** Note on/off states indexed by note number (0-127)
-*   `program` **[number][299]?** Program change value for the channel (0-127)
-*   `pitchBend` **[number][299]?** Pitch bend value for the channel (0-16383, center=8192)
-*   `monoPressure` **[number][299]?** Channel pressure/aftertouch value (0-127)
-*   `polyPressure` **[Object][297]<[number][299], [number][299]>?** Polyphonic pressure values indexed by note number
+*   `ccs` **[Object][313]<[number][315], [number][315]>** Control Change values indexed by CC number (0-127)
+*   `notes` **[Object][313]<[number][315], [number][315]>** Note on/off states indexed by note number (0-127)
+*   `program` **[number][315]?** Program change value for the channel (0-127)
+*   `pitchBend` **[number][315]?** Pitch bend value for the channel (0-16383, center=8192)
+*   `monoPressure` **[number][315]?** Channel pressure/aftertouch value (0-127)
+*   `polyPressure` **[Object][313]<[number][315], [number][315]>?** Polyphonic pressure values indexed by note number
 
 ## SettingData
 
 Control binding settings
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `min` **[number][299]** Minimum input value
-*   `max` **[number][299]** Maximum input value
-*   `invert` **[boolean][300]** Whether to invert the value mapping
-*   `is14Bit` **[boolean][300]** Whether this is a 14-bit CC control
-*   `label` **([string][298] | null)** Optional display label
-*   `elementId` **([string][298] | null)** Associated DOM element ID
-*   `onInput` **([Function][301] | null)** Optional callback for value updates
+*   `min` **[number][315]** Minimum input value
+*   `max` **[number][315]** Maximum input value
+*   `invert` **[boolean][316]** Whether to invert the value mapping
+*   `is14Bit` **[boolean][316]** Whether this is a 14-bit CC control
+*   `label` **([string][314] | null)** Optional display label
+*   `elementId` **([string][314] | null)** Associated DOM element ID
+*   `onInput` **([Function][317] | null)** Optional callback for value updates
 
 ## CONTROLLER\_EVENTS
 
@@ -824,52 +840,60 @@ Controller event constants. Events are organized by category and follow a consis
 *   System events (SYS\_\*)
 *   Patch events (PATCH\_\*)
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `READY` **[string][298]** Emitted when controller is initialized and ready
-*   `ERROR` **[string][298]** Emitted on errors
-*   `DESTROYED` **[string][298]** Emitted when controller is destroyed
-*   `DEV_OUT_CONNECTED` **[string][298]** Emitted when output device is connected
-*   `DEV_IN_CONNECTED` **[string][298]** Emitted when input device is connected
-*   `CH_CC_SEND` **[string][298]** Emitted when sending control change
-*   `CH_CC_RECV` **[string][298]** Emitted when receiving control change
-*   `CH_NOTE_ON_SEND` **[string][298]** Emitted when sending note on
-*   `CH_NOTE_ON_RECV` **[string][298]** Emitted when receiving note on
-*   `CH_NOTE_OFF_SEND` **[string][298]** Emitted when sending note off
-*   `CH_NOTE_OFF_RECV` **[string][298]** Emitted when receiving note off
-*   `CH_PC_SEND` **[string][298]** Emitted when sending program change
-*   `CH_PC_RECV` **[string][298]** Emitted when receiving program change
-*   `CH_PITCH_BEND_SEND` **[string][298]** Emitted when sending pitch bend
-*   `CH_PITCH_BEND_RECV` **[string][298]** Emitted when receiving pitch bend
-*   `CH_MONO_PRESS_SEND` **[string][298]** Emitted when sending channel pressure
-*   `CH_MONO_PRESS_RECV` **[string][298]** Emitted when receiving channel pressure
-*   `CH_POLY_PRESS_SEND` **[string][298]** Emitted when sending polyphonic pressure
-*   `CH_POLY_PRESS_RECV` **[string][298]** Emitted when receiving polyphonic pressure
-*   `SYS_EX_SEND` **[string][298]** Emitted when sending SysEx
-*   `SYS_EX_RECV` **[string][298]** Emitted when receiving SysEx
-*   `SYS_CLOCK_RECV` **[string][298]** Emitted when receiving MIDI clock
-*   `SYS_START_RECV` **[string][298]** Emitted when receiving start command
-*   `SYS_CONTINUE_RECV` **[string][298]** Emitted when receiving continue command
-*   `SYS_STOP_RECV` **[string][298]** Emitted when receiving stop command
-*   `SYS_MTC_RECV` **[string][298]** Emitted when receiving MTC
-*   `SYS_SONG_POS_RECV` **[string][298]** Emitted when receiving song position
-*   `SYS_SONG_SEL_RECV` **[string][298]** Emitted when receiving song selection
-*   `SYS_TUNE_REQ_RECV` **[string][298]** Emitted when receiving tune request
-*   `SYS_ACT_SENSE_RECV` **[string][298]** Emitted when receiving active sensing
-*   `SYS_RESET_RECV` **[string][298]** Emitted when receiving system reset
-*   `MIDI_RAW` **[string][298]** Emitted for unhandled raw MIDI messages
-*   `PATCH_SAVED` **[string][298]** Emitted when a patch is saved
-*   `PATCH_LOADED` **[string][298]** Emitted when a patch is loaded
-*   `PATCH_DELETED` **[string][298]** Emitted when a patch is deleted
+*   `READY` **[string][314]** Emitted when controller is initialized and ready
+*   `ERROR` **[string][314]** Emitted on errors
+*   `DESTROYED` **[string][314]** Emitted when controller is destroyed
+*   `DEV_OUT_CONNECTED` **[string][314]** Emitted when output device is connected
+*   `DEV_IN_CONNECTED` **[string][314]** Emitted when input device is connected
+*   `CH_CC_SEND` **[string][314]** Emitted when sending control change
+*   `CH_CC_RECV` **[string][314]** Emitted when receiving control change
+*   `CH_NOTE_ON_SEND` **[string][314]** Emitted when sending note on
+*   `CH_NOTE_ON_RECV` **[string][314]** Emitted when receiving note on
+*   `CH_NOTE_OFF_SEND` **[string][314]** Emitted when sending note off
+*   `CH_NOTE_OFF_RECV` **[string][314]** Emitted when receiving note off
+*   `CH_PC_SEND` **[string][314]** Emitted when sending program change
+*   `CH_PC_RECV` **[string][314]** Emitted when receiving program change
+*   `CH_PITCH_BEND_SEND` **[string][314]** Emitted when sending pitch bend
+*   `CH_PITCH_BEND_RECV` **[string][314]** Emitted when receiving pitch bend
+*   `CH_MONO_PRESS_SEND` **[string][314]** Emitted when sending channel pressure
+*   `CH_MONO_PRESS_RECV` **[string][314]** Emitted when receiving channel pressure
+*   `CH_POLY_PRESS_SEND` **[string][314]** Emitted when sending polyphonic pressure
+*   `CH_POLY_PRESS_RECV` **[string][314]** Emitted when receiving polyphonic pressure
+*   `CH_ALL_SOUNDS_OFF_SEND` **[string][314]** Emitted when sending all sounds off
+*   `CH_RESET_CONTROLLERS_SEND` **[string][314]** Emitted when sending reset all controllers
+*   `CH_LOCAL_CONTROL_SEND` **[string][314]** Emitted when sending local control
+*   `CH_ALL_NOTES_OFF_SEND` **[string][314]** Emitted when sending all notes off
+*   `CH_OMNI_OFF_SEND` **[string][314]** Emitted when sending omni mode off
+*   `CH_OMNI_ON_SEND` **[string][314]** Emitted when sending omni mode on
+*   `CH_MONO_ON_SEND` **[string][314]** Emitted when sending mono mode on
+*   `CH_POLY_ON_SEND` **[string][314]** Emitted when sending poly mode on
+*   `SYS_EX_SEND` **[string][314]** Emitted when sending SysEx
+*   `SYS_EX_RECV` **[string][314]** Emitted when receiving SysEx
+*   `SYS_CLOCK_RECV` **[string][314]** Emitted when receiving MIDI clock
+*   `SYS_START_RECV` **[string][314]** Emitted when receiving start command
+*   `SYS_CONTINUE_RECV` **[string][314]** Emitted when receiving continue command
+*   `SYS_STOP_RECV` **[string][314]** Emitted when receiving stop command
+*   `SYS_MTC_RECV` **[string][314]** Emitted when receiving MTC
+*   `SYS_SONG_POS_RECV` **[string][314]** Emitted when receiving song position
+*   `SYS_SONG_SEL_RECV` **[string][314]** Emitted when receiving song selection
+*   `SYS_TUNE_REQ_RECV` **[string][314]** Emitted when receiving tune request
+*   `SYS_ACT_SENSE_RECV` **[string][314]** Emitted when receiving active sensing
+*   `SYS_RESET_RECV` **[string][314]** Emitted when receiving system reset
+*   `MIDI_RAW` **[string][314]** Emitted for unhandled raw MIDI messages
+*   `PATCH_SAVED` **[string][314]** Emitted when a patch is saved
+*   `PATCH_LOADED` **[string][314]** Emitted when a patch is loaded
+*   `PATCH_DELETED` **[string][314]** Emitted when a patch is deleted
 
 ### Examples
 
 ```javascript
 // Listen for controller ready
 midi.on(midi.READY, (controller) => {
-  console.log('MIDI ready!');
+  console.log("MIDI ready!");
 });
 ```
 
@@ -905,7 +929,7 @@ Main controller for browser-based MIDI operations. Provides APIs for:
 
 ### Parameters
 
-*   `options` **[Object][297]**  (optional, default `{}`)
+*   `options` **[Object][313]**  (optional, default `{}`)
 
 ### Examples
 
@@ -917,7 +941,7 @@ await midi.init();
 
 ```javascript
 // Bind UI controls to MIDI CCs
-const volumeSlider = document.getElementById('volume');
+const volumeSlider = document.getElementById("volume");
 midi.bind(volumeSlider, { cc: 7 }); // Bind CC 7 (volume)
 ```
 
@@ -937,15 +961,15 @@ midi.on(midi.CH_CC_RECV, ({ cc, value, channel }) => {
 
 ```javascript
 // Save and load patches
-const patch = midi.patch.get('My Patch');
-midi.patch.save('My Patch');
-midi.patch.load('My Patch');
+const patch = midi.patch.get("My Patch");
+midi.patch.save("My Patch");
+midi.patch.load("My Patch");
 ```
 
 ### init
 
 Initialize MIDI access. Requests browser permission and connects to devices.
-Emits 'ready' event on success, 'error' event on failure.
+Emits "ready" event on success, "error" event on failure.
 
 #### Examples
 
@@ -969,17 +993,17 @@ await midi.init();
 // With event listeners
 const midi = new MIDIController();
 midi.on(midi.READY, (controller) => {
-  console.log('MIDI ready!');
+  console.log("MIDI ready!");
 });
 midi.on(midi.ERROR, (error) => {
-  console.error('MIDI error:', error);
+  console.error("MIDI error:", error);
 });
 await midi.init();
 ```
 
-*   Throws **[MIDIAccessError][147]** If MIDI access is denied or browser doesn't support Web MIDI
+*   Throws **[MIDIAccessError][163]** If MIDI access is denied or browser doesn't support Web MIDI
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### bind
 
@@ -989,33 +1013,33 @@ Sends initial MIDI value when binding if controller is initialized.
 
 #### Parameters
 
-*   `element` **[HTMLElement][303]** DOM element to bind (e.g., input range, number input)
-*   `config` **[Object][297]** Binding configuration
+*   `element` **[HTMLElement][319]** DOM element to bind (e.g., input range, number input)
+*   `config` **[Object][313]** Binding configuration
 
-    *   `config.cc` **[number][299]** CC number (0-127, e.g., 7 for volume, 74 for filter cutoff)
-    *   `config.min` **[number][299]** Minimum input value (auto-detected from element if available) (optional, default `0`)
-    *   `config.max` **[number][299]** Maximum input value (auto-detected from element if available) (optional, default `127`)
-    *   `config.channel` **[number][299]?** MIDI channel (defaults to controller's default channel)
-    *   `config.invert` **[boolean][300]** Invert the value mapping (optional, default `false`)
-    *   `config.is14Bit` **[boolean][300]** Use 14-bit CC (MSB + LSB, requires msb/lsb config) (optional, default `false`)
-    *   `config.msb` **[number][299]?** MSB CC number for 14-bit control
-    *   `config.lsb` **[number][299]?** LSB CC number for 14-bit control
-    *   `config.onInput` **[Function][301]?** Optional callback for value updates (receives normalized element value)
-*   `options` **[Object][297]** Additional options (optional, default `{}`)
+    *   `config.cc` **[number][315]** CC number (0-127, e.g., 7 for volume, 74 for filter cutoff)
+    *   `config.min` **[number][315]** Minimum input value (auto-detected from element if available) (optional, default `0`)
+    *   `config.max` **[number][315]** Maximum input value (auto-detected from element if available) (optional, default `127`)
+    *   `config.channel` **[number][315]?** MIDI channel (defaults to controller's default channel)
+    *   `config.invert` **[boolean][316]** Invert the value mapping (optional, default `false`)
+    *   `config.is14Bit` **[boolean][316]** Use 14-bit CC (MSB + LSB, requires msb/lsb config) (optional, default `false`)
+    *   `config.msb` **[number][315]?** MSB CC number for 14-bit control
+    *   `config.lsb` **[number][315]?** LSB CC number for 14-bit control
+    *   `config.onInput` **[Function][317]?** Optional callback for value updates (receives normalized element value)
+*   `options` **[Object][313]** Additional options (optional, default `{}`)
 
-    *   `options.debounce` **[number][299]** Debounce delay in ms for high-frequency updates (optional, default `0`)
+    *   `options.debounce` **[number][315]** Debounce delay in ms for high-frequency updates (optional, default `0`)
 
 #### Examples
 
 ```javascript
 // Basic slider binding
-const volumeSlider = document.getElementById('volume');
+const volumeSlider = document.getElementById("volume");
 const unbindVolume = midi.bind(volumeSlider, { cc: 7 }); // CC 7 = Channel Volume
 ```
 
 ```javascript
 // Binding with custom range and inversion
-const filterKnob = document.getElementById('filter');
+const filterKnob = document.getElementById("filter");
 midi.bind(filterKnob, {
   cc: 74,        // CC 74 = Filter Cutoff
   min: 0,        // Knob minimum value
@@ -1026,7 +1050,7 @@ midi.bind(filterKnob, {
 
 ```javascript
 // 14-bit high-resolution control
-const fineTune = document.getElementById('fine-tune');
+const fineTune = document.getElementById("fine-tune");
 midi.bind(fineTune, {
   is14Bit: true,
   msb: 0,    // CC 0 = MSB
@@ -1036,14 +1060,14 @@ midi.bind(fineTune, {
 
 ```javascript
 // With debouncing for high-frequency updates
-const lfoRate = document.getElementById('lfo-rate');
+const lfoRate = document.getElementById("lfo-rate");
 midi.bind(lfoRate, { cc: 76 }, { debounce: 50 }); // 50ms debounce
 ```
 
 ```javascript
 // Using callback to update display
-const pitchSlider = document.getElementById('pitch');
-const pitchDisplay = document.getElementById('pitch-value');
+const pitchSlider = document.getElementById("pitch");
+const pitchDisplay = document.getElementById("pitch-value");
 midi.bind(pitchSlider, {
   cc: 75,
   onInput: (value) => {
@@ -1052,7 +1076,7 @@ midi.bind(pitchSlider, {
 });
 ```
 
-Returns **[Function][301]** Unbind function - Call to remove binding and cleanup event listeners
+Returns **[Function][317]** Unbind function - Call to remove binding and cleanup event listeners
 
 ### unbind
 
@@ -1060,7 +1084,7 @@ Unbind a control
 
 #### Parameters
 
-*   `element` **[HTMLElement][303]**&#x20;
+*   `element` **[HTMLElement][319]**&#x20;
 
 ### destroy
 
@@ -1072,15 +1096,15 @@ Connect to a MIDI output device
 
 #### Parameters
 
-*   `device` **([string][298] | [number][299])?** Device name, ID, or index. If not provided, uses options.output or auto-connects
+*   `device` **([string][314] | [number][315])?** Device name, ID, or index. If not provided, uses options.output or auto-connects
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### \_disconnect
 
 Disconnect from current MIDI device
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### \_connectInput
 
@@ -1088,9 +1112,9 @@ Connect to a MIDI input device for receiving messages
 
 #### Parameters
 
-*   `device` **([string][298] | [number][299])** Device name, ID, or index
+*   `device` **([string][314] | [number][315])** Device name, ID, or index
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### \_connectOutput
 
@@ -1098,33 +1122,33 @@ Switch to a different output device
 
 #### Parameters
 
-*   `output` **([string][298] | [number][299])** Device name, ID, or index
+*   `output` **([string][314] | [number][315])** Device name, ID, or index
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### \_getCurrentOutput
 
 Get current output device
 
-Returns **([Object][297] | null)**&#x20;
+Returns **([Object][313] | null)**&#x20;
 
 ### \_getCurrentInput
 
 Get current input device
 
-Returns **([Object][297] | null)**&#x20;
+Returns **([Object][313] | null)**&#x20;
 
 ### \_getOutputs
 
 Get all available MIDI outputs
 
-Returns **[Array][304]<{id: [string][298], name: [string][298], manufacturer: [string][298]}>**&#x20;
+Returns **[Array][320]<{id: [string][314], name: [string][314], manufacturer: [string][314]}>**&#x20;
 
 ### \_getInputs
 
 Get all available MIDI inputs
 
-Returns **[Array][304]<{id: [string][298], name: [string][298], manufacturer: [string][298]}>**&#x20;
+Returns **[Array][320]<{id: [string][314], name: [string][314], manufacturer: [string][314]}>**&#x20;
 
 ### send
 
@@ -1132,7 +1156,7 @@ Send raw MIDI data
 
 #### Parameters
 
-*   `data` **[Array][304]<[number][299]>** MIDI message bytes
+*   `data` **[Array][320]<[number][315]>** MIDI message bytes
 
 ### \_sendNoteOn
 
@@ -1140,9 +1164,9 @@ Send a note on message
 
 #### Parameters
 
-*   `note` **[number][299]** Note number (0-127)
-*   `velocity` **[number][299]** Note velocity (0-127) (optional, default `64`)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `note` **[number][315]** Note number (0-127)
+*   `velocity` **[number][315]** Note velocity (0-127) (optional, default `64`)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
 ### \_sendNoteOff
 
@@ -1150,9 +1174,9 @@ Send a note off message
 
 #### Parameters
 
-*   `note` **[number][299]** Note number (0-127)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
-*   `velocity` **[number][299]** Release velocity (0-127) (optional, default `0`)
+*   `note` **[number][315]** Note number (0-127)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
+*   `velocity` **[number][315]** Release velocity (0-127) (optional, default `0`)
 
 ### \_sendCC
 
@@ -1160,9 +1184,9 @@ Send a control change message
 
 #### Parameters
 
-*   `cc` **[number][299]** CC number (0-127)
-*   `value` **[number][299]** CC value (0-127)
-*   `channel` **[number][299]?** MIDI channel (defaults to controller channel) (optional, default `this.options.channel`)
+*   `cc` **[number][315]** CC number (0-127)
+*   `value` **[number][315]** CC value (0-127)
+*   `channel` **[number][315]?** MIDI channel (defaults to controller channel) (optional, default `this.options.channel`)
 
 ### \_sendPC
 
@@ -1170,8 +1194,8 @@ Send a program change message
 
 #### Parameters
 
-*   `program` **[number][299]** Program number (0-127)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `program` **[number][315]** Program number (0-127)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
 ### \_getPC
 
@@ -1179,9 +1203,9 @@ Get current program for a channel
 
 #### Parameters
 
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
-Returns **([number][299] | [undefined][305])**&#x20;
+Returns **([number][315] | [undefined][321])**&#x20;
 
 ### \_getCC
 
@@ -1189,10 +1213,10 @@ Get current value of a CC
 
 #### Parameters
 
-*   `cc` **[number][299]** CC number
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `cc` **[number][315]** CC number
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
-Returns **([number][299] | [undefined][305])**&#x20;
+Returns **([number][315] | [undefined][321])**&#x20;
 
 ### \_sendPitchBend
 
@@ -1200,8 +1224,8 @@ Send a pitch bend message
 
 #### Parameters
 
-*   `value` **[number][299]** Pitch bend value (0-16383, center = 8192)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `value` **[number][315]** Pitch bend value (0-16383, center = 8192)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
 ### \_getPitchBend
 
@@ -1209,9 +1233,9 @@ Get current pitch bend value for a channel
 
 #### Parameters
 
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
-Returns **([number][299] | [undefined][305])**&#x20;
+Returns **([number][315] | [undefined][321])**&#x20;
 
 ### \_sendMonoPressure
 
@@ -1219,8 +1243,8 @@ Send a channel pressure (aftertouch) message
 
 #### Parameters
 
-*   `pressure` **[number][299]** Pressure value (0-127)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `pressure` **[number][315]** Pressure value (0-127)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
 ### \_getMonoPressure
 
@@ -1228,9 +1252,9 @@ Get current channel pressure for a channel
 
 #### Parameters
 
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
-Returns **([number][299] | [undefined][305])**&#x20;
+Returns **([number][315] | [undefined][321])**&#x20;
 
 ### \_sendPolyPressure
 
@@ -1238,9 +1262,9 @@ Send a polyphonic key pressure (polyphonic aftertouch) message
 
 #### Parameters
 
-*   `note` **[number][299]** Note number (0-127)
-*   `pressure` **[number][299]** Pressure value (0-127)
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `note` **[number][315]** Note number (0-127)
+*   `pressure` **[number][315]** Pressure value (0-127)
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
 ### \_getPolyPressure
 
@@ -1248,10 +1272,76 @@ Get current polyphonic pressure for a note on a channel
 
 #### Parameters
 
-*   `note` **[number][299]** Note number
-*   `channel` **[number][299]?** MIDI channel (optional, default `this.options.channel`)
+*   `note` **[number][315]** Note number
+*   `channel` **[number][315]?** MIDI channel (optional, default `this.options.channel`)
 
-Returns **([number][299] | [undefined][305])**&#x20;
+Returns **([number][315] | [undefined][321])**&#x20;
+
+### \_allSoundsOff
+
+Send All Sounds Off message (CC 120, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_resetControllers
+
+Send Reset All Controllers message (CC 121, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_localControl
+
+Send Local Control On/Off message (CC 122)
+
+#### Parameters
+
+*   `enabled` **[boolean][316]** true for on (value 127), false for off (value 0)
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_allNotesOff
+
+Send All Notes Off message (CC 123, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_omniOff
+
+Send Omni Mode Off message (CC 124, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_omniOn
+
+Send Omni Mode On message (CC 125, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_monoOn
+
+Send Mono Mode On message (CC 126)
+
+#### Parameters
+
+*   `channels` **[number][315]** Number of channels for mono mode (0-16, 0=omni) (optional, default `1`)
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
+
+### \_polyOn
+
+Send Poly Mode On message (CC 127, value 0)
+
+#### Parameters
+
+*   `channel` **[number][315]?** MIDI channel (1-16). If not provided, sends to all channels
 
 ### \_sendClock
 
@@ -1275,7 +1365,7 @@ Send an MTC quarter frame message
 
 #### Parameters
 
-*   `data` **[number][299]** MTC quarter frame data (0-127)
+*   `data` **[number][315]** MTC quarter frame data (0-127)
 
 ### \_sendSongPosition
 
@@ -1283,7 +1373,7 @@ Send a song position pointer message
 
 #### Parameters
 
-*   `position` **[number][299]** Song position in beats (0-16383)
+*   `position` **[number][315]** Song position in beats (0-16383)
 
 ### \_sendSongSelect
 
@@ -1291,7 +1381,7 @@ Send a song select message
 
 #### Parameters
 
-*   `song` **[number][299]** Song number (0-127)
+*   `song` **[number][315]** Song number (0-127)
 
 ### \_sendTuneRequest
 
@@ -1311,9 +1401,9 @@ Get current state as a patch object
 
 #### Parameters
 
-*   `name` **[string][298]?** Optional patch name (optional, default `"Unnamed Patch"`)
+*   `name` **[string][314]?** Optional patch name (optional, default `"Unnamed Patch"`)
 
-Returns **[Object][297]** Patch object
+Returns **[Object][313]** Patch object
 
 ### \_setPatch
 
@@ -1323,7 +1413,7 @@ Apply a patch to the controller
 
 *   `patch` **[PatchData][27]** Patch object
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### \_savePatch
 
@@ -1331,10 +1421,10 @@ Save a patch to localStorage
 
 #### Parameters
 
-*   `name` **[string][298]** Patch name
-*   `patch` **[Object][297]?** Optional patch object (will use getPatch() if not provided) (optional, default `null`)
+*   `name` **[string][314]** Patch name
+*   `patch` **[Object][313]?** Optional patch object (will use getPatch() if not provided) (optional, default `null`)
 
-Returns **[string][298]** Storage key used
+Returns **[string][314]** Storage key used
 
 ### \_loadPatch
 
@@ -1342,9 +1432,9 @@ Load a patch from localStorage
 
 #### Parameters
 
-*   `name` **[string][298]** Patch name
+*   `name` **[string][314]** Patch name
 
-Returns **([Object][297] | null)** Patch object or null if not found
+Returns **([Object][313] | null)** Patch object or null if not found
 
 ### \_deletePatch
 
@@ -1352,15 +1442,15 @@ Delete a patch from localStorage
 
 #### Parameters
 
-*   `name` **[string][298]** Patch name
+*   `name` **[string][314]** Patch name
 
-Returns **[boolean][300]** Success
+Returns **[boolean][316]** Success
 
 ### \_listPatches
 
 List all saved patches
 
-Returns **[Array][304]<[Object][297]>** Array of { name, patch }
+Returns **[Array][320]<[Object][313]>** Array of { name, patch }
 
 ## MIDIDeviceManager
 
@@ -1377,7 +1467,7 @@ For direct MIDI I/O and control binding, use MIDIController instead.
 
 ### Parameters
 
-*   `options` **[Object][297]** Configuration options (optional, default `{}`)
+*   `options` **[Object][313]** Configuration options (optional, default `{}`)
 
 ### Examples
 
@@ -1387,8 +1477,8 @@ const midi = new MIDIController();
 await midi.init();
 
 const manager = new MIDIDeviceManager({ midiController: midi });
-const deviceSelect = document.getElementById('device-select');
-const channelSelect = document.getElementById('channel-select');
+const deviceSelect = document.getElementById("device-select");
+const channelSelect = document.getElementById("channel-select");
 
 // Set up device list dropdown
 manager.populateDeviceList(deviceSelect);
@@ -1408,10 +1498,10 @@ const manager = new MIDIDeviceManager({
   midiController: midi,
   onStatusUpdate: (message, state) => {
     console.log(`Status: ${message}`);
-    document.getElementById('status').textContent = message;
+    document.getElementById("status").textContent = message;
   },
   onConnectionUpdate: (device, midi) => {
-    console.log('Connection state changed');
+    console.log("Connection state changed");
   }
 });
 ```
@@ -1432,7 +1522,7 @@ updating status messages and tracking the current device state.
 
 #### Parameters
 
-*   `onDeviceListChange` **[Function][301]?** Optional callback to refresh device list UI when devices change
+*   `onDeviceListChange` **[Function][317]?** Optional callback to refresh device list UI when devices change
 
 #### Examples
 
@@ -1456,17 +1546,17 @@ Update status message and trigger status callback
 
 #### Parameters
 
-*   `message` **[string][298]** Status message to display
-*   `state` **[string][298]** Status state (e.g., 'connected', 'error', 'warning') (optional, default `''`)
+*   `message` **[string][314]** Status message to display
+*   `state` **[string][314]** Status state (e.g., "connected", "error", "warning") (optional, default `""`)
 
 #### Examples
 
 ```javascript
-manager.updateStatus('Connected to MIDI keyboard', 'connected');
+manager.updateStatus("Connected to MIDI keyboard", "connected");
 ```
 
 ```javascript
-manager.updateStatus('Connection failed', 'error');
+manager.updateStatus("Connection failed", "error");
 ```
 
 Returns **void**&#x20;
@@ -1479,13 +1569,13 @@ Update connection status
 
 Get the current list of MIDI output devices
 
-Returns **[Array][304]<[Object][297]>** Array of device objects with id, name, manufacturer
+Returns **[Array][320]<[Object][313]>** Array of device objects with id, name, manufacturer
 
 ### getInputDevices
 
 Get the current list of MIDI input devices
 
-Returns **[Array][304]<[Object][297]>** Array of device objects with id, name, manufacturer
+Returns **[Array][320]<[Object][313]>** Array of device objects with id, name, manufacturer
 
 ### isDeviceConnected
 
@@ -1493,9 +1583,9 @@ Check if a device is still connected
 
 #### Parameters
 
-*   `deviceName` **[string][298]**&#x20;
+*   `deviceName` **[string][314]**&#x20;
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ### connectDeviceSelection
 
@@ -1505,14 +1595,14 @@ Also manages connection state to prevent concurrent connection attempts.
 
 #### Parameters
 
-*   `deviceSelectElement` **[HTMLSelectElement][306]** The select element populated with devices
-*   `onConnect` **[Function][301]** Callback when device is successfully connected (midi: MIDIController, device: Object)
+*   `deviceSelectElement` **[HTMLSelectElement][322]** The select element populated with devices
+*   `onConnect` **[Function][317]** Callback when device is successfully connected (midi: MIDIController, device: Object)
 
 #### Examples
 
 ```javascript
 // Basic device selection
-const deviceSelect = document.getElementById('device-select');
+const deviceSelect = document.getElementById("device-select");
 manager.connectDeviceSelection(deviceSelect, (midi, device) => {
   console.log(`Connected to ${device.name}`);
 });
@@ -1538,20 +1628,20 @@ update to notify listeners of the channel change.
 
 #### Parameters
 
-*   `channelSelectElement` **[HTMLSelectElement][306]** The select element with channel options (1-16)
+*   `channelSelectElement` **[HTMLSelectElement][322]** The select element with channel options (1-16)
 
 #### Examples
 
 ```javascript
 // Setup channel selection
-const channelSelect = document.getElementById('channel-select');
+const channelSelect = document.getElementById("channel-select");
 manager.connectChannelSelection(channelSelect);
 ```
 
 ```javascript
 // Combined with device selection
 manager.connectDeviceSelection(deviceSelect, (midi, device) => {
-  console.log('Device connected');
+  console.log("Device connected");
 });
 manager.connectChannelSelection(channelSelect);
 ```
@@ -1566,21 +1656,21 @@ selection when the current device is disconnected. Updates status message accord
 
 #### Parameters
 
-*   `selectElement` **[HTMLSelectElement][306]** The select element to populate with devices
-*   `onChange` **[Function][301]?** Optional callback invoked after populating the list
+*   `selectElement` **[HTMLSelectElement][322]** The select element to populate with devices
+*   `onChange` **[Function][317]?** Optional callback invoked after populating the list
 
 #### Examples
 
 ```javascript
 // Basic population
-const deviceSelect = document.getElementById('device-select');
+const deviceSelect = document.getElementById("device-select");
 manager.populateDeviceList(deviceSelect);
 ```
 
 ```javascript
 // With refresh callback
 manager.populateDeviceList(deviceSelect, () => {
-  console.log('Device list updated');
+  console.log("Device list updated");
 });
 ```
 
@@ -1609,10 +1699,10 @@ Register an event listener
 
 #### Parameters
 
-*   `event` **[string][298]** Event name
-*   `handler` **[Function][301]** Event handler function
+*   `event` **[string][314]** Event name
+*   `handler` **[Function][317]** Event handler function
 
-Returns **[Function][301]** Unsubscribe function
+Returns **[Function][317]** Unsubscribe function
 
 ### once
 
@@ -1620,8 +1710,8 @@ Register a one-time event listener
 
 #### Parameters
 
-*   `event` **[string][298]** Event name
-*   `handler` **[Function][301]** Event handler function
+*   `event` **[string][314]** Event name
+*   `handler` **[Function][317]** Event handler function
 
 ### off
 
@@ -1629,8 +1719,8 @@ Remove an event listener
 
 #### Parameters
 
-*   `event` **[string][298]** Event name
-*   `handler` **[Function][301]** Event handler function
+*   `event` **[string][314]** Event name
+*   `handler` **[Function][317]** Event handler function
 
 ### emit
 
@@ -1638,7 +1728,7 @@ Emit an event
 
 #### Parameters
 
-*   `event` **[string][298]** Event name
+*   `event` **[string][314]** Event name
 *   `data` **any** Event data
 
 ### removeAllListeners
@@ -1647,7 +1737,7 @@ Remove all event listeners
 
 #### Parameters
 
-*   `event` **[string][298]?** Optional event name to clear specific event
+*   `event` **[string][314]?** Optional event name to clear specific event
 
 ## MIDIError
 
@@ -1729,7 +1819,7 @@ Error thrown when DX7 SysEx data parsing fails
 
 ## DX7ParseError
 
-*   **See**: [https://github.com/asb2m10/dexed][307]
+*   **See**: [https://github.com/asb2m10/dexed][323]
 
 DX7 Voice (patch) parser and manipulator for Yamaha DX7 SYX files
 
@@ -1766,15 +1856,15 @@ Error thrown when DX7 parameter validation fails
 
 Connection event constants
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `DEVICE_CHANGE` **[string][298]** Emitted when any MIDI device state changes (connect/disconnect)
-*   `IN_DEV_CONNECTED` **[string][298]** Emitted when an input device is connected
-*   `IN_DEV_DISCONNECTED` **[string][298]** Emitted when an input device is disconnected
-*   `OUT_DEV_CONNECTED` **[string][298]** Emitted when an output device is connected
-*   `OUT_DEV_DISCONNECTED` **[string][298]** Emitted when an output device is disconnected
+*   `DEVICE_CHANGE` **[string][314]** Emitted when any MIDI device state changes (connect/disconnect)
+*   `IN_DEV_CONNECTED` **[string][314]** Emitted when an input device is connected
+*   `IN_DEV_DISCONNECTED` **[string][314]** Emitted when an input device is disconnected
+*   `OUT_DEV_CONNECTED` **[string][314]** Emitted when an output device is connected
+*   `OUT_DEV_DISCONNECTED` **[string][314]** Emitted when an output device is disconnected
 
 ### Examples
 
@@ -1807,7 +1897,7 @@ should use MIDIController instead for higher-level APIs.
 
 ### Parameters
 
-*   `options` **[Object][297]**  (optional, default `{}`)
+*   `options` **[Object][313]**  (optional, default `{}`)
 
 ### Examples
 
@@ -1815,7 +1905,7 @@ should use MIDIController instead for higher-level APIs.
 // Basic usage
 const connection = new MIDIConnection({ sysex: true });
 await connection.requestAccess();
-await connection.connect('My MIDI Device');
+await connection.connect("My MIDI Device");
 connection.send([0x90, 60, 100]); // Note on
 ```
 
@@ -1844,9 +1934,9 @@ const connection = new MIDIConnection({ sysex: true });
 await connection.requestAccess();
 ```
 
-*   Throws **[MIDIAccessError][147]** If MIDI is not supported or access is denied
+*   Throws **[MIDIAccessError][163]** If MIDI is not supported or access is denied
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### connect
 
@@ -1854,7 +1944,7 @@ Connect to a MIDI output device. Can connect by index, name, or ID.
 
 #### Parameters
 
-*   `device` **([string][298] | [number][299])?** Device name, ID, or index (defaults to first available)
+*   `device` **([string][314] | [number][315])?** Device name, ID, or index (defaults to first available)
 
 #### Examples
 
@@ -1870,18 +1960,18 @@ await connection.connect(0);
 
 ```javascript
 // Connect by name
-await connection.connect('My MIDI Keyboard');
+await connection.connect("My MIDI Keyboard");
 ```
 
 ```javascript
 // Connect by device ID
-await connection.connect('input-12345');
+await connection.connect("input-12345");
 ```
 
-*   Throws **[MIDIConnectionError][149]** If MIDI access not initialized
-*   Throws **[MIDIDeviceError][151]** If device not found or index out of range
+*   Throws **[MIDIConnectionError][165]** If MIDI access not initialized
+*   Throws **[MIDIDeviceError][167]** If device not found or index out of range
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### connectInput
 
@@ -1889,16 +1979,16 @@ Connect to a MIDI input device for receiving messages
 
 #### Parameters
 
-*   `device` **([string][298] | [number][299])?** Device name, ID, or index (defaults to first available)
-*   `onMessage` **[Function][301]** Callback for incoming MIDI messages
+*   `device` **([string][314] | [number][315])?** Device name, ID, or index (defaults to first available)
+*   `onMessage` **[Function][317]** Callback for incoming MIDI messages
 
 <!---->
 
-*   Throws **[MIDIConnectionError][149]** If MIDI access not initialized
-*   Throws **[MIDIValidationError][153]** If onMessage is not a function
-*   Throws **[MIDIDeviceError][151]** If device not found or index out of range
+*   Throws **[MIDIConnectionError][165]** If MIDI access not initialized
+*   Throws **[MIDIValidationError][169]** If onMessage is not a function
+*   Throws **[MIDIDeviceError][167]** If device not found or index out of range
 
-Returns **[Promise][302]\<void>**&#x20;
+Returns **[Promise][318]\<void>**&#x20;
 
 ### disconnectOutput
 
@@ -1916,31 +2006,31 @@ Disconnect from both output and input
 
 Check if currently connected to an output
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ### getCurrentOutput
 
 Get current output device info
 
-Returns **([Object][297] | null)**&#x20;
+Returns **([Object][313] | null)**&#x20;
 
 ### getCurrentInput
 
 Get current input device info
 
-Returns **([Object][297] | null)**&#x20;
+Returns **([Object][313] | null)**&#x20;
 
 ### getOutputs
 
 Get all available MIDI outputs
 
-Returns **[Array][304]<{id: [string][298], name: [string][298], manufacturer: [string][298]}>**&#x20;
+Returns **[Array][320]<{id: [string][314], name: [string][314], manufacturer: [string][314]}>**&#x20;
 
 ### getInputs
 
 Get all available MIDI inputs
 
-Returns **[Array][304]<{id: [string][298], name: [string][298], manufacturer: [string][298]}>**&#x20;
+Returns **[Array][320]<{id: [string][314], name: [string][314], manufacturer: [string][314]}>**&#x20;
 
 ### send
 
@@ -1949,8 +2039,8 @@ Arrays to Uint8Array for Web MIDI API compatibility.
 
 #### Parameters
 
-*   `message` **([Uint8Array][308] | [Array][304]<[number][299]>)** MIDI message bytes (e.g., \[0x90, 60, 100])
-*   `timestamp` **[number][299]** Optional timestamp for scheduled sending (optional, default `performance.now()`)
+*   `message` **([Uint8Array][324] | [Array][320]<[number][315]>)** MIDI message bytes (e.g., \[0x90, 60, 100])
+*   `timestamp` **[number][315]** Optional timestamp for scheduled sending (optional, default `performance.now()`)
 
 #### Examples
 
@@ -1977,8 +2067,8 @@ Send a System Exclusive (SysEx) message. Requires sysex: true in constructor opt
 
 #### Parameters
 
-*   `data` **[Array][304]<[number][299]>** SysEx data bytes (without F0/F7 wrapper)
-*   `includeWrapper` **[boolean][300]** If true, wraps data with F0/F7 bytes (optional, default `false`)
+*   `data` **[Array][320]<[number][315]>** SysEx data bytes (without F0/F7 wrapper)
+*   `includeWrapper` **[boolean][316]** If true, wraps data with F0/F7 bytes (optional, default `false`)
 
 #### Examples
 
@@ -2003,15 +2093,15 @@ loading from files, converting to/from SysEx format, and manipulating voices.
 
 ### Parameters
 
-*   `data` **([Array][304]<[number][299]> | [ArrayBuffer][309] | [Uint8Array][308])?** Bank SYX data (4104 bytes with SysEx wrapper or 4096 bytes raw)
-*   `name` **[string][298]** Optional bank name (e.g., filename without extension) (optional, default `""`)
+*   `data` **([Array][320]<[number][315]> | [ArrayBuffer][325] | [Uint8Array][324])?** Bank SYX data (4104 bytes with SysEx wrapper or 4096 bytes raw)
+*   `name` **[string][314]** Optional bank name (e.g., filename without extension) (optional, default `""`)
 
 ### Examples
 
 ```javascript
 // Load from file
-const fileInput = document.getElementById('file-input');
-fileInput.addEventListener('change', async (e) => {
+const fileInput = document.getElementById("file-input");
+fileInput.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   const bank = await DX7Bank.fromFile(file);
   console.log(bank.getVoiceNames());
@@ -2021,29 +2111,29 @@ fileInput.addEventListener('change', async (e) => {
 ```javascript
 // Create from SysEx data
 const syxData = new Uint8Array([0xF0, 0x43, 0x00, 0x09, 0x20, 0x00, 0xF7]);
-const bank = DX7Bank.fromSysEx(syxData, 'My Bank');
+const bank = DX7Bank.fromSysEx(syxData, "My Bank");
 ```
 
 ```javascript
 // Manipulate voices
 const bank = new DX7Bank();
-const voice = DX7Voice.fromName('BASS 1');
+const voice = DX7Voice.fromName("BASS 1");
 bank.replaceVoice(0, voice); // Replace first voice
-console.log(bank.getVoice(0).name); // 'BASS 1'
+console.log(bank.getVoice(0).name); // "BASS 1"
 ```
 
 ```javascript
 // Export to SysEx
 const bank = await DX7Bank.fromFile(file);
 const syxData = bank.toSysEx();
-download(syxData, 'my-bank.syx');
+download(syxData, "my-bank.syx");
 ```
 
 ```javascript
 // Convert to JSON for storage
 const bank = await DX7Bank.fromFile(file);
 const json = bank.toJSON();
-localStorage.setItem('dx7-bank', JSON.stringify(json));
+localStorage.setItem("dx7-bank", JSON.stringify(json));
 ```
 
 ### replaceVoice
@@ -2053,17 +2143,17 @@ of the voice data to ensure the bank maintains its own independent copy.
 
 #### Parameters
 
-*   `index` **[number][299]** Voice index (0-31)
-*   `voice` **[DX7Voice][219]** Voice to insert
+*   `index` **[number][315]** Voice index (0-31)
+*   `voice` **[DX7Voice][235]** Voice to insert
 
 #### Examples
 
 ```javascript
 // Replace first voice with a custom voice
 const bank = await DX7Bank.fromFile(file);
-const customVoice = DX7Voice.fromName('LEAD 1');
+const customVoice = DX7Voice.fromName("LEAD 1");
 bank.replaceVoice(0, customVoice);
-console.log(bank.getVoice(0).name); // 'LEAD 1'
+console.log(bank.getVoice(0).name); // "LEAD 1"
 ```
 
 ```javascript
@@ -2074,7 +2164,7 @@ const voiceFromBank2 = bank2.getVoice(5);
 bank1.replaceVoice(0, voiceFromBank2); // Copy voice from bank2 to bank1
 ```
 
-*   Throws **[DX7ValidationError][160]** If index is out of range (0-31)
+*   Throws **[DX7ValidationError][176]** If index is out of range (0-31)
 
 Returns **void**&#x20;
 
@@ -2084,15 +2174,15 @@ Add a voice to the first empty slot
 
 #### Parameters
 
-*   `voice` **[DX7Voice][219]** Voice to add
+*   `voice` **[DX7Voice][235]** Voice to add
 
-Returns **[number][299]** Index where voice was added, or -1 if bank is full
+Returns **[number][315]** Index where voice was added, or -1 if bank is full
 
 ### getVoices
 
 Get all voices in the bank
 
-Returns **[Array][304]<[DX7Voice][219]>**&#x20;
+Returns **[Array][320]<[DX7Voice][235]>**&#x20;
 
 ### getVoice
 
@@ -2100,15 +2190,15 @@ Get a specific voice by index
 
 #### Parameters
 
-*   `index` **[number][299]** Voice index (0-31)
+*   `index` **[number][315]** Voice index (0-31)
 
-Returns **([DX7Voice][219] | null)**&#x20;
+Returns **([DX7Voice][235] | null)**&#x20;
 
 ### getVoiceNames
 
 Get all voice names
 
-Returns **[Array][304]<[string][298]>**&#x20;
+Returns **[Array][320]<[string][314]>**&#x20;
 
 ### findVoiceByName
 
@@ -2116,21 +2206,21 @@ Find a voice by name (case-insensitive, partial match)
 
 #### Parameters
 
-*   `name` **[string][298]** Voice name to search for
+*   `name` **[string][314]** Voice name to search for
 
-Returns **([DX7Voice][219] | null)**&#x20;
+Returns **([DX7Voice][235] | null)**&#x20;
 
 ### toSysEx
 
 Export bank to SysEx format
 
-Returns **[Uint8Array][308]** Full SysEx data (4104 bytes)
+Returns **[Uint8Array][324]** Full SysEx data (4104 bytes)
 
 ### toJSON
 
 Convert bank to JSON format
 
-Returns **[object][297]** Bank data in JSON format
+Returns **[object][313]** Bank data in JSON format
 
 ### fromFile
 
@@ -2138,15 +2228,15 @@ Load a DX7 bank from a file
 
 #### Parameters
 
-*   `file` **(File | [Blob][310])** SYX file to load
+*   `file` **(File | [Blob][326])** SYX file to load
 
 <!---->
 
-*   Throws **[DX7ParseError][157]** If file is a single voice file
-*   Throws **[DX7ValidationError][160]** If data is not valid DX7 SYX format
-*   Throws **[Error][311]** If file cannot be read (FileReader error)
+*   Throws **[DX7ParseError][173]** If file is a single voice file
+*   Throws **[DX7ValidationError][176]** If data is not valid DX7 SYX format
+*   Throws **[Error][327]** If file cannot be read (FileReader error)
 
-Returns **[Promise][302]<[DX7Bank][189]>**&#x20;
+Returns **[Promise][318]<[DX7Bank][205]>**&#x20;
 
 ### fromSysEx
 
@@ -2154,15 +2244,15 @@ Create a DX7Bank from SysEx data
 
 #### Parameters
 
-*   `data` **([Array][304]<[number][299]> | [ArrayBuffer][309] | [Uint8Array][308])** SysEx data (4104 bytes with header/footer) or raw voice data (4096 bytes)
-*   `name` **[string][298]** Optional bank name (optional, default `""`)
+*   `data` **([Array][320]<[number][315]> | [ArrayBuffer][325] | [Uint8Array][324])** SysEx data (4104 bytes with header/footer) or raw voice data (4096 bytes)
+*   `name` **[string][314]** Optional bank name (optional, default `""`)
 
 <!---->
 
-*   Throws **[DX7ParseError][157]** If SysEx header is invalid
-*   Throws **[DX7ValidationError][160]** If data length is invalid
+*   Throws **[DX7ParseError][173]** If SysEx header is invalid
+*   Throws **[DX7ValidationError][176]** If data length is invalid
 
-Returns **[DX7Bank][189]**&#x20;
+Returns **[DX7Bank][205]**&#x20;
 
 ### fromJSON
 
@@ -2170,67 +2260,67 @@ Create a DX7Bank from a JSON object
 
 #### Parameters
 
-*   `json` **[DX7BankJSON][217]** JSON representation of a DX7 bank
+*   `json` **[DX7BankJSON][233]** JSON representation of a DX7 bank
 
 <!---->
 
-*   Throws **[DX7ValidationError][160]** If JSON structure is invalid
+*   Throws **[DX7ValidationError][176]** If JSON structure is invalid
 
-Returns **[DX7Bank][189]**&#x20;
+Returns **[DX7Bank][205]**&#x20;
 
 ## DX7OperatorJSON
 
 JSON representation of a DX7 operator (human-readable)
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `id` **[number][299]** Operator number (1-6)
-*   `osc` **[Object][297]** Oscillator parameters (frequency, detune)
-*   `eg` **[Object][297]** Envelope generator (rates and levels)
-*   `key` **[Object][297]** Key scaling parameters (break point, velocity)
-*   `output` **[Object][297]** Output parameters (level, amp mod sensitivity)
-*   `scale` **[Object][297]** Keyboard scaling (left/right curves and depths)
+*   `id` **[number][315]** Operator number (1-6)
+*   `osc` **[Object][313]** Oscillator parameters (frequency, detune)
+*   `eg` **[Object][313]** Envelope generator (rates and levels)
+*   `key` **[Object][313]** Key scaling parameters (break point, velocity)
+*   `output` **[Object][313]** Output parameters (level, amp mod sensitivity)
+*   `scale` **[Object][313]** Keyboard scaling (left/right curves and depths)
 
 ## DX7VoiceJSON
 
 JSON representation of a DX7 voice (patch)
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `name` **[string][298]** Voice/patch name (max 10 characters)
-*   `operators` **[Array][304]<[DX7OperatorJSON][211]>** Array of 6 operators
-*   `pitchEG` **[Object][297]** Pitch envelope generator (rates and levels)
-*   `lfo` **[Object][297]** Low frequency oscillator parameters
-*   `global` **[Object][297]** Global voice parameters (algorithm, feedback, transpose, etc.)
+*   `name` **[string][314]** Voice/patch name (max 10 characters)
+*   `operators` **[Array][320]<[DX7OperatorJSON][227]>** Array of 6 operators
+*   `pitchEG` **[Object][313]** Pitch envelope generator (rates and levels)
+*   `lfo` **[Object][313]** Low frequency oscillator parameters
+*   `global` **[Object][313]** Global voice parameters (algorithm, feedback, transpose, etc.)
 
 ## DX7VoiceIndexJSON
 
 JSON representation of a DX7 voice with bank index
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `index` **[number][299]** Voice index in bank (1-32)
-*   `name` **[string][298]** Voice/patch name
-*   `operators` **[Array][304]<[DX7OperatorJSON][211]>** Array of 6 operators
-*   `pitchEG` **[Object][297]** Pitch envelope parameters
-*   `lfo` **[Object][297]** LFO parameters
-*   `global` **[Object][297]** Global voice parameters
+*   `index` **[number][315]** Voice index in bank (1-32)
+*   `name` **[string][314]** Voice/patch name
+*   `operators` **[Array][320]<[DX7OperatorJSON][227]>** Array of 6 operators
+*   `pitchEG` **[Object][313]** Pitch envelope parameters
+*   `lfo` **[Object][313]** LFO parameters
+*   `global` **[Object][313]** Global voice parameters
 
 ## DX7BankJSON
 
-Type: [Object][297]
+Type: [Object][313]
 
 ### Properties
 
-*   `version` **[string][298]** Version string (e.g., "1.0")
-*   `name` **[string][298]** Bank name (e.g., filename)
-*   `voices` **[Array][304]<[DX7VoiceIndexJSON][215]>** Array of 32 voices
+*   `version` **[string][314]** Version string (e.g., "1.0")
+*   `name` **[string][314]** Bank name (e.g., filename)
+*   `voices` **[Array][320]<[DX7VoiceIndexJSON][231]>** Array of 32 voices
 
 ## DX7Voice
 
@@ -2255,8 +2345,8 @@ Each voice contains:
 
 ### Parameters
 
-*   `data` **([Array][304]<[number][299]> | [Uint8Array][308])** 128 bytes of voice data
-*   `index` **[number][299]** Voice index (0-31) (optional, default `0`)
+*   `data` **([Array][320]<[number][315]> | [Uint8Array][324])** 128 bytes of voice data
+*   `index` **[number][315]** Voice index (0-31) (optional, default `0`)
 
 ### Examples
 
@@ -2271,7 +2361,7 @@ console.log(voice.name); // e.g., "BASS 1"
 
 ```javascript
 // Load a voice from a single-voice SYX file
-const file = document.getElementById('voice-file').files[0];
+const file = document.getElementById("voice-file").files[0];
 const voice = await DX7Voice.fromFile(file);
 console.log(voice.toJSON());
 ```
@@ -2299,13 +2389,13 @@ Get a raw parameter value from the packed data
 
 #### Parameters
 
-*   `offset` **[number][299]** Byte offset in the voice data (0-127)
+*   `offset` **[number][315]** Byte offset in the voice data (0-127)
 
 <!---->
 
-*   Throws **[DX7ValidationError][160]** If offset is out of range
+*   Throws **[DX7ValidationError][176]** If offset is out of range
 
-Returns **[number][299]** Parameter value (0-127)
+Returns **[number][315]** Parameter value (0-127)
 
 ### getUnpackedParameter
 
@@ -2313,13 +2403,13 @@ Get a parameter value from the unpacked 169-byte format
 
 #### Parameters
 
-*   `offset` **[number][299]** Byte offset in the unpacked data (0-168)
+*   `offset` **[number][315]** Byte offset in the unpacked data (0-168)
 
 <!---->
 
-*   Throws **[DX7ValidationError][160]** If offset is out of range
+*   Throws **[DX7ValidationError][176]** If offset is out of range
 
-Returns **[number][299]** Parameter value (0-127)
+Returns **[number][315]** Parameter value (0-127)
 
 ### setParameter
 
@@ -2327,15 +2417,15 @@ Set a raw parameter value in the packed data
 
 #### Parameters
 
-*   `offset` **[number][299]** Byte offset in the voice data
-*   `value` **[number][299]** Parameter value (0-127)
+*   `offset` **[number][315]** Byte offset in the voice data
+*   `value` **[number][315]** Parameter value (0-127)
 
 ### unpack
 
 Unpack the voice data to 169-byte unpacked format
 This converts the packed 128-byte format to the full DX7 parameter set
 
-Returns **[Uint8Array][308]** 169 bytes of unpacked voice data (138 operator + 8 pitch EG + 13 global + 10 name = 169 bytes)
+Returns **[Uint8Array][324]** 169 bytes of unpacked voice data (138 operator + 8 pitch EG + 13 global + 10 name = 169 bytes)
 
 ### toSysEx
 
@@ -2343,13 +2433,13 @@ Export voice to DX7 single voice SysEx format (VCED format)
 This is useful for synths that only support single voice dumps (e.g., KORG Volca FM)
 Converts from 169-byte unpacked format to 155-byte VCED format
 
-Returns **[Uint8Array][308]** Single voice SysEx data (163 bytes)
+Returns **[Uint8Array][324]** Single voice SysEx data (163 bytes)
 
 ### toJSON
 
 Convert voice to JSON format
 
-Returns **[object][297]** Voice data in JSON format
+Returns **[object][313]** Voice data in JSON format
 
 ### pack
 
@@ -2357,9 +2447,9 @@ Pack 169-byte unpacked data to 128-byte format
 
 #### Parameters
 
-*   `unpacked` **([Array][304]<[number][299]> | [Uint8Array][308])** 169 bytes of unpacked data (159 parameters + 10 name bytes)
+*   `unpacked` **([Array][320]<[number][315]> | [Uint8Array][324])** 169 bytes of unpacked data (159 parameters + 10 name bytes)
 
-Returns **[Uint8Array][308]** 128 bytes of packed data
+Returns **[Uint8Array][324]** 128 bytes of packed data
 
 ### createDefault
 
@@ -2367,9 +2457,9 @@ Create a default/empty voice
 
 #### Parameters
 
-*   `index` **[number][299]** Voice index (optional, default `0`)
+*   `index` **[number][315]** Voice index (optional, default `0`)
 
-Returns **[DX7Voice][219]**&#x20;
+Returns **[DX7Voice][235]**&#x20;
 
 ### fromUnpacked
 
@@ -2377,10 +2467,10 @@ Create a voice from unpacked 169-byte data
 
 #### Parameters
 
-*   `unpacked` **([Array][304]<[number][299]> | [Uint8Array][308])** 169 bytes of unpacked data (159 parameters + 10 name bytes)
-*   `index` **[number][299]** Voice index (optional, default `0`)
+*   `unpacked` **([Array][320]<[number][315]> | [Uint8Array][324])** 169 bytes of unpacked data (159 parameters + 10 name bytes)
+*   `index` **[number][315]** Voice index (optional, default `0`)
 
-Returns **[DX7Voice][219]**&#x20;
+Returns **[DX7Voice][235]**&#x20;
 
 ### fromFile
 
@@ -2388,14 +2478,14 @@ Load a DX7 voice from a single voice SYX file
 
 #### Parameters
 
-*   `file` **(File | [Blob][310])** SYX file (single voice in VCED format)
+*   `file` **(File | [Blob][326])** SYX file (single voice in VCED format)
 
 <!---->
 
-*   Throws **[DX7ParseError][157]** If file has invalid VCED header
-*   Throws **[Error][311]** If file cannot be read (FileReader error)
+*   Throws **[DX7ParseError][173]** If file has invalid VCED header
+*   Throws **[Error][327]** If file cannot be read (FileReader error)
 
-Returns **[Promise][302]<[DX7Voice][219]>**&#x20;
+Returns **[Promise][318]<[DX7Voice][235]>**&#x20;
 
 ### fromSysEx
 
@@ -2403,15 +2493,15 @@ Create a DX7Voice from SysEx data
 
 #### Parameters
 
-*   `data` **([Array][304]<[number][299]> | [ArrayBuffer][309] | [Uint8Array][308])** Voice data (128 bytes of packed voice data) or VCED SysEx data (163 bytes with header/footer)
-*   `index` **[number][299]** Voice index (optional, defaults to 0) (optional, default `0`)
+*   `data` **([Array][320]<[number][315]> | [ArrayBuffer][325] | [Uint8Array][324])** Voice data (128 bytes of packed voice data) or VCED SysEx data (163 bytes with header/footer)
+*   `index` **[number][315]** Voice index (optional, defaults to 0) (optional, default `0`)
 
 <!---->
 
-*   Throws **[DX7ParseError][157]** If VCED header is invalid
-*   Throws **[DX7ValidationError][160]** If data length is invalid
+*   Throws **[DX7ParseError][173]** If VCED header is invalid
+*   Throws **[DX7ValidationError][176]** If data length is invalid
 
-Returns **[DX7Voice][219]**&#x20;
+Returns **[DX7Voice][235]**&#x20;
 
 ### fromJSON
 
@@ -2419,14 +2509,14 @@ Create a DX7Voice from a JSON object
 
 #### Parameters
 
-*   `json` **[DX7VoiceJSON][213]** JSON representation of a DX7 voice
-*   `index` **[number][299]** Voice index (optional, defaults to 0) (optional, default `0`)
+*   `json` **[DX7VoiceJSON][229]** JSON representation of a DX7 voice
+*   `index` **[number][315]** Voice index (optional, defaults to 0) (optional, default `0`)
 
 <!---->
 
-*   Throws **[DX7ValidationError][160]** If JSON structure is invalid
+*   Throws **[DX7ValidationError][176]** If JSON structure is invalid
 
-Returns **[DX7Voice][219]**&#x20;
+Returns **[DX7Voice][235]**&#x20;
 
 ## clamp
 
@@ -2434,11 +2524,11 @@ Clamp a value between min and max
 
 ### Parameters
 
-*   `value` **[number][299]** Value to clamp
-*   `min` **[number][299]** Minimum value
-*   `max` **[number][299]** Maximum value
+*   `value` **[number][315]** Value to clamp
+*   `min` **[number][315]** Minimum value
+*   `max` **[number][315]** Maximum value
 
-Returns **[number][299]**&#x20;
+Returns **[number][315]**&#x20;
 
 ## normalizeValue
 
@@ -2446,12 +2536,12 @@ Normalize a value from input range to MIDI range (0-127)
 
 ### Parameters
 
-*   `value` **[number][299]** Input value
-*   `inputMin` **[number][299]** Input minimum
-*   `inputMax` **[number][299]** Input maximum
-*   `invert` **[boolean][300]** Invert the output (optional, default `false`)
+*   `value` **[number][315]** Input value
+*   `inputMin` **[number][315]** Input minimum
+*   `inputMax` **[number][315]** Input maximum
+*   `invert` **[boolean][316]** Invert the output (optional, default `false`)
 
-Returns **[number][299]** MIDI value (0-127)
+Returns **[number][315]** MIDI value (0-127)
 
 ## denormalizeValue
 
@@ -2459,12 +2549,12 @@ Denormalize a MIDI value (0-127) to a custom range
 
 ### Parameters
 
-*   `midiValue` **[number][299]** MIDI value (0-127)
-*   `outputMin` **[number][299]** Output minimum
-*   `outputMax` **[number][299]** Output maximum
-*   `invert` **[boolean][300]** Invert the input (optional, default `false`)
+*   `midiValue` **[number][315]** MIDI value (0-127)
+*   `outputMin` **[number][315]** Output minimum
+*   `outputMax` **[number][315]** Output maximum
+*   `invert` **[boolean][316]** Invert the input (optional, default `false`)
 
-Returns **[number][299]**&#x20;
+Returns **[number][315]**&#x20;
 
 ## noteNameToNumber
 
@@ -2472,13 +2562,13 @@ Convert a note name to MIDI note number
 
 ### Parameters
 
-*   `noteName` **[string][298]** Note name (e.g., "C4", "A#3", "Bb5")
+*   `noteName` **[string][314]** Note name (e.g., "C4", "A#3", "Bb5")
 
 <!---->
 
-*   Throws **[MIDIValidationError][153]** If noteName is not a valid note format
+*   Throws **[MIDIValidationError][169]** If noteName is not a valid note format
 
-Returns **[number][299]** MIDI note number (0-127)
+Returns **[number][315]** MIDI note number (0-127)
 
 ## noteNumberToName
 
@@ -2486,10 +2576,10 @@ Convert MIDI note number to note name
 
 ### Parameters
 
-*   `noteNumber` **[number][299]** MIDI note number (0-127)
-*   `useFlats` **[boolean][300]** Use flats instead of sharps (optional, default `false`)
+*   `noteNumber` **[number][315]** MIDI note number (0-127)
+*   `useFlats` **[boolean][316]** Use flats instead of sharps (optional, default `false`)
 
-Returns **[string][298]** Note name (e.g., "C4")
+Returns **[string][314]** Note name (e.g., "C4")
 
 ## frequencyToNote
 
@@ -2497,9 +2587,9 @@ Convert frequency (Hz) to nearest MIDI note number
 
 ### Parameters
 
-*   `frequency` **[number][299]** Frequency in Hz
+*   `frequency` **[number][315]** Frequency in Hz
 
-Returns **[number][299]** MIDI note number
+Returns **[number][315]** MIDI note number
 
 ## noteToFrequency
 
@@ -2507,9 +2597,9 @@ Convert MIDI note number to frequency (Hz)
 
 ### Parameters
 
-*   `noteNumber` **[number][299]** MIDI note number
+*   `noteNumber` **[number][315]** MIDI note number
 
-Returns **[number][299]** Frequency in Hz
+Returns **[number][315]** Frequency in Hz
 
 ## getCCName
 
@@ -2517,9 +2607,9 @@ Get CC name for common controller numbers
 
 ### Parameters
 
-*   `cc` **[number][299]** CC number
+*   `cc` **[number][315]** CC number
 
-Returns **[string][298]** CC name or "CC {number}"
+Returns **[string][314]** CC name or "CC {number}"
 
 ## encode14BitValue
 
@@ -2527,9 +2617,9 @@ Encode a 14-bit value into MSB and LSB (7-bit each)
 
 ### Parameters
 
-*   `value` **[number][299]** 14-bit value (0-16383)
+*   `value` **[number][315]** 14-bit value (0-16383)
 
-Returns **{msb: [number][299], lsb: [number][299]}** MSB and LSB values
+Returns **{msb: [number][315], lsb: [number][315]}** MSB and LSB values
 
 ## decode14BitValue
 
@@ -2537,10 +2627,10 @@ Decode MSB and LSB (7-bit each) into a 14-bit value
 
 ### Parameters
 
-*   `msb` **[number][299]** Most significant byte (0-127)
-*   `lsb` **[number][299]** Least significant byte (0-127)
+*   `msb` **[number][315]** Most significant byte (0-127)
+*   `lsb` **[number][315]** Least significant byte (0-127)
 
-Returns **[number][299]** 14-bit value (0-16383)
+Returns **[number][315]** 14-bit value (0-16383)
 
 ## normalize14BitValue
 
@@ -2548,12 +2638,12 @@ Normalize a 14-bit value from input range
 
 ### Parameters
 
-*   `value` **[number][299]** Input value
-*   `inputMin` **[number][299]** Input minimum
-*   `inputMax` **[number][299]** Input maximum
-*   `invert` **[boolean][300]** Invert the output (optional, default `false`)
+*   `value` **[number][315]** Input value
+*   `inputMin` **[number][315]** Input minimum
+*   `inputMax` **[number][315]** Input maximum
+*   `invert` **[boolean][316]** Invert the output (optional, default `false`)
 
-Returns **{msb: [number][299], lsb: [number][299]}** MSB and LSB values
+Returns **{msb: [number][315], lsb: [number][315]}** MSB and LSB values
 
 ## denormalize14BitValue
 
@@ -2561,13 +2651,13 @@ Denormalize a 14-bit value to a custom range
 
 ### Parameters
 
-*   `msb` **[number][299]** Most significant byte (0-127)
-*   `lsb` **[number][299]** Least significant byte (0-127)
-*   `outputMin` **[number][299]** Output minimum
-*   `outputMax` **[number][299]** Output maximum
-*   `invert` **[boolean][300]** Invert the input (optional, default `false`)
+*   `msb` **[number][315]** Most significant byte (0-127)
+*   `lsb` **[number][315]** Least significant byte (0-127)
+*   `outputMin` **[number][315]** Output minimum
+*   `outputMax` **[number][315]** Output maximum
+*   `invert` **[boolean][316]** Invert the input (optional, default `false`)
 
-Returns **[number][299]** Denormalized value
+Returns **[number][315]** Denormalized value
 
 ## parseSysEx
 
@@ -2575,9 +2665,9 @@ Parse a SysEx message
 
 ### Parameters
 
-*   `data` **[Array][304]<[number][299]>** Raw MIDI data
+*   `data` **[Array][320]<[number][315]>** Raw MIDI data
 
-Returns **([Object][297] | null)** Parsed SysEx data or null if not SysEx
+Returns **([Object][313] | null)** Parsed SysEx data or null if not SysEx
 
 ## createSysEx
 
@@ -2585,10 +2675,10 @@ Create a SysEx message
 
 ### Parameters
 
-*   `manufacturerId` **[number][299]** Manufacturer ID
-*   `payload` **[Array][304]<[number][299]>** SysEx payload data
+*   `manufacturerId` **[number][315]** Manufacturer ID
+*   `payload` **[Array][320]<[number][315]>** SysEx payload data
 
-Returns **[Array][304]<[number][299]>** Complete SysEx message with F0/F7
+Returns **[Array][320]<[number][315]>** Complete SysEx message with F0/F7
 
 ## isSysEx
 
@@ -2596,9 +2686,9 @@ Check if data is a SysEx message
 
 ### Parameters
 
-*   `data` **[Array][304]<[number][299]>** MIDI data
+*   `data` **[Array][320]<[number][315]>** MIDI data
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## encode7Bit
 
@@ -2606,9 +2696,9 @@ Encode 8-bit data to 7-bit MIDI format
 
 ### Parameters
 
-*   `data` **[Array][304]<[number][299]>** 8-bit data array
+*   `data` **[Array][320]<[number][315]>** 8-bit data array
 
-Returns **[Array][304]<[number][299]>** 7-bit encoded data
+Returns **[Array][320]<[number][315]>** 7-bit encoded data
 
 ## decode7Bit
 
@@ -2616,9 +2706,9 @@ Decode 7-bit MIDI format to 8-bit data
 
 ### Parameters
 
-*   `data` **[Array][304]<[number][299]>** 7-bit encoded data
+*   `data` **[Array][320]<[number][315]>** 7-bit encoded data
 
-Returns **[Array][304]<[number][299]>** 8-bit decoded data
+Returns **[Array][320]<[number][315]>** 8-bit decoded data
 
 ## isValidChannel
 
@@ -2626,9 +2716,9 @@ Validate MIDI channel number
 
 ### Parameters
 
-*   `channel` **[number][299]** Channel number
+*   `channel` **[number][315]** Channel number
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidCC
 
@@ -2636,9 +2726,9 @@ Validate MIDI CC number
 
 ### Parameters
 
-*   `cc` **[number][299]** CC number
+*   `cc` **[number][315]** CC number
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValid14BitCC
 
@@ -2646,9 +2736,9 @@ Validate 14-bit MIDI CC number (0-31 for MSB)
 
 ### Parameters
 
-*   `cc` **[number][299]** CC number
+*   `cc` **[number][315]** CC number
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidMIDIValue
 
@@ -2656,9 +2746,9 @@ Validate MIDI value (0-127)
 
 ### Parameters
 
-*   `value` **[number][299]** MIDI value
+*   `value` **[number][315]** MIDI value
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidNote
 
@@ -2666,9 +2756,9 @@ Validate MIDI note number
 
 ### Parameters
 
-*   `note` **[number][299]** Note number
+*   `note` **[number][315]** Note number
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidVelocity
 
@@ -2676,9 +2766,9 @@ Validate note velocity
 
 ### Parameters
 
-*   `velocity` **[number][299]** Velocity value
+*   `velocity` **[number][315]** Velocity value
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidProgramChange
 
@@ -2686,9 +2776,9 @@ Validate MIDI program change number
 
 ### Parameters
 
-*   `program` **[number][299]** Program number
+*   `program` **[number][315]** Program number
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidPitchBend
 
@@ -2696,9 +2786,9 @@ Validate pitch bend value (14-bit)
 
 ### Parameters
 
-*   `value` **[number][299]** Pitch bend value (0-16383, where 8192 is center)
+*   `value` **[number][315]** Pitch bend value (0-16383, where 8192 is center)
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 ## isValidPitchBendBytes
 
@@ -2706,10 +2796,10 @@ Validate pitch bend MSB and LSB separately
 
 ### Parameters
 
-*   `msb` **[number][299]** Most significant byte (0-127)
-*   `lsb` **[number][299]** Least significant byte (0-127)
+*   `msb` **[number][315]** Most significant byte (0-127)
+*   `lsb` **[number][315]** Least significant byte (0-127)
 
-Returns **[boolean][300]**&#x20;
+Returns **[boolean][316]**&#x20;
 
 [1]: #midiwire
 
@@ -2879,456 +2969,488 @@ Returns **[boolean][300]**&#x20;
 
 [84]: #parameters-21
 
-[85]: #_sendclock
+[85]: #_allsoundsoff
 
-[86]: #_sendstart
+[86]: #parameters-22
 
-[87]: #_sendcontinue
+[87]: #_resetcontrollers
 
-[88]: #_sendstop
+[88]: #parameters-23
 
-[89]: #_sendmtc
+[89]: #_localcontrol
 
-[90]: #parameters-22
+[90]: #parameters-24
 
-[91]: #_sendsongposition
+[91]: #_allnotesoff
 
-[92]: #parameters-23
+[92]: #parameters-25
 
-[93]: #_sendsongselect
+[93]: #_omnioff
 
-[94]: #parameters-24
+[94]: #parameters-26
 
-[95]: #_sendtunerequest
+[95]: #_omnion
 
-[96]: #_sendactivesensing
+[96]: #parameters-27
 
-[97]: #_sendsystemreset
+[97]: #_monoon
 
-[98]: #_getpatch
+[98]: #parameters-28
 
-[99]: #parameters-25
+[99]: #_polyon
 
-[100]: #_setpatch
+[100]: #parameters-29
 
-[101]: #parameters-26
+[101]: #_sendclock
 
-[102]: #_savepatch
+[102]: #_sendstart
 
-[103]: #parameters-27
+[103]: #_sendcontinue
 
-[104]: #_loadpatch
+[104]: #_sendstop
 
-[105]: #parameters-28
+[105]: #_sendmtc
 
-[106]: #_deletepatch
+[106]: #parameters-30
 
-[107]: #parameters-29
+[107]: #_sendsongposition
 
-[108]: #_listpatches
+[108]: #parameters-31
 
-[109]: #mididevicemanager
+[109]: #_sendsongselect
 
-[110]: #parameters-30
+[110]: #parameters-32
 
-[111]: #examples-15
+[111]: #_sendtunerequest
 
-[112]: #setmidi
+[112]: #_sendactivesensing
 
-[113]: #parameters-31
+[113]: #_sendsystemreset
 
-[114]: #setupdevicelisteners
+[114]: #_getpatch
 
-[115]: #parameters-32
+[115]: #parameters-33
 
-[116]: #examples-16
+[116]: #_setpatch
 
-[117]: #updatestatus
+[117]: #parameters-34
 
-[118]: #parameters-33
+[118]: #_savepatch
 
-[119]: #examples-17
+[119]: #parameters-35
 
-[120]: #updateconnectionstatus
+[120]: #_loadpatch
 
-[121]: #getoutputdevices
+[121]: #parameters-36
 
-[122]: #getinputdevices
+[122]: #_deletepatch
 
-[123]: #isdeviceconnected
+[123]: #parameters-37
 
-[124]: #parameters-34
+[124]: #_listpatches
 
-[125]: #connectdeviceselection
+[125]: #mididevicemanager
 
-[126]: #parameters-35
+[126]: #parameters-38
 
-[127]: #examples-18
+[127]: #examples-15
 
-[128]: #connectchannelselection
+[128]: #setmidi
 
-[129]: #parameters-36
+[129]: #parameters-39
 
-[130]: #examples-19
+[130]: #setupdevicelisteners
 
-[131]: #populatedevicelist
+[131]: #parameters-40
 
-[132]: #parameters-37
+[132]: #examples-16
 
-[133]: #examples-20
+[133]: #updatestatus
 
-[134]: #eventemitter
+[134]: #parameters-41
 
-[135]: #on
+[135]: #examples-17
 
-[136]: #parameters-38
+[136]: #updateconnectionstatus
 
-[137]: #once
+[137]: #getoutputdevices
 
-[138]: #parameters-39
+[138]: #getinputdevices
 
-[139]: #off
+[139]: #isdeviceconnected
 
-[140]: #parameters-40
+[140]: #parameters-42
 
-[141]: #emit
+[141]: #connectdeviceselection
 
-[142]: #parameters-41
+[142]: #parameters-43
 
-[143]: #removealllisteners
+[143]: #examples-18
 
-[144]: #parameters-42
+[144]: #connectchannelselection
 
-[145]: #midierror
+[145]: #parameters-44
 
-[146]: #parameters-43
+[146]: #examples-19
 
-[147]: #midiaccesserror
+[147]: #populatedevicelist
 
-[148]: #parameters-44
+[148]: #parameters-45
 
-[149]: #midiconnectionerror
+[149]: #examples-20
 
-[150]: #parameters-45
+[150]: #eventemitter
 
-[151]: #midideviceerror
+[151]: #on
 
 [152]: #parameters-46
 
-[153]: #midivalidationerror
+[153]: #once
 
 [154]: #parameters-47
 
-[155]: #dx7error
+[155]: #off
 
 [156]: #parameters-48
 
-[157]: #dx7parseerror
+[157]: #emit
 
 [158]: #parameters-49
 
-[159]: #dx7parseerror-1
+[159]: #removealllisteners
 
-[160]: #dx7validationerror
+[160]: #parameters-50
 
-[161]: #parameters-50
+[161]: #midierror
 
-[162]: #connection_events
+[162]: #parameters-51
 
-[163]: #properties-6
+[163]: #midiaccesserror
 
-[164]: #examples-21
+[164]: #parameters-52
 
-[165]: #midiconnection
+[165]: #midiconnectionerror
 
-[166]: #parameters-51
+[166]: #parameters-53
 
-[167]: #examples-22
+[167]: #midideviceerror
 
-[168]: #requestaccess
+[168]: #parameters-54
 
-[169]: #examples-23
+[169]: #midivalidationerror
 
-[170]: #connect
+[170]: #parameters-55
 
-[171]: #parameters-52
+[171]: #dx7error
 
-[172]: #examples-24
+[172]: #parameters-56
 
-[173]: #connectinput
+[173]: #dx7parseerror
 
-[174]: #parameters-53
+[174]: #parameters-57
 
-[175]: #disconnectoutput
+[175]: #dx7parseerror-1
 
-[176]: #disconnectinput
+[176]: #dx7validationerror
 
-[177]: #disconnect
+[177]: #parameters-58
 
-[178]: #isconnected
+[178]: #connection_events
 
-[179]: #getcurrentoutput
+[179]: #properties-6
 
-[180]: #getcurrentinput
+[180]: #examples-21
 
-[181]: #getoutputs
+[181]: #midiconnection
 
-[182]: #getinputs
+[182]: #parameters-59
 
-[183]: #send-1
+[183]: #examples-22
 
-[184]: #parameters-54
+[184]: #requestaccess
 
-[185]: #examples-25
+[185]: #examples-23
 
-[186]: #sendsysex
+[186]: #connect
 
-[187]: #parameters-55
+[187]: #parameters-60
 
-[188]: #examples-26
+[188]: #examples-24
 
-[189]: #dx7bank
+[189]: #connectinput
 
-[190]: #parameters-56
+[190]: #parameters-61
 
-[191]: #examples-27
+[191]: #disconnectoutput
 
-[192]: #replacevoice
+[192]: #disconnectinput
 
-[193]: #parameters-57
+[193]: #disconnect
 
-[194]: #examples-28
+[194]: #isconnected
 
-[195]: #addvoice
+[195]: #getcurrentoutput
 
-[196]: #parameters-58
+[196]: #getcurrentinput
 
-[197]: #getvoices
+[197]: #getoutputs
 
-[198]: #getvoice
+[198]: #getinputs
 
-[199]: #parameters-59
+[199]: #send-1
 
-[200]: #getvoicenames
+[200]: #parameters-62
 
-[201]: #findvoicebyname
+[201]: #examples-25
 
-[202]: #parameters-60
+[202]: #sendsysex
 
-[203]: #tosysex
+[203]: #parameters-63
 
-[204]: #tojson
+[204]: #examples-26
 
-[205]: #fromfile
+[205]: #dx7bank
 
-[206]: #parameters-61
+[206]: #parameters-64
 
-[207]: #fromsysex
+[207]: #examples-27
 
-[208]: #parameters-62
+[208]: #replacevoice
 
-[209]: #fromjson
+[209]: #parameters-65
 
-[210]: #parameters-63
+[210]: #examples-28
 
-[211]: #dx7operatorjson
+[211]: #addvoice
 
-[212]: #properties-7
+[212]: #parameters-66
 
-[213]: #dx7voicejson
+[213]: #getvoices
 
-[214]: #properties-8
+[214]: #getvoice
 
-[215]: #dx7voiceindexjson
+[215]: #parameters-67
 
-[216]: #properties-9
+[216]: #getvoicenames
 
-[217]: #dx7bankjson
+[217]: #findvoicebyname
 
-[218]: #properties-10
+[218]: #parameters-68
 
-[219]: #dx7voice
+[219]: #tosysex
 
-[220]: #parameters-64
+[220]: #tojson
 
-[221]: #examples-29
+[221]: #fromfile
 
-[222]: #getparameter
+[222]: #parameters-69
 
-[223]: #parameters-65
+[223]: #fromsysex
 
-[224]: #getunpackedparameter
+[224]: #parameters-70
 
-[225]: #parameters-66
+[225]: #fromjson
 
-[226]: #setparameter
+[226]: #parameters-71
 
-[227]: #parameters-67
+[227]: #dx7operatorjson
 
-[228]: #unpack
+[228]: #properties-7
 
-[229]: #tosysex-1
+[229]: #dx7voicejson
 
-[230]: #tojson-1
+[230]: #properties-8
 
-[231]: #pack
+[231]: #dx7voiceindexjson
 
-[232]: #parameters-68
+[232]: #properties-9
 
-[233]: #createdefault
+[233]: #dx7bankjson
 
-[234]: #parameters-69
+[234]: #properties-10
 
-[235]: #fromunpacked
+[235]: #dx7voice
 
-[236]: #parameters-70
+[236]: #parameters-72
 
-[237]: #fromfile-1
+[237]: #examples-29
 
-[238]: #parameters-71
+[238]: #getparameter
 
-[239]: #fromsysex-1
+[239]: #parameters-73
 
-[240]: #parameters-72
+[240]: #getunpackedparameter
 
-[241]: #fromjson-1
+[241]: #parameters-74
 
-[242]: #parameters-73
+[242]: #setparameter
 
-[243]: #clamp
+[243]: #parameters-75
 
-[244]: #parameters-74
+[244]: #unpack
 
-[245]: #normalizevalue
+[245]: #tosysex-1
 
-[246]: #parameters-75
+[246]: #tojson-1
 
-[247]: #denormalizevalue
+[247]: #pack
 
 [248]: #parameters-76
 
-[249]: #notenametonumber
+[249]: #createdefault
 
 [250]: #parameters-77
 
-[251]: #notenumbertoname
+[251]: #fromunpacked
 
 [252]: #parameters-78
 
-[253]: #frequencytonote
+[253]: #fromfile-1
 
 [254]: #parameters-79
 
-[255]: #notetofrequency
+[255]: #fromsysex-1
 
 [256]: #parameters-80
 
-[257]: #getccname
+[257]: #fromjson-1
 
 [258]: #parameters-81
 
-[259]: #encode14bitvalue
+[259]: #clamp
 
 [260]: #parameters-82
 
-[261]: #decode14bitvalue
+[261]: #normalizevalue
 
 [262]: #parameters-83
 
-[263]: #normalize14bitvalue
+[263]: #denormalizevalue
 
 [264]: #parameters-84
 
-[265]: #denormalize14bitvalue
+[265]: #notenametonumber
 
 [266]: #parameters-85
 
-[267]: #parsesysex
+[267]: #notenumbertoname
 
 [268]: #parameters-86
 
-[269]: #createsysex
+[269]: #frequencytonote
 
 [270]: #parameters-87
 
-[271]: #issysex
+[271]: #notetofrequency
 
 [272]: #parameters-88
 
-[273]: #encode7bit
+[273]: #getccname
 
 [274]: #parameters-89
 
-[275]: #decode7bit
+[275]: #encode14bitvalue
 
 [276]: #parameters-90
 
-[277]: #isvalidchannel
+[277]: #decode14bitvalue
 
 [278]: #parameters-91
 
-[279]: #isvalidcc
+[279]: #normalize14bitvalue
 
 [280]: #parameters-92
 
-[281]: #isvalid14bitcc
+[281]: #denormalize14bitvalue
 
 [282]: #parameters-93
 
-[283]: #isvalidmidivalue
+[283]: #parsesysex
 
 [284]: #parameters-94
 
-[285]: #isvalidnote
+[285]: #createsysex
 
 [286]: #parameters-95
 
-[287]: #isvalidvelocity
+[287]: #issysex
 
 [288]: #parameters-96
 
-[289]: #isvalidprogramchange
+[289]: #encode7bit
 
 [290]: #parameters-97
 
-[291]: #isvalidpitchbend
+[291]: #decode7bit
 
 [292]: #parameters-98
 
-[293]: #isvalidpitchbendbytes
+[293]: #isvalidchannel
 
 [294]: #parameters-99
 
-[295]: https://github.com/alexferl/midiwire
+[295]: #isvalidcc
 
-[296]: https://github.com/alexferl/midiwire#quick-start
+[296]: #parameters-100
 
-[297]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[297]: #isvalid14bitcc
 
-[298]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+[298]: #parameters-101
 
-[299]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+[299]: #isvalidmidivalue
 
-[300]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+[300]: #parameters-102
 
-[301]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+[301]: #isvalidnote
 
-[302]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise
+[302]: #parameters-103
 
-[303]: https://developer.mozilla.org/docs/Web/HTML/Element
+[303]: #isvalidvelocity
 
-[304]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[304]: #parameters-104
 
-[305]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/undefined
+[305]: #isvalidprogramchange
 
-[306]: https://developer.mozilla.org/docs/Web/API/HTMLSelectElement
+[306]: #parameters-105
 
-[307]: https://github.com/asb2m10/dexed
+[307]: #isvalidpitchbend
 
-[308]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array
+[308]: #parameters-106
 
-[309]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
+[309]: #isvalidpitchbendbytes
 
-[310]: https://developer.mozilla.org/docs/Web/API/Blob
+[310]: #parameters-107
 
-[311]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error
+[311]: https://github.com/alexferl/midiwire
+
+[312]: https://github.com/alexferl/midiwire#quick-start
+
+[313]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+
+[314]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[315]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+
+[316]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+
+[317]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+
+[318]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise
+
+[319]: https://developer.mozilla.org/docs/Web/HTML/Element
+
+[320]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+
+[321]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/undefined
+
+[322]: https://developer.mozilla.org/docs/Web/API/HTMLSelectElement
+
+[323]: https://github.com/asb2m10/dexed
+
+[324]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array
+
+[325]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
+
+[326]: https://developer.mozilla.org/docs/Web/API/Blob
+
+[327]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error
