@@ -411,7 +411,7 @@ export class MIDIDeviceManager {
         if (this.currentDevice && this.midi) {
           await this.midi.device.disconnectOutput()
           this.currentDevice = null
-          this.updateStatus("Disconnected")
+          this.updateStatus("Output device disconnected", "error")
           this.updateConnectionStatus()
         }
         return
@@ -425,7 +425,6 @@ export class MIDIDeviceManager {
         this.currentDevice = this.midi.device.getCurrentOutput()
 
         // Update the select element to show the selected device
-        // The value will already be set by the browser, but we ensure consistency
         if (this.currentDevice) {
           const outputs = this.midi.device.getOutputs()
           const index = outputs.findIndex((o) => o.id === this.currentDevice.id)
@@ -464,7 +463,7 @@ export class MIDIDeviceManager {
       if (!deviceIndex) {
         if (this.midi) {
           await this.midi.device.disconnectInput()
-          this.updateStatus("Input disconnected")
+          this.updateStatus("Input device disconnected", "error")
           this.updateConnectionStatus()
         }
         return

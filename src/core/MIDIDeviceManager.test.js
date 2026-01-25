@@ -159,8 +159,8 @@ describe("MIDIDeviceManager", () => {
       expect(mockMidi.device.disconnectOutput).toHaveBeenCalled()
       expect(deviceManager.currentDevice).toBe(null)
       expect(statusUpdates).toContainEqual({
-        message: "Disconnected",
-        state: "",
+        message: "Output device disconnected",
+        state: "error",
       })
     })
 
@@ -243,6 +243,66 @@ describe("MIDIDeviceManager", () => {
       select.dispatchEvent(new Event("change"))
 
       expect(mockMidi.options.inputChannel).toBe(3)
+    })
+
+    it("should return early if no select element provided", () => {
+      const mockMidi = {
+        options: { outputChannel: 1 },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      // Should not throw when null select element is provided
+      expect(() => {
+        deviceManager.output.connectChannelSelection(null)
+      }).not.toThrow()
+
+      // Verify no event listener was added
+      const select = document.createElement("select")
+      select.value = "5"
+      select.dispatchEvent(new Event("change"))
+      expect(mockMidi.options.outputChannel).toBe(1) // Should remain unchanged
+    })
+
+    it("should return early if no MIDI connection", () => {
+      deviceManager.midi = null
+
+      const select = document.createElement("select")
+      select.innerHTML = ""
+      for (let i = 1; i <= 16; i++) {
+        const option = document.createElement("option")
+        option.value = i
+        option.textContent = i
+        select.appendChild(option)
+      }
+
+      deviceManager.output.connectChannelSelection(select)
+
+      // Should not throw when midi is null
+      expect(() => {
+        select.value = "5"
+        select.dispatchEvent(new Event("change"))
+      }).not.toThrow()
+    })
+
+    it("should handle missing options object gracefully", () => {
+      const mockMidi = { options: {} }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      select.innerHTML = ""
+      for (let i = 1; i <= 16; i++) {
+        const option = document.createElement("option")
+        option.value = i
+        option.textContent = i
+        select.appendChild(option)
+      }
+
+      deviceManager.output.connectChannelSelection(select)
+
+      // Should create outputChannel property if it doesn't exist
+      select.value = "5"
+      select.dispatchEvent(new Event("change"))
+      expect(mockMidi.options.outputChannel).toBe(5)
     })
   })
 
@@ -668,8 +728,8 @@ describe("MIDIDeviceManager", () => {
 
       expect(mockMidi.device.disconnectInput).toHaveBeenCalled()
       expect(statusUpdates).toContainEqual({
-        message: "Input disconnected",
-        state: "",
+        message: "Input device disconnected",
+        state: "error",
       })
     })
 
