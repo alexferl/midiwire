@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CONTROLLER_EVENTS } from "./MIDIController.js"
 import { MIDIDeviceManager } from "./MIDIDeviceManager.js"
 
@@ -655,6 +655,111 @@ describe("MIDIDeviceManager", () => {
 
         expect(statusUpdates.some((u) => u.message.includes("Input device disconnected"))).toBe(true)
       })
+    })
+  })
+
+  // setupDeviceListeners tests
+  describe("setupDeviceListeners() - String Selectors", () => {
+    let manager
+    let mockMidi
+    let mockOutputSelect
+    let mockInputSelect
+
+    beforeEach(() => {
+      mockOutputSelect = document.createElement("select")
+      mockOutputSelect.id = "output-select"
+      mockInputSelect = document.createElement("select")
+      mockInputSelect.id = "input-select"
+      document.body.appendChild(mockOutputSelect)
+      document.body.appendChild(mockInputSelect)
+
+      mockMidi = {
+        on: vi.fn(),
+        device: {
+          getOutputs: vi.fn().mockReturnValue([]),
+          getInputs: vi.fn().mockReturnValue([]),
+        },
+        options: { outputChannel: 1, inputChannel: 1 },
+      }
+      manager = new MIDIDeviceManager()
+      manager.setMIDI(mockMidi)
+    })
+
+    afterEach(() => {
+      document.body.removeChild(mockOutputSelect)
+      document.body.removeChild(mockInputSelect)
+    })
+
+    it("should accept string selectors for output element", () => {
+      manager.setupDeviceListeners(null, {
+        output: "#output-select",
+      })
+
+      expect(mockMidi.on).toHaveBeenCalled()
+    })
+
+    it("should accept string selectors for input element", () => {
+      manager.setupDeviceListeners(null, {
+        input: "#input-select",
+      })
+
+      expect(mockMidi.on).toHaveBeenCalled()
+    })
+
+    it("should accept string selectors for both output and input elements", () => {
+      manager.setupDeviceListeners(null, {
+        output: "#output-select",
+        input: "#input-select",
+      })
+
+      expect(mockMidi.on).toHaveBeenCalled()
+    })
+
+    it("should handle missing elements with string selectors", () => {
+      // Suppress console.warn for this test
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+      manager.setupDeviceListeners(null, {
+        output: "#nonexistent",
+        input: "#alsononexistent",
+      })
+
+      expect(consoleSpy).toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it("should clear output select value on disconnect when using string selector", () => {
+      manager.currentOutput = { name: "Test Output" }
+
+      manager.setupDeviceListeners(null, {
+        output: "#output-select",
+      })
+
+      // Find the disconnect handler for output
+      const disconnectCalls = mockMidi.on.mock.calls.filter(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED,
+      )
+      expect(disconnectCalls.length).toBe(1)
+
+      const disconnectHandler = disconnectCalls[0][1]
+      disconnectHandler({ name: "Test Output" })
+
+      expect(mockOutputSelect.value).toBe("")
+    })
+
+    it("should clear input select value on disconnect when using string selector", () => {
+      manager.setupDeviceListeners(null, {
+        input: "#input-select",
+      })
+
+      // Find the disconnect handler for input
+      const disconnectCalls = mockMidi.on.mock.calls.filter((call) => call[0] === CONTROLLER_EVENTS.DEV_IN_DISCONNECTED)
+      expect(disconnectCalls.length).toBe(1)
+
+      const disconnectHandler = disconnectCalls[0][1]
+      disconnectHandler({ name: "Test Input" })
+
+      expect(mockInputSelect.value).toBe("")
     })
   })
 
