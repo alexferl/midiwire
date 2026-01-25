@@ -39,6 +39,9 @@ jobs:
       - name: Copy examples to docs
         run: cp -r examples docs/examples
 
+      - name: Copy src to docs
+        run: cp -r src docs/src
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
