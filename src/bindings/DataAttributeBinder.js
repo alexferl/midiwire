@@ -106,7 +106,6 @@ export class DataAttributeBinder {
     )
 
     elements.forEach((element) => {
-      // Skip if already bound
       if (element.hasAttribute("data-midi-bound")) return
 
       const config = this._parseAttributes(element)
@@ -147,10 +146,8 @@ export class DataAttributeBinder {
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        // Handle added nodes
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Check the node itself
             if (node.matches?.(selector)) {
               const config = this._parseAttributes(node)
               if (config && !node.hasAttribute("data-midi-bound")) {
@@ -159,7 +156,6 @@ export class DataAttributeBinder {
               }
             }
 
-            // Check children
             if (node.querySelectorAll) {
               const children = node.querySelectorAll(selector)
               children.forEach((child) => {
@@ -175,15 +171,12 @@ export class DataAttributeBinder {
           }
         })
 
-        // Handle removed nodes
         mutation.removedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Unbind removed elements
             if (node.hasAttribute?.("data-midi-bound")) {
               this.controller.unbind(node)
             }
 
-            // Check children recursively
             if (node.querySelectorAll) {
               const boundChildren = node.querySelectorAll("[data-midi-bound]")
               boundChildren.forEach((child) => {
@@ -288,7 +281,6 @@ export class DataAttributeBinder {
       }
     }
 
-    // Invalid configuration
     if (
       element.dataset.midiCc !== undefined ||
       (element.dataset.midiMsb !== undefined && element.dataset.midiLsb !== undefined)

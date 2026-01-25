@@ -23,7 +23,6 @@ export class EventEmitter {
     }
     this.events.get(event).push(handler)
 
-    // Return unsubscribe function
     return () => this.off(event, handler)
   }
 

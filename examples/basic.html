@@ -101,12 +101,10 @@
 
     async function init() {
       try {
-        // Cache DOM elements
         const status = document.getElementById("status");
         const controlsContainer = document.getElementById("controls-container");
         const connectMessage = document.getElementById("connect-message");
 
-        // Create a MIDIDeviceManager with integrated MIDIController
         const deviceManager = await createMIDIDeviceManager({
           onStatusUpdate: (message, state) => {
             status.textContent = message;
@@ -156,7 +154,6 @@
           }
         });
 
-        // Set up device and channel selection
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 

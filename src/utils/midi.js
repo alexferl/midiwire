@@ -20,13 +20,8 @@ export function clamp(value, min, max) {
  * @returns {number} MIDI value (0-127)
  */
 export function normalizeValue(value, inputMin, inputMax, invert = false) {
-  // Normalize to 0-1
   const normalized = (value - inputMin) / (inputMax - inputMin)
-
-  // Invert if requested
   const final = invert ? 1 - normalized : normalized
-
-  // Scale to MIDI range (0-127)
   const midiValue = final * 127
 
   return clamp(Math.round(midiValue), 0, 127)
@@ -41,15 +36,11 @@ export function normalizeValue(value, inputMin, inputMax, invert = false) {
  * @returns {number}
  */
 export function denormalizeValue(midiValue, outputMin, outputMax, invert = false) {
-  // Normalize MIDI value to 0-1
   let normalized = clamp(midiValue, 0, 127) / 127
-
-  // Invert if requested
   if (invert) {
     normalized = 1 - normalized
   }
 
-  // Scale to output range
   return outputMin + normalized * (outputMax - outputMin)
 }
 
@@ -207,13 +198,8 @@ export function decode14BitValue(msb, lsb) {
  * @returns {{msb: number, lsb: number}} MSB and LSB values
  */
 export function normalize14BitValue(value, inputMin, inputMax, invert = false) {
-  // Normalize to 0-1
   const normalized = (value - inputMin) / (inputMax - inputMin)
-
-  // Invert if requested
   const final = invert ? 1 - normalized : normalized
-
-  // Scale to 14-bit range (0-16383)
   const value14Bit = final * 16383
 
   return encode14BitValue(value14Bit)
@@ -230,15 +216,10 @@ export function normalize14BitValue(value, inputMin, inputMax, invert = false) {
  */
 export function denormalize14BitValue(msb, lsb, outputMin, outputMax, invert = false) {
   const value14Bit = decode14BitValue(msb, lsb)
-
-  // Normalize to 0-1
   let normalized = value14Bit / 16383
-
-  // Invert if requested
   if (invert) {
     normalized = 1 - normalized
   }
 
-  // Scale to output range
   return outputMin + normalized * (outputMax - outputMin)
 }

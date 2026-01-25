@@ -137,12 +137,10 @@
 
     async function init() {
       try {
-        // Cache DOM elements
         const status = document.getElementById("status");
         const controlsContainer = document.getElementById("controls-container");
         const connectMessage = document.getElementById("connect-message");
 
-        // Create a MIDIDeviceManager with integrated MIDIController
         deviceManager = await createMIDIDeviceManager({
           onStatusUpdate: (message, state) => {
             status.textContent = message;
@@ -197,12 +195,10 @@
             midi = midiObj; // Assign to outer scope
             window.midi = midiObj;
 
-            // Refresh patch list after midi is assigned
             refreshPatchList();
           }
         });
 
-        // Set up device and channel selection
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
@@ -240,7 +236,6 @@
     window.loadPatch = (name) => {
       if (!midi) return;
 
-      // Show loading state
       const statusEl = document.getElementById("status");
       statusEl.textContent = `Loading patch "${name}"...`;
       statusEl.className = "status";
@@ -250,17 +245,13 @@
         const hasOutput = midi.connection?.output;
 
         if (hasOutput) {
-          // If we have an output, use setPatch to send MIDI and update UI
           midi.patch.set(patch).then(() => {
-            // Update displays immediately after setPatch completes
             if (window.updateControlDisplays) {
               window.updateControlDisplays();
             }
-            // Show success state
             statusEl.textContent = `Patch "${name}" loaded!`;
             statusEl.className = "status connected";
           }).catch(err => {
-            // Show error state
             statusEl.textContent = `Failed to load patch: ${err.message}`;
             statusEl.className = "status error";
           });
@@ -270,23 +261,19 @@
           const channelData = patch.channels?.[channel];
 
           if (channelData?.ccs) {
-            // Update each control based on patch data
             Object.entries(channelData.ccs).forEach(([cc, value]) => {
               const ccNum = parseInt(cc, 10);
               const slider = document.querySelector(`[data-midi-cc="${ccNum}"]`);
               if (slider) {
                 slider.value = value;
-                // Trigger input event to update displays
                 slider.dispatchEvent(new Event("input"));
               }
             });
           }
-          // Show success state
           statusEl.textContent = `Patch "${name}" loaded!`;
           statusEl.className = "status connected";
         }
       } else {
-        // Show error if patch not found
         statusEl.textContent = `Patch "${name}" not found`;
         statusEl.className = "status error";
       }
@@ -326,16 +313,13 @@
 
       const patch = midi.patch.load(name);
       if (patch) {
-        // Convert to pretty JSON
         const jsonStr = JSON.stringify(patch, null, 2);
 
-        // Create blob and download
         const blob = new Blob([jsonStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
 
-        // Sanitize filename
         const safeName = name.replace(/[^a-zA-Z0-9-_\s]/g, "_");
         a.download = `${safeName}.midiwire.json`;
 
@@ -360,7 +344,6 @@
         return;
       }
 
-      // Check file size (max 1MB for patch files)
       if (file.size > 1024 * 1024) {
         alert("File too large. Patch files should be under 1MB.");
         fileInput.value = "";
@@ -372,25 +355,19 @@
         try {
           const patch = JSON.parse(e.target.result);
 
-          // Validate patch structure
           if (!patch || !patch.channels || !patch.settings) {
             throw new Error("Invalid patch format: missing required properties");
           }
 
-          // Extract filename as patch name (without extension)
           const fileName = file.name.replace(/\.midiwire\.json$/, "").replace(/\.json$/, "");
 
-          // Confirm loading
           if (confirm(`Load patch "${fileName}" from file and apply to controls?`)) {
-            // Save to localStorage with the filename as the name
             midi.patch.save(fileName, patch);
 
-            // Apply the patch and update UI displays
             const hasOutput = midi.connection?.output;
             if (hasOutput) {
               midi.patch.set(patch);
             } else {
-              // Manually update UI controls without sending MIDI
               const channel = midi.options.channel;
               const channelData = patch.channels?.[channel];
 
@@ -423,7 +400,6 @@
       reader.readAsText(file);
     };
 
-    // HTML escape function to prevent XSS
     function escapeHtml(text) {
       const div = document.createElement("div");
       div.textContent = text;
@@ -446,7 +422,6 @@
       }
 
       listEl.innerHTML = patches.map(({ name, patch }) => {
-        // Extract control labels for better readability
         const settings = patch.settings || {};
         const labels = Object.values(settings)
           .map(s => s.label)
@@ -481,7 +456,6 @@
       }).join("");
     }
 
-    // Event delegation for patch action buttons
     document.getElementById("patch-list").addEventListener("click", (e) => {
       const button = e.target.closest("button[data-action]");
       if (!button) return;

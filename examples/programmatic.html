@@ -125,12 +125,10 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
 
     async function init() {
       try {
-        // Cache DOM elements
         const status = document.getElementById("status");
         const controlsContainer = document.getElementById("controls-container");
         const connectMessage = document.getElementById("connect-message");
 
-        // Initialize MIDI manager with callbacks
         deviceManager = await createMIDIDeviceManager({
           onStatusUpdate: (message, state) => {
             status.textContent = message;
@@ -159,7 +157,6 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
           }
         });
 
-        // Set up device and channel selection
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
@@ -174,7 +171,6 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
       }
     }
 
-    // Knob update function that integrates with the MIDI library
     function updateKnobValue(knobId, value) {
       const element = document.getElementById(`${knobId}-knob`);
       const indicator = document.getElementById(`${knobId}-indicator`);
@@ -191,7 +187,6 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
 
       valueDisplay.textContent = clampedValue;
 
-      // Store current value for reference
       element.dataset.value = clampedValue;
     }
 
@@ -209,10 +204,8 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
         let startY = 0;
         let startValue = 0;
 
-        // Initialize knob display
         updateKnobValue(knob.id, currentValue);
 
-        // Store knob data for the library integration
         element.dataset.currentValue = currentValue;
         element.dataset.cc = knob.cc;
 
@@ -234,7 +227,6 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
           const sensitivity = 0.5; // Adjust sensitivity (lower = more drag distance needed)
           let value = startValue + (deltaY * sensitivity);
 
-          // Clamp value
           value = Math.max(0, Math.min(127, value));
 
           const roundedValue = Math.round(value);
@@ -244,7 +236,6 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
             updateKnobValue(knob.id, roundedValue);
             element.dataset.currentValue = roundedValue;
 
-            // Let the library handle MIDI sending via onInput callback
             if (element.onInput) {
               element.onInput(roundedValue);
             }
@@ -258,14 +249,12 @@ midi.connection.send([0x90, 60, 100]);  // Raw MIDI</pre>
           window.removeEventListener("mouseup", stopDrag);
         }
 
-        // Make cursor indicate it's draggable
         element.style.cursor = "grab";
         element.addEventListener("mousedown", startDrag);
       });
     }
 
     function setupButtons() {
-      // Manual binding buttons
       document.getElementById("bind-cutoff").addEventListener("click", () => {
         if (!window.midi) {
           alert("Please connect to a MIDI device first");
@@ -366,7 +355,6 @@ document.body.appendChild(slider);`;
         console.log("Dynamically created and bound volume slider to CC7");
       });
 
-      // Direct MIDI command buttons
       document.getElementById("chord-cmaj7").addEventListener("click", () => {
         if (!window.midi) {
           alert("Please connect to a MIDI device first");
