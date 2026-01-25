@@ -29,15 +29,6 @@ describe("MIDIDeviceManager", () => {
       expect(manager.onStatusUpdate).toBe(statusCallback)
       expect(manager.onConnectionUpdate).toBe(connectionCallback)
     })
-
-    it("should set MIDI controller via setMIDI", () => {
-      const manager = new MIDIDeviceManager()
-      const mockMidi = { device: {} }
-
-      manager.setMIDI(mockMidi)
-
-      expect(manager.midi).toBe(mockMidi)
-    })
   })
 
   // Status and connection callback tests
@@ -94,8 +85,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { outputChannel: 1 },
         }
-        manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        manager = new MIDIDeviceManager({ midiController: mockMidi })
       })
 
       it("should populate output selector with devices", async () => {
@@ -200,8 +190,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { inputChannel: 1 },
         }
-        manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        manager = new MIDIDeviceManager({ midiController: mockMidi })
       })
 
       it("should populate input selector with devices", async () => {
@@ -275,8 +264,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { outputChannel: 1 },
         }
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         const channelSelect = document.createElement("select")
         channelSelect.innerHTML = "<option value='1'>1</option><option value='5'>5</option>"
@@ -301,8 +289,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { outputChannel: 1 },
         }
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         const outputSelect = document.createElement("select")
         const channelSelect = document.createElement("select")
@@ -318,18 +305,19 @@ describe("MIDIDeviceManager", () => {
       })
 
       it("should setup all selectors at once", async () => {
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI({
-          on: vi.fn(),
-          device: {
-            getOutputs: vi.fn().mockReturnValue([{ name: "Output", id: "1" }]),
-            getInputs: vi.fn().mockReturnValue([{ name: "Input", id: "1" }]),
-            connectOutput: vi.fn().mockResolvedValue(undefined),
-            connectInput: vi.fn().mockResolvedValue(undefined),
-            getCurrentOutput: vi.fn(),
-            getCurrentInput: vi.fn(),
+        const manager = new MIDIDeviceManager({
+          midiController: {
+            on: vi.fn(),
+            device: {
+              getOutputs: vi.fn().mockReturnValue([{ name: "Output", id: "1" }]),
+              getInputs: vi.fn().mockReturnValue([{ name: "Input", id: "1" }]),
+              connectOutput: vi.fn().mockResolvedValue(undefined),
+              connectInput: vi.fn().mockResolvedValue(undefined),
+              getCurrentOutput: vi.fn(),
+              getCurrentInput: vi.fn(),
+            },
+            options: { outputChannel: 1, inputChannel: 1 },
           },
-          options: { outputChannel: 1, inputChannel: 1 },
         })
 
         const outputSelect = document.createElement("select")
@@ -359,8 +347,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { outputChannel: 1 },
         }
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
         const outputSelect = document.createElement("select")
 
         await expect(manager.setupSelectors({ output: outputSelect }, {})).resolves.not.toThrow()
@@ -383,8 +370,7 @@ describe("MIDIDeviceManager", () => {
           },
           options: { outputChannel: 1 },
         }
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
         const outputSelect = document.createElement("select")
 
         await manager.setupSelectors({ output: outputSelect }, {})
@@ -426,8 +412,7 @@ describe("MIDIDeviceManager", () => {
           options: { outputChannel: 1, inputChannel: 1 },
         }
 
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         // Call setupSelectors with string selectors
         await manager.setupSelectors({
@@ -456,8 +441,7 @@ describe("MIDIDeviceManager", () => {
           options: { outputChannel: 1, inputChannel: 1 },
         }
 
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         // Should not throw with null/undefined selectors
         await expect(
@@ -480,8 +464,7 @@ describe("MIDIDeviceManager", () => {
           options: { outputChannel: 1 },
         }
 
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         // Use non-existent selector
         await manager.setupSelectors({
@@ -509,8 +492,7 @@ describe("MIDIDeviceManager", () => {
           options: { outputChannel: 1, inputChannel: 1 },
         }
 
-        const manager = new MIDIDeviceManager()
-        manager.setMIDI(mockMidi)
+        const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
         const inputElement = document.createElement("select")
 
@@ -658,8 +640,8 @@ describe("MIDIDeviceManager", () => {
     })
   })
 
-  // setupDeviceListeners tests
-  describe("setupDeviceListeners() - String Selectors", () => {
+  // _setupDeviceChangeListeners tests
+  describe("_setupDeviceChangeListeners() - String Selectors", () => {
     let manager
     let mockMidi
     let mockOutputSelect
@@ -678,11 +660,11 @@ describe("MIDIDeviceManager", () => {
         device: {
           getOutputs: vi.fn().mockReturnValue([]),
           getInputs: vi.fn().mockReturnValue([]),
+          getCurrentInput: vi.fn().mockReturnValue(null),
         },
         options: { outputChannel: 1, inputChannel: 1 },
       }
-      manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      manager = new MIDIDeviceManager({ midiController: mockMidi })
     })
 
     afterEach(() => {
@@ -691,25 +673,21 @@ describe("MIDIDeviceManager", () => {
     })
 
     it("should accept string selectors for output element", () => {
-      manager.setupDeviceListeners(null, {
-        output: "#output-select",
-      })
+      manager._setupDeviceChangeListeners({ output: mockOutputSelect })
 
       expect(mockMidi.on).toHaveBeenCalled()
     })
 
     it("should accept string selectors for input element", () => {
-      manager.setupDeviceListeners(null, {
-        input: "#input-select",
-      })
+      manager._setupDeviceChangeListeners({ input: mockInputSelect })
 
       expect(mockMidi.on).toHaveBeenCalled()
     })
 
     it("should accept string selectors for both output and input elements", () => {
-      manager.setupDeviceListeners(null, {
-        output: "#output-select",
-        input: "#input-select",
+      manager._setupDeviceChangeListeners({
+        output: mockOutputSelect,
+        input: mockInputSelect,
       })
 
       expect(mockMidi.on).toHaveBeenCalled()
@@ -719,20 +697,20 @@ describe("MIDIDeviceManager", () => {
       // Suppress console.warn for this test
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      manager.setupDeviceListeners(null, {
-        output: "#nonexistent",
-        input: "#alsononexistent",
+      manager._setupDeviceChangeListeners({
+        output: null,
+        input: null,
       })
 
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy).not.toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
 
     it("should clear output select value on disconnect when using string selector", () => {
       manager.currentOutput = { name: "Test Output" }
 
-      manager.setupDeviceListeners(null, {
-        output: "#output-select",
+      manager._setupDeviceChangeListeners({
+        output: mockOutputSelect,
       })
 
       // Find the disconnect handler for output
@@ -748,8 +726,8 @@ describe("MIDIDeviceManager", () => {
     })
 
     it("should clear input select value on disconnect when using string selector", () => {
-      manager.setupDeviceListeners(null, {
-        input: "#input-select",
+      manager._setupDeviceChangeListeners({
+        input: mockInputSelect,
       })
 
       // Find the disconnect handler for input
@@ -761,30 +739,126 @@ describe("MIDIDeviceManager", () => {
 
       expect(mockInputSelect.value).toBe("")
     })
+
+    it("should call onDeviceListChange callback when output device connects", async () => {
+      mockMidi.device.getOutputs = vi.fn().mockReturnValue([{ name: "New Device", id: "1" }])
+      const mockCallback = vi.fn()
+
+      manager._setupDeviceChangeListeners({ output: mockOutputSelect }, mockCallback)
+
+      // Find the connect handler for output
+      const connectCalls = mockMidi.on.mock.calls.filter((call) => call[0] === CONTROLLER_EVENTS.DEV_OUT_CONNECTED)
+      expect(connectCalls.length).toBe(1)
+
+      const connectHandler = connectCalls[0][1]
+      await connectHandler({ name: "New Device", id: "1" })
+
+      expect(mockCallback).toHaveBeenCalled()
+    })
+
+    it("should call onDeviceListChange callback when output device disconnects", async () => {
+      const mockCallback = vi.fn()
+
+      manager._setupDeviceChangeListeners({ output: mockOutputSelect }, mockCallback)
+
+      // Find the disconnect handler for output
+      const disconnectCalls = mockMidi.on.mock.calls.filter(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED,
+      )
+      expect(disconnectCalls.length).toBe(1)
+
+      const disconnectHandler = disconnectCalls[0][1]
+      await disconnectHandler({ name: "Test Output" })
+
+      expect(mockCallback).toHaveBeenCalled()
+    })
+
+    it("should call onDeviceListChange callback when input device connects", async () => {
+      mockMidi.device.getInputs = vi.fn().mockReturnValue([{ name: "New Input", id: "1" }])
+      const mockCallback = vi.fn()
+
+      manager._setupDeviceChangeListeners({ input: mockInputSelect }, mockCallback)
+
+      // Find the connect handler for input
+      const connectCalls = mockMidi.on.mock.calls.filter((call) => call[0] === CONTROLLER_EVENTS.DEV_IN_CONNECTED)
+      expect(connectCalls.length).toBe(1)
+
+      const connectHandler = connectCalls[0][1]
+      await connectHandler({ name: "New Input", id: "1" })
+
+      expect(mockCallback).toHaveBeenCalled()
+    })
+
+    it("should call onDeviceListChange callback when input device disconnects", async () => {
+      const mockCallback = vi.fn()
+
+      manager._setupDeviceChangeListeners({ input: mockInputSelect }, mockCallback)
+
+      // Find the disconnect handler for input
+      const disconnectCalls = mockMidi.on.mock.calls.filter((call) => call[0] === CONTROLLER_EVENTS.DEV_IN_DISCONNECTED)
+      expect(disconnectCalls.length).toBe(1)
+
+      const disconnectHandler = disconnectCalls[0][1]
+      await disconnectHandler({ name: "Test Input" })
+
+      expect(mockCallback).toHaveBeenCalled()
+    })
+
+    it("should call onDeviceListChange callback for both output and input elements", async () => {
+      mockMidi.device.getOutputs = vi.fn().mockReturnValue([{ name: "New Output", id: "1" }])
+      mockMidi.device.getInputs = vi.fn().mockReturnValue([{ name: "New Input", id: "1" }])
+      const mockCallback = vi.fn()
+
+      manager._setupDeviceChangeListeners({ output: mockOutputSelect, input: mockInputSelect }, mockCallback)
+
+      // Find all handlers
+      const outputConnectHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_OUT_CONNECTED,
+      )?.[1]
+      const outputDisconnectHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED,
+      )?.[1]
+      const inputConnectHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_IN_CONNECTED,
+      )?.[1]
+      const inputDisconnectHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_IN_DISCONNECTED,
+      )?.[1]
+
+      // Test all four callbacks
+      await outputConnectHandler({ name: "New Output", id: "1" })
+      expect(mockCallback).toHaveBeenCalledTimes(1)
+
+      await outputDisconnectHandler({ name: "Output", id: "1" })
+      expect(mockCallback).toHaveBeenCalledTimes(2)
+
+      await inputConnectHandler({ name: "New Input", id: "1" })
+      expect(mockCallback).toHaveBeenCalledTimes(3)
+
+      await inputDisconnectHandler({ name: "Input", id: "1" })
+      expect(mockCallback).toHaveBeenCalledTimes(4)
+    })
   })
 
   // Internal method tests
   describe("Internal Methods - Guard Clauses", () => {
-    it("should return early in setupDeviceListeners without MIDI", () => {
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(null)
+    it("should return early in _setupDeviceChangeListeners without MIDI", () => {
+      const manager = new MIDIDeviceManager({ midiController: null })
 
       expect(() => {
-        manager.setupDeviceListeners(() => {}, {})
+        manager._setupDeviceChangeListeners({}, () => {})
       }).not.toThrow()
     })
 
     it("should return empty array from _getOutputDevices without MIDI", () => {
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(null)
+      const manager = new MIDIDeviceManager({ midiController: null })
 
       const devices = manager._getOutputDevices()
       expect(devices).toEqual([])
     })
 
     it("should return empty array from _getInputDevices without MIDI", () => {
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(null)
+      const manager = new MIDIDeviceManager({ midiController: null })
 
       const devices = manager._getInputDevices()
       expect(devices).toEqual([])
@@ -796,12 +870,10 @@ describe("MIDIDeviceManager", () => {
         device: { getOutputs: vi.fn().mockReturnValue([]) },
         options: { outputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       await expect(manager._populateOutputDeviceList(null)).resolves.toBeUndefined()
 
-      manager.setMIDI(null)
       await expect(manager._populateOutputDeviceList(document.createElement("select"))).resolves.toBeUndefined()
     })
 
@@ -811,12 +883,11 @@ describe("MIDIDeviceManager", () => {
         device: { getInputs: vi.fn().mockReturnValue([]) },
         options: { inputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      let manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       await expect(manager._populateInputDeviceList(null)).resolves.toBeUndefined()
 
-      manager.setMIDI(null)
+      manager = new MIDIDeviceManager({ midiController: null })
       await expect(manager._populateInputDeviceList(document.createElement("select"))).resolves.toBeUndefined()
     })
 
@@ -825,12 +896,10 @@ describe("MIDIDeviceManager", () => {
         on: vi.fn(),
         device: { getOutputs: vi.fn().mockReturnValue([]) },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       expect(() => manager._connectOutputDeviceSelection(null)).not.toThrow()
 
-      manager.setMIDI(null)
       expect(() => manager._connectOutputDeviceSelection(document.createElement("select"))).not.toThrow()
     })
 
@@ -839,12 +908,10 @@ describe("MIDIDeviceManager", () => {
         on: vi.fn(),
         device: { getInputs: vi.fn().mockReturnValue([]) },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       expect(() => manager._connectInputDeviceSelection(null)).not.toThrow()
 
-      manager.setMIDI(null)
       expect(() => manager._connectInputDeviceSelection(document.createElement("select"))).not.toThrow()
     })
 
@@ -853,12 +920,10 @@ describe("MIDIDeviceManager", () => {
         on: vi.fn(),
         device: { getOutputs: vi.fn().mockReturnValue([]) },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       expect(() => manager._connectChannelSelection(null, "output")).not.toThrow()
 
-      manager.setMIDI(null)
       expect(() => manager._connectChannelSelection(document.createElement("select"), "output")).not.toThrow()
     })
   })
@@ -875,8 +940,7 @@ describe("MIDIDeviceManager", () => {
           ]),
         },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
       const onChange = () => {
@@ -895,8 +959,7 @@ describe("MIDIDeviceManager", () => {
           getOutputs: vi.fn().mockReturnValue([{ name: "Output 1", id: "1" }]),
         },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
 
@@ -909,8 +972,7 @@ describe("MIDIDeviceManager", () => {
         device: { getOutputs: vi.fn().mockReturnValue([]) },
         options: { outputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
       await manager._populateOutputDeviceList(outputSelect)
@@ -929,8 +991,7 @@ describe("MIDIDeviceManager", () => {
           ]),
         },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
       manager.currentOutput = { name: "Output 3", id: "3" } // Not in list
 
       const outputSelect = document.createElement("select")
@@ -950,8 +1011,7 @@ describe("MIDIDeviceManager", () => {
           ]),
         },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
       manager.currentOutput = { name: "Output 1", id: "1" } // IS in list
 
       const outputSelect = document.createElement("select")
@@ -976,8 +1036,7 @@ describe("MIDIDeviceManager", () => {
         },
         options: { outputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
       let connectCount = 0
@@ -1014,8 +1073,7 @@ describe("MIDIDeviceManager", () => {
         },
         options: { outputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
       outputSelect.innerHTML = "<option value='0'>Output 1</option>"
@@ -1053,8 +1111,7 @@ describe("MIDIDeviceManager", () => {
         },
         options: { outputChannel: 1 },
       }
-      const manager = new MIDIDeviceManager()
-      manager.setMIDI(mockMidi)
+      const manager = new MIDIDeviceManager({ midiController: mockMidi })
 
       const outputSelect = document.createElement("select")
       outputSelect.innerHTML = "<option value='0'>Output 1</option><option value='1'>Output 2</option>"

@@ -57,12 +57,16 @@ const manager = new MIDIDeviceManager({
 });
 
 // Setup all selectors at once (returns MIDIController)
-const midi = await manager.setupSelectors({
-  output: "#output-select",
-  input: "#input-select",
-  channel: "#channel-select",
-  onConnect: ({ device, type }) => console.log(`${type}: ${device.name}`)
-});
+const midi = await manager.setupSelectors(
+  {
+    output: "#output-select",
+    input: "#input-select",
+    channel: "#channel-select"
+  },
+  {
+    onConnect: ({ device, type }) => console.log(`${type}: ${device.name}`)
+  }
+);
 
 // Use the MIDI controller directly
 midi.channel.sendCC(1, 100);
