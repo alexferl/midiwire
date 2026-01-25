@@ -57,10 +57,13 @@
  *   }
  * });
  *
- * // Populate device dropdown
+ * // Setup device dropdown
  * const select = document.getElementById("device-select");
- * deviceManager.output.populateDeviceList(select);
- * deviceManager.output.connectDeviceSelection(select);
+ * const channelSelect = document.getElementById("channel-select");
+ * await deviceManager.setupSelectors({
+ *   output: select,
+ *   channel: channelSelect
+ * });
  */
 
 import { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
@@ -217,11 +220,14 @@ export async function createMIDIController(options = {}) {
  *     console.log(message);
  *     document.getElementById("status").textContent = message;
  *   },
- *   onReady: (midi, deviceManager) => {
- *     // Populate device dropdown
- *     const select = document.getElementById("device-select");
- *     deviceManager.output.populateDeviceList(select);
- *     deviceManager.output.connectDeviceSelection(select);
+ *   onReady: async (midi, deviceManager) => {
+ *     // Setup device dropdown and channel selector
+ *     const deviceSelect = document.getElementById("device-select");
+ *     const channelSelect = document.getElementById("channel-select");
+ *     await deviceManager.setupSelectors({
+ *       output: deviceSelect,
+ *       channel: channelSelect
+ *     });
  *   }
  * };
  *
@@ -281,14 +287,13 @@ export async function createMIDIController(options = {}) {
  *     document.getElementById("status").textContent = message;
  *   },
  *   onReady: async (midi, dm) => {
- *     // Setup device selection
+ *     // Setup device and channel selection
  *     const deviceSelect = document.getElementById("device-select");
- *     dm.output.populateDeviceList(deviceSelect);
- *     dm.output.connectDeviceSelection(deviceSelect);
- *
- *     // Setup channel selection
  *     const channelSelect = document.getElementById("channel-select");
- *     dm.output.connectChannelSelection(channelSelect);
+ *     await dm.setupSelectors({
+ *       output: deviceSelect,
+ *       channel: channelSelect
+ *     });
  *   }
  * });
  *
@@ -303,15 +308,15 @@ export async function createMIDIController(options = {}) {
  *     document.getElementById("status").textContent = message;
  *   },
  *   onReady: async (midi, dm) => {
- *     // Setup input device selection
+ *     // Setup input and output device selectors
  *     const inputSelect = document.getElementById("input-select");
- *     dm.input.populateDeviceList(inputSelect);
- *     dm.input.connectDeviceSelection(inputSelect);
- *
- *     // Setup output device selection
  *     const outputSelect = document.getElementById("output-select");
- *     dm.output.populateDeviceList(outputSelect);
- *     dm.output.connectDeviceSelection(outputSelect);
+ *     const channelSelect = document.getElementById("channel-select");
+ *     await dm.setupSelectors({
+ *       input: inputSelect,
+ *       output: outputSelect,
+ *       channel: channelSelect
+ *     });
  *   }
  * });
  */
@@ -352,7 +357,7 @@ export async function createMIDIDeviceManager(options = {}) {
   if (output) {
     try {
       await midi.device.connectOutput(output)
-      deviceManager.currentDevice = midi.device.getCurrentOutput()
+      deviceManager.currentOutput = midi.device.getCurrentOutput()
       deviceManager.updateConnectionStatus()
     } catch (err) {
       if (onError) onError(err)

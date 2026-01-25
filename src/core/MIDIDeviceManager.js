@@ -2,56 +2,36 @@ import { CONTROLLER_EVENTS } from "./MIDIController.js"
 
 /**
  * High-level MIDI device manager for web UIs. Provides simplified APIs for:
- * - Populating device select dropdowns with available MIDI inputs and outputs
- * - Handling device connections/disconnections with status updates
- * - Tracking connection state and current device
- * - Updating UI elements on device changes
+ * - Setting up device selectors with automatic population and refresh
+ * - Handling device connections/disconnections with callbacks
  * - Managing MIDI channel selection
  *
- * NOTE: Typically used with createMIDIDeviceManager() factory function.
- * For direct MIDI I/O and control binding, use MIDIController instead.
- *
  * @example
- * // Basic usage with MIDIController
- * const midi = new MIDIController();
- * await midi.init();
- *
- * const manager = new MIDIDeviceManager({ midiController: midi });
- * const outputSelect = document.getElementById("output-select");
- * const inputSelect = document.getElementById("input-select");
- * const channelSelect = document.getElementById("channel-select");
- *
- * // Set up output device list dropdown
- * manager.output.populateDeviceList(outputSelect);
- *
- * // Handle output device selection
- * manager.output.connectDeviceSelection(outputSelect, (midi, device) => {
- *   console.log(`Connected to ${device.name}`);
- * });
- *
- * // Set up input device list dropdown
- * manager.input.populateDeviceList(inputSelect);
- *
- * // Handle input device selection
- * manager.input.connectDeviceSelection(inputSelect, (midi, device) => {
- *   console.log(`Connected to input: ${device.name}`);
- * });
- *
- * // Handle channel selection
- * manager.output.connectChannelSelection(channelSelect); // or manager.input.connectChannelSelection(channelSelect)
- *
- * @example
- * // With status and connection callbacks
+ * // Setup with callback
  * const manager = new MIDIDeviceManager({
  *   midiController: midi,
- *   onStatusUpdate: (message, state) => {
- *     console.log(`Status: ${message}`);
- *     document.getElementById("status").textContent = message;
- *   },
- *   onConnectionUpdate: (device, midi) => {
- *     console.log("Connection state changed");
+ *   onStatusUpdate: (msg, state) => updateStatus(msg, state),
+ *   onConnectionUpdate: (output, input, midi) => {
+ *     console.log("Output:", output?.name);
+ *     console.log("Input:", input?.name);
  *   }
  * });
+ *
+ * // Setup all selectors with callbacks
+ * const midi = await manager.setupSelectors({
+ *   output: document.getElementById("output-select"),
+ *   input: document.getElementById("input-select"),
+ *   channel: document.getElementById("channel-select"),
+ *   onConnect: ({ midi, device, type }) => {
+ *     console.log(`${type} connected: ${device.name}`);
+ *   },
+ *   onDisconnect: ({ midi, type }) => {
+ *     console.log(`${type} disconnected`);
+ *   }
+ * });
+ *
+ * // Returns MIDI controller for immediate use
+ * midi.channel.sendCC(1, 100);
  */
 export class MIDIDeviceManager {
   /**
@@ -59,201 +39,17 @@ export class MIDIDeviceManager {
    * @param {Object} options - Configuration options
    * @param {MIDIController} [options.midiController] - MIDIController instance. Can also be set via setMIDI()
    * @param {Function} [options.onStatusUpdate] - Callback for status updates (message: string, state: string)
-   * @param {Function} [options.onConnectionUpdate] - Callback when connection status changes (device: Object, midi: MIDIController)
+   * @param {Function} [options.onConnectionUpdate] - Callback when connection status changes (outputDevice: Object, inputDevice: Object, midi: MIDIController)
    * @param {number} [options.channel=1] - Default MIDI channel
-   *
-   * @example
-   * // With MIDIController
-   * const manager = new MIDIDeviceManager({
-   *   midiController: midi,
-   *   onStatusUpdate: (msg, state) => console.log(msg),
-   *   onConnectionUpdate: (device, midi) => console.log("Device changed")
-   * });
-   *
-   * @example
-   * // Set MIDIController later
-   * const manager = new MIDIDeviceManager({
-   *   onStatusUpdate: (msg, state) => updateUI(msg, state)
-   * });
-   * manager.setMIDI(midi);
    */
   constructor(options = {}) {
     this.midi = options.midiController || null
     this.onStatusUpdate = options.onStatusUpdate || (() => {})
     this.onConnectionUpdate = options.onConnectionUpdate || (() => {})
     this.channel = options.channel || 1
-    this.currentDevice = null
+    this.currentOutput = null
+    this.currentInput = null
     this.isConnecting = false
-
-    // Initialize namespaces after all methods are defined
-    this._initNamespaces()
-  }
-
-  /**
-   * Initialize namespace bindings
-   * This must be called after all private methods are defined
-   * @private
-   */
-  _initNamespaces() {
-    /**
-     * Output device management namespace
-     * @namespace
-     */
-    this.output = {
-      /**
-       * Populate a select element with available MIDI output devices. Automatically
-       * handles maintaining selection when the current device remains connected, and clears
-       * selection when the current device is disconnected. Updates status message accordingly.
-       *
-       * @param {HTMLSelectElement} selectElement - The select element to populate with devices
-       * @param {Function} [onChange] - Optional callback invoked after populating the list
-       * @returns {Promise<void>}
-       *
-       * @example
-       * // Basic population
-       * const outputSelect = document.getElementById("output-select");
-       * await manager.output.populateDeviceList(outputSelect);
-       *
-       * @example
-       * // With refresh callback
-       * await manager.output.populateDeviceList(outputSelect, () => {
-       *   console.log("Device list updated");
-       * });
-       *
-       * @example
-       * // Combined with device listeners for automatic refresh
-       * manager.setupDeviceListeners(() => {
-       *   manager.output.populateDeviceList(outputSelect);
-       * });
-       * await manager.output.populateDeviceList(outputSelect); // Initial population
-       */
-      populateDeviceList: this._populateOutputDeviceList.bind(this),
-
-      /**
-       * Connect device selection events for output devices to automatically handle connections when
-       * the user selects a device from a dropdown. Handles both connection and disconnection.
-       *
-       * @param {HTMLSelectElement} deviceSelectElement - The select element populated with output devices
-       * @param {Function} onConnect - Callback when device is successfully connected (midi: MIDIController, device: Object)
-       * @returns {void}
-       *
-       * @example
-       * // Basic output device selection
-       * const outputSelect = document.getElementById("output-select");
-       * manager.output.connectDeviceSelection(outputSelect, (midi, device) => {
-       *   console.log(`Connected to ${device.name}`);
-       * });
-       */
-      connectDeviceSelection: this._connectOutputDeviceSelection.bind(this),
-
-      /**
-       * Connect channel selection events to automatically update the output MIDI channel when
-       * the user selects a different channel from a dropdown. Triggers connection status
-       * update to notify listeners of the channel change.
-       *
-       * @param {HTMLSelectElement} channelSelectElement - The select element with channel options (1-16)
-       * @returns {void}
-       *
-       * @example
-       * // Setup output channel selection
-       * const channelSelect = document.getElementById("channel-select");
-       * manager.output.connectChannelSelection(channelSelect);
-       */
-      connectChannelSelection: (channelSelectElement) => this._connectChannelSelection(channelSelectElement, "output"),
-
-      /**
-       * Check if an output device is connected
-       * @param {string} deviceName
-       * @returns {boolean}
-       */
-      isDeviceConnected: this._isOutputDeviceConnected.bind(this),
-
-      /**
-       * Get the current list of MIDI output devices
-       * @returns {Array<Object>}
-       */
-      getDevices: this._getOutputDevices.bind(this),
-    }
-
-    /**
-     * Input device management namespace
-     * @namespace
-     */
-    this.input = {
-      /**
-       * Populate a select element with available MIDI input devices. Automatically
-       * handles maintaining selection when the current input device remains connected, and clears
-       * selection when the current input device is disconnected.
-       *
-       * @param {HTMLSelectElement} selectElement - The select element to populate with input devices
-       * @param {Function} [onChange] - Optional callback invoked after populating the list
-       * @returns {Promise<void>}
-       *
-       * @example
-       * // Basic population
-       * const inputSelect = document.getElementById("input-select");
-       * await manager.input.populateDeviceList(inputSelect);
-       *
-       * @example
-       * // With refresh callback
-       * await manager.input.populateDeviceList(inputSelect, () => {
-       *   console.log("Input device list updated");
-       * });
-       *
-       * @example
-       * // Combined with device listeners for automatic refresh
-       * manager.setupDeviceListeners(() => {
-       *   manager.input.populateDeviceList(inputSelect);
-       * });
-       * await manager.input.populateDeviceList(inputSelect); // Initial population
-       */
-      populateDeviceList: this._populateInputDeviceList.bind(this),
-
-      /**
-       * Connect input device selection events to automatically handle input device connections when
-       * the user selects a device from a dropdown. Handles both connection and disconnection.
-       *
-       * @param {HTMLSelectElement} deviceSelectElement - The select element populated with input devices
-       * @param {Function} onConnect - Callback when device is successfully connected (midi: MIDIController, device: Object)
-       * @returns {void}
-       *
-       * @example
-       * // Basic input device selection
-       * const inputSelect = document.getElementById("input-select");
-       * manager.input.connectDeviceSelection(inputSelect, (midi, device) => {
-       *   console.log(`Connected to input: ${device.name}`);
-       * });
-       */
-      connectDeviceSelection: this._connectInputDeviceSelection.bind(this),
-
-      /**
-       * Connect channel selection events to automatically update the input MIDI channel when
-       * the user selects a different channel from a dropdown. Triggers connection status
-       * update to notify listeners of the channel change.
-       *
-       * @param {HTMLSelectElement} channelSelectElement - The select element with channel options (1-16)
-       * @returns {void}
-       *
-       * @example
-       * // Setup input channel selection
-       * const inputChannelSelect = document.getElementById("input-channel-select");
-       * manager.input.connectChannelSelection(inputChannelSelect);
-       */
-      connectChannelSelection: (channelSelectElement) => this._connectChannelSelection(channelSelectElement, "input"),
-
-      /**
-       * Check if an input device is connected
-       * @param {string} deviceName
-       * @returns {boolean}
-       */
-      isDeviceConnected: this._isInputDeviceConnected.bind(this),
-
-      /**
-       * Get the current list of MIDI input devices
-       * @returns {Array<Object>}
-       */
-      getDevices: this._getInputDevices.bind(this),
-    }
   }
 
   /**
@@ -308,12 +104,11 @@ export class MIDIDeviceManager {
     this.midi.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, (device) => {
       this.updateStatus(`Output device disconnected: ${device?.name || "Unknown"}`, "error")
 
-      const wasCurrentDevice = this.currentDevice && device?.name === this.currentDevice.name
+      const wasCurrentDevice = this.currentOutput && device?.name === this.currentOutput.name
 
       if (wasCurrentDevice) {
-        this.currentDevice = null
+        this.currentOutput = null
         this.updateConnectionStatus()
-        // Clear output select element if provided
         if (selectElements.output) {
           selectElements.output.value = ""
         }
@@ -333,7 +128,6 @@ export class MIDIDeviceManager {
 
     this.midi.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, (device) => {
       this.updateStatus(`Input device disconnected: ${device?.name || "Unknown"}`, "error")
-      // Clear input select element if provided
       if (selectElements.input) {
         selectElements.input.value = ""
       }
@@ -364,7 +158,90 @@ export class MIDIDeviceManager {
    * Update connection status
    */
   updateConnectionStatus() {
-    this.onConnectionUpdate(this.currentDevice, this.midi)
+    this.onConnectionUpdate(this.currentOutput, this.currentInput, this.midi)
+  }
+
+  /**
+   * Set up all MIDI device selectors in one call. Handles population, connection
+   * handling, channel selection, and automatic refresh on device changes.
+   *
+   * @param {Object} selectors - Selectors configuration
+   * @param {HTMLSelectElement} [selectors.output] - Output device dropdown element
+   * @param {HTMLSelectElement} [selectors.input] - Input device dropdown element
+   * @param {HTMLSelectElement} [selectors.channel] - MIDI channel dropdown element
+   * @param {Object} [options] - Configuration options
+   * @param {Function} [options.onConnect] - Called when device connects ({ midi, device, type })
+   * @param {Function} [options.onDisconnect] - Called when device disconnects ({ midi, type })
+   * @returns {Promise<MIDIController>} The MIDI controller instance for chaining
+   *
+   * @example
+   * // Setup all selectors at once
+   * const midi = await manager.setupSelectors({
+   *   output: document.getElementById("output-select"),
+   *   input: document.getElementById("input-select"),
+   *   channel: document.getElementById("channel-select"),
+   *   onConnect: ({ midi, device, type }) => {
+   *     console.log(`${type} connected: ${device.name}`);
+   *   },
+   *   onDisconnect: ({ midi, type }) => {
+   *     console.log(`${type} disconnected`);
+   *   }
+   * });
+   *
+   * // Now use the midi controller directly
+   * midi.channel.sendCC(1, 100);
+   */
+  async setupSelectors(selectors = {}, options = {}) {
+    if (!this.midi) {
+      throw new Error("MIDI controller not initialized. Call setMIDI() first.")
+    }
+
+    const selectElements = {}
+    const { output: outputSelect, input: inputSelect, channel: channelSelect } = selectors
+
+    if (outputSelect) {
+      selectElements.output = outputSelect
+
+      this.setupDeviceListeners(async () => {
+        await this._populateOutputDeviceList(outputSelect)
+      }, selectElements)
+
+      await this._populateOutputDeviceList(outputSelect)
+
+      const handleOutputConnect = options.onConnect
+        ? async (midi, device) => options.onConnect({ midi, device, type: "output" })
+        : undefined
+      const handleOutputDisconnect = options.onDisconnect
+        ? async (midi) => options.onDisconnect({ midi, type: "output" })
+        : undefined
+
+      this._connectOutputDeviceSelection(outputSelect, handleOutputConnect, handleOutputDisconnect)
+    }
+
+    if (inputSelect) {
+      selectElements.input = inputSelect
+
+      this.setupDeviceListeners(async () => {
+        await this._populateInputDeviceList(inputSelect)
+      }, selectElements)
+
+      await this._populateInputDeviceList(inputSelect)
+
+      const handleInputConnect = options.onConnect
+        ? async (midi, device) => options.onConnect({ midi, device, type: "input" })
+        : undefined
+      const handleInputDisconnect = options.onDisconnect
+        ? async (midi) => options.onDisconnect({ midi, type: "input" })
+        : undefined
+
+      this._connectInputDeviceSelection(inputSelect, handleInputConnect, handleInputDisconnect)
+    }
+
+    if (channelSelect) {
+      this._connectChannelSelection(channelSelect, "output")
+    }
+
+    return this.midi
   }
 
   /**
@@ -388,66 +265,45 @@ export class MIDIDeviceManager {
   }
 
   /**
-   * Check if an output device is connected by name
-   * @private
-   * @param {string} deviceName - Name of the device to check
-   * @returns {boolean} True if device is connected, false otherwise
-   */
-  _isOutputDeviceConnected(deviceName) {
-    if (!this.midi) return false
-    const outputs = this.midi.device.getOutputs()
-    return outputs.some((o) => o.name === deviceName)
-  }
-
-  /**
-   * Check if an input device is connected by name
-   * @private
-   * @param {string} deviceName - Name of the input device to check
-   * @returns {boolean} True if device is connected, false otherwise
-   */
-  _isInputDeviceConnected(deviceName) {
-    if (!this.midi) return false
-    const inputs = this.midi.device.getInputs()
-    return inputs.some((input) => input.name === deviceName)
-  }
-
-  /**
    * Connect output device selection events to automatically handle connections when
    * the user selects a device from a dropdown. Handles both connection and disconnection.
    * @private
    * @param {HTMLSelectElement} deviceSelectElement - The select element populated with output devices
-   * @param {Function} onConnect - Callback when device is successfully connected
+   * @param {Function} [onConnect] - Callback when device is successfully connected (midi: MIDIController, device: Object)
+   * @param {Function} [onDisconnect] - Callback when device is disconnected (midi: MIDIController)
    * @returns {void}
    */
-  _connectOutputDeviceSelection(deviceSelectElement, onConnect) {
+  _connectOutputDeviceSelection(deviceSelectElement, onConnect, onDisconnect) {
     if (!deviceSelectElement || !this.midi) return
 
     deviceSelectElement.addEventListener("change", async (e) => {
-      // Check for concurrent connections first
       if (this.isConnecting) return
       this.isConnecting = true
 
       const deviceIndex = e.target.value
 
       if (!deviceIndex) {
-        if (this.currentDevice && this.midi) {
+        if (this.currentOutput && this.midi) {
           await this.midi.device.disconnectOutput()
-          this.currentDevice = null
+          this.currentOutput = null
           this.updateStatus("Output device disconnected", "")
           this.updateConnectionStatus()
         }
         this.isConnecting = false
+
+        if (onDisconnect) {
+          await onDisconnect(this.midi)
+        }
         return
       }
 
       try {
         await this.midi.device.connectOutput(parseInt(deviceIndex, 10))
-        this.currentDevice = this.midi.device.getCurrentOutput()
+        this.currentOutput = this.midi.device.getCurrentOutput()
 
-        // Update the select element to show the selected device
-        if (this.currentDevice) {
+        if (this.currentOutput) {
           const outputs = this.midi.device.getOutputs()
-          const index = outputs.findIndex((o) => o.id === this.currentDevice.id)
+          const index = outputs.findIndex((o) => o.id === this.currentOutput.id)
           if (index !== -1) {
             deviceSelectElement.value = index.toString()
           }
@@ -456,7 +312,7 @@ export class MIDIDeviceManager {
         this.updateConnectionStatus()
 
         if (onConnect) {
-          await onConnect(this.midi, this.currentDevice)
+          await onConnect(this.midi, this.currentOutput)
         }
       } catch (err) {
         this.updateStatus(`Output connection failed: ${err.message}`, "error")
@@ -471,10 +327,11 @@ export class MIDIDeviceManager {
    * the user selects a device from a dropdown. Handles both connection and disconnection.
    * @private
    * @param {HTMLSelectElement} deviceSelectElement - The select element populated with input devices
-   * @param {Function} onConnect - Callback when device is successfully connected
+   * @param {Function} [onConnect] - Callback when device is successfully connected (midi: MIDIController, device: Object)
+   * @param {Function} [onDisconnect] - Callback when device is disconnected (midi: MIDIController)
    * @returns {void}
    */
-  _connectInputDeviceSelection(deviceSelectElement, onConnect) {
+  _connectInputDeviceSelection(deviceSelectElement, onConnect, onDisconnect) {
     if (!deviceSelectElement || !this.midi) return
 
     deviceSelectElement.addEventListener("change", async (e) => {
@@ -485,6 +342,10 @@ export class MIDIDeviceManager {
           await this.midi.device.disconnectInput()
           this.updateStatus("Input device disconnected", "")
           this.updateConnectionStatus()
+        }
+
+        if (onDisconnect) {
+          await onDisconnect(this.midi)
         }
         return
       }
@@ -524,14 +385,11 @@ export class MIDIDeviceManager {
         '<option value="">Select a device</option>' +
         devices.map((device, i) => `<option value="${i}">${device.name}</option>`).join("")
 
-      // Check if the currently connected device is still available
       if (currentDevice) {
         const deviceIndex = devices.findIndex((d) => d.name === currentDevice.name)
         if (deviceIndex !== -1) {
-          // Device is still connected, keep it selected
           selectElement.value = deviceIndex.toString()
         } else {
-          // Current device was disconnected
           selectElement.value = ""
           if (isOutput) {
             this.currentDevice = null
@@ -539,12 +397,11 @@ export class MIDIDeviceManager {
           }
         }
       } else {
-        // No device connected, show "Select a device"
         selectElement.value = ""
       }
 
       selectElement.disabled = false
-      if (isOutput && !this.currentDevice) {
+      if (isOutput && !this.currentOutput) {
         this.updateStatus("Select a device")
       }
     } else {
@@ -573,7 +430,7 @@ export class MIDIDeviceManager {
     if (!selectElement || !this.midi) return
 
     const outputs = this._getOutputDevices()
-    this._populateDeviceList(selectElement, outputs, this.currentDevice, onChange, true)
+    this._populateDeviceList(selectElement, outputs, this.currentOutput, onChange, true)
   }
 
   /**

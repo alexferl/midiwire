@@ -61,20 +61,22 @@
 
     async function init() {
       try {
-        // Cache DOM elements
         const status = document.getElementById("status");
         const controlsContainer = document.getElementById("controls-container");
         const connectMessage = document.getElementById("connect-message");
+        const deviceSelect = document.getElementById("device-select");
+        const channelSelect = document.getElementById("channel-select");
 
-        // Create a MIDIDeviceManager with integrated MIDIController
-        const deviceManager = await createMIDIDeviceManager({
+        const midi = await createMIDIDeviceManager({
           onStatusUpdate: (message, state) => {
             status.textContent = message;
             status.className = state ? `status ${state}` : "status";
           },
-          onConnectionUpdate: (device, midi) => {
+          onConnectionUpdate: (outputDevice, inputDevice, midi) => {
+            const device = outputDevice || inputDevice;
             if (device && midi) {
-              status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
+              const channel = outputDevice ? midi.options.outputChannel : midi.options.inputChannel;
+              status.textContent = `Connected to ${device.name} (Channel ${channel})`;
               status.className = "status connected";
               controlsContainer.style.display = "grid";
               connectMessage.style.display = "none";
@@ -83,24 +85,15 @@
               connectMessage.style.display = "block";
             }
           },
-          onReady: (midi) => {
-            // Make MIDI globally available for debugging
-            window.midi = midi;
-          }
         });
 
-        // Set up device and channel selection
-        const deviceSelect = document.getElementById("device-select");
-        const channelSelect = document.getElementById("channel-select");
-
-        deviceManager.setupDeviceListeners(async () => {
-          await deviceManager.output.populateDeviceList(deviceSelect);
+        await midi.setupSelectors({
+          output: deviceSelect,
+          channel: channelSelect,
         });
 
-        // Initial population
-        await deviceManager.output.populateDeviceList(deviceSelect);
-        deviceManager.output.connectDeviceSelection(deviceSelect);
-        deviceManager.output.connectChannelSelection(channelSelect);
+        // Make MIDI globally available for debugging
+        window.midi = midi;
       } catch (err) {
         const status = document.getElementById("status");
         status.textContent = `MIDI initialization failed: ${err.message}`;
