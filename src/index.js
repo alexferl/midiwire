@@ -59,8 +59,8 @@
  *
  * // Populate device dropdown
  * const select = document.getElementById("device-select");
- * deviceManager.populateDeviceList(select);
- * deviceManager.connectDeviceSelection(select);
+ * deviceManager.populateOutputDeviceList(select);
+ * deviceManager.connectOutputDeviceSelection(select);
  */
 
 import { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
@@ -200,8 +200,8 @@ export async function createMIDIController(options = {}) {
  *   onReady: (midi, deviceManager) => {
  *     // Populate device dropdown
  *     const select = document.getElementById("device-select");
- *     deviceManager.populateDeviceList(select);
- *     deviceManager.connectDeviceSelection(select);
+ *     deviceManager.populateOutputDeviceList(select);
+ *     deviceManager.connectOutputDeviceSelection(select);
  *   }
  * };
  */
@@ -252,8 +252,8 @@ export async function createMIDIController(options = {}) {
  *   onReady: async (midi, dm) => {
  *     // Setup device selection
  *     const deviceSelect = document.getElementById("device-select");
- *     dm.populateDeviceList(deviceSelect);
- *     dm.connectDeviceSelection(deviceSelect);
+ *     dm.populateOutputDeviceList(deviceSelect);
+ *     dm.connectOutputDeviceSelection(deviceSelect);
  *
  *     // Setup channel selection
  *     const channelSelect = document.getElementById("channel-select");

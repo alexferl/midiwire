@@ -158,14 +158,14 @@
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
-        deviceManager.setupDeviceListeners(() => {
-          deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.setupDeviceListeners(async () => {
+          await deviceManager.output.populateDeviceList(deviceSelect);
         });
 
         // Initial population
-        deviceManager.populateDeviceList(deviceSelect);
-        deviceManager.connectDeviceSelection(deviceSelect);
-        deviceManager.connectChannelSelection(channelSelect);
+        await deviceManager.output.populateDeviceList(deviceSelect);
+        deviceManager.output.connectDeviceSelection(deviceSelect);
+        deviceManager.output.connectChannelSelection(channelSelect);
 
         // Set up CC display updates (independent of MIDI connection)
         document.querySelectorAll("[data-midi-cc]").forEach(slider => {

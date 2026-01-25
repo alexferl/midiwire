@@ -204,19 +204,19 @@
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
-        deviceManager.setupDeviceListeners(() => {
-          deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.setupDeviceListeners(async () => {
+          await deviceManager.output.populateDeviceList(deviceSelect);
         });
 
         // Initial population
-        deviceManager.populateDeviceList(deviceSelect);
-        deviceManager.connectDeviceSelection(deviceSelect, (midiObj) => {
+        await deviceManager.output.populateDeviceList(deviceSelect);
+        deviceManager.output.connectDeviceSelection(deviceSelect, (midiObj) => {
           midi = midiObj; // Assign to outer scope
           window.midi = midiObj;
           // Controls should be bound via data-midi-cc attributes
           // The DataAttributeBinder is created in the MIDIController
         });
-        deviceManager.connectChannelSelection(channelSelect);
+        deviceManager.output.connectChannelSelection(channelSelect);
       } catch (err) {
         const status = document.getElementById("status");
         status.textContent = `MIDI initialization failed: ${err.message}`;

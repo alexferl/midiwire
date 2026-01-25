@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createMIDIController } from "../index.js"
 import { EventEmitter } from "./EventEmitter.js"
-import { CONNECTION_EVENTS } from "./MIDIConnection.js"
+import { CONTROLLER_EVENTS } from "./MIDIController.js"
 import { MIDIDeviceManager } from "./MIDIDeviceManager.js"
 
 describe("MIDIDeviceManager", () => {
@@ -57,7 +57,7 @@ describe("MIDIDeviceManager", () => {
 
   describe("getOutputDevices", () => {
     it("should return empty array when no MIDI connection", () => {
-      expect(deviceManager.getOutputDevices()).toEqual([])
+      expect(deviceManager.output.getDevices()).toEqual([])
     })
 
     it("should return list of devices from MIDI connection", () => {
@@ -66,19 +66,19 @@ describe("MIDIDeviceManager", () => {
         { id: "2", name: "Device 2", manufacturer: "Company B" },
       ]
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => mockDevices,
         },
       }
       deviceManager.midi = mockMidi
 
-      expect(deviceManager.getOutputDevices()).toEqual(mockDevices)
+      expect(deviceManager.output.getDevices()).toEqual(mockDevices)
     })
   })
 
   describe("getInputDevices", () => {
     it("should return empty array when no MIDI connection", () => {
-      expect(deviceManager.getInputDevices()).toEqual([])
+      expect(deviceManager.input.getDevices()).toEqual([])
     })
 
     it("should return list of input devices from MIDI connection", () => {
@@ -87,43 +87,26 @@ describe("MIDIDeviceManager", () => {
         { id: "input-2", name: "Pad Controller", manufacturer: "Company B" },
       ]
       const mockMidi = {
-        connection: {
+        device: {
           getInputs: () => mockInputDevices,
         },
       }
       deviceManager.midi = mockMidi
 
-      expect(deviceManager.getInputDevices()).toEqual(mockInputDevices)
+      expect(deviceManager.input.getDevices()).toEqual(mockInputDevices)
     })
   })
 
-  describe("isDeviceConnected", () => {
-    it("should return false when no MIDI connection", () => {
-      expect(deviceManager.isDeviceConnected("Device 1")).toBe(false)
-    })
-
-    it("should return true if device is connected", () => {
-      const mockMidi = {
-        connection: {
-          getOutputs: () => [
-            { id: "1", name: "Device 1", manufacturer: "Company A" },
-            { id: "2", name: "Device 2", manufacturer: "Company B" },
-          ],
-        },
-      }
-      deviceManager.midi = mockMidi
-
-      expect(deviceManager.isDeviceConnected("Device 1")).toBe(true)
-      expect(deviceManager.isDeviceConnected("Device 3")).toBe(false)
-    })
-  })
-
-  describe("connectDeviceSelection", () => {
+  describe("connectOutputDeviceSelection", () => {
     it("should connect to selected device", async () => {
       const mockMidi = {
         device: {
           connectOutput: vi.fn().mockResolvedValue(undefined),
-          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1", id: "1" }),
+          getOutputs: vi.fn().mockReturnValue([
+            { id: "1", name: "Device 1", manufacturer: "Company A" },
+            { id: "2", name: "Device 2", manufacturer: "Company B" },
+          ]),
         },
         connection: {
           on: vi.fn(),
@@ -137,7 +120,7 @@ describe("MIDIDeviceManager", () => {
         '<option value="">Select a device</option><option value="0">Device 1</option><option value="1">Device 2</option>'
 
       let connectedDevice = null
-      deviceManager.connectDeviceSelection(select, async (_midi, device) => {
+      deviceManager.output.connectDeviceSelection(select, async (_midi, device) => {
         connectedDevice = device
       })
 
@@ -149,26 +132,23 @@ describe("MIDIDeviceManager", () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockMidi.device.connectOutput).toHaveBeenCalledWith(0)
-      expect(connectedDevice).toEqual({ name: "Device 1" })
-      expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
+      expect(connectedDevice).toEqual({ name: "Device 1", id: "1" })
+      expect(deviceManager.currentDevice).toEqual({ name: "Device 1", id: "1" })
     })
 
     it("should disconnect when selecting empty option", async () => {
       const mockMidi = {
         device: {
           connectOutput: vi.fn(),
+          disconnectOutput: vi.fn(),
         },
         getCurrentOutput: vi.fn(),
-        connection: {
-          on: vi.fn(),
-          disconnect: vi.fn(),
-        },
       }
       deviceManager.setMIDI(mockMidi)
       deviceManager.currentDevice = { name: "Device 1" }
 
       const select = document.createElement("select")
-      deviceManager.connectDeviceSelection(select)
+      deviceManager.output.connectDeviceSelection(select)
 
       // Select empty option
       select.value = ""
@@ -176,7 +156,7 @@ describe("MIDIDeviceManager", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
-      expect(mockMidi.connection.disconnect).toHaveBeenCalled()
+      expect(mockMidi.device.disconnectOutput).toHaveBeenCalled()
       expect(deviceManager.currentDevice).toBe(null)
       expect(statusUpdates).toContainEqual({
         message: "Disconnected",
@@ -188,7 +168,8 @@ describe("MIDIDeviceManager", () => {
       const mockMidi = {
         device: {
           connectOutput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
-          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1" }),
+          getCurrentOutput: vi.fn().mockReturnValue({ name: "Device 1", id: "1" }),
+          getOutputs: vi.fn().mockReturnValue([{ id: "1", name: "Device 1", manufacturer: "Company A" }]),
         },
         connection: {
           on: vi.fn(),
@@ -201,7 +182,7 @@ describe("MIDIDeviceManager", () => {
       select.innerHTML = '<option value="">Select a device</option><option value="0">Device 1</option>'
 
       let connectCount = 0
-      deviceManager.connectDeviceSelection(select, async () => {
+      deviceManager.output.connectDeviceSelection(select, async () => {
         connectCount++
         await new Promise((resolve) => setTimeout(resolve, 10))
       })
@@ -218,9 +199,9 @@ describe("MIDIDeviceManager", () => {
   })
 
   describe("connectChannelSelection", () => {
-    it("should update channel when selection changes", () => {
+    it("should update output channel when selection changes", () => {
       const mockMidi = {
-        options: { channel: 1 },
+        options: { outputChannel: 1 },
       }
       deviceManager.setMIDI(mockMidi)
 
@@ -233,12 +214,35 @@ describe("MIDIDeviceManager", () => {
         select.appendChild(option)
       }
 
-      deviceManager.connectChannelSelection(select)
+      deviceManager.output.connectChannelSelection(select)
 
       select.value = "5"
       select.dispatchEvent(new Event("change"))
 
-      expect(mockMidi.options.channel).toBe(5)
+      expect(mockMidi.options.outputChannel).toBe(5)
+    })
+
+    it("should update input channel when selection changes", () => {
+      const mockMidi = {
+        options: { inputChannel: 1 },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      select.innerHTML = ""
+      for (let i = 1; i <= 16; i++) {
+        const option = document.createElement("option")
+        option.value = i
+        option.textContent = i
+        select.appendChild(option)
+      }
+
+      deviceManager.input.connectChannelSelection(select)
+
+      select.value = "3"
+      select.dispatchEvent(new Event("change"))
+
+      expect(mockMidi.options.inputChannel).toBe(3)
     })
   })
 
@@ -251,10 +255,11 @@ describe("MIDIDeviceManager", () => {
         onstatechange: null,
       })
 
-      const midi = await createMIDIController({ autoConnect: false, channel: 3 })
+      const midi = await createMIDIController({ autoConnect: false, inputChannel: 3, outputChannel: 3 })
       deviceManager.setMIDI(midi)
 
-      expect(midi.options.channel).toBe(3)
+      expect(midi.options.inputChannel).toBe(3)
+      expect(midi.options.outputChannel).toBe(3)
       expect(deviceManager.midi).toBe(midi)
     })
   })
@@ -312,41 +317,37 @@ describe("MIDIDeviceManager", () => {
 
   describe("setupDeviceListeners", () => {
     it("should set up device connection event listeners", () => {
-      const mockConnection = new EventEmitter()
-      const mockMidi = { connection: mockConnection }
-
+      const mockMidi = new EventEmitter()
       deviceManager.setMIDI(mockMidi)
 
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUT_DEV_CONNECTED event
+      // Emit DEV_OUT_CONNECTED event
       const device = { name: "Device 1", id: "1" }
-      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_CONNECTED, { device })
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, device)
 
       expect(statusUpdates).toContainEqual({
-        message: "Device connected: Device 1",
+        message: "Output device connected: Device 1",
         state: "connected",
       })
       expect(onDeviceListChange).toHaveBeenCalled()
     })
 
     it("should set up device disconnection event listeners", () => {
-      const mockConnection = new EventEmitter()
-      const mockMidi = { connection: mockConnection }
-
+      const mockMidi = new EventEmitter()
       deviceManager.setMIDI(mockMidi)
       deviceManager.currentDevice = { name: "Device 1" }
 
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUT_DEV_DISCONNECTED event
+      // Emit DEV_OUT_DISCONNECTED event
       const device = { name: "Device 1", id: "1" }
-      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device })
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
 
       expect(statusUpdates).toContainEqual({
-        message: "Device disconnected: Device 1",
+        message: "Output device disconnected: Device 1",
         state: "error",
       })
       expect(deviceManager.currentDevice).toBe(null)
@@ -354,18 +355,16 @@ describe("MIDIDeviceManager", () => {
     })
 
     it("should not clear currentDevice if different device disconnected", () => {
-      const mockConnection = new EventEmitter()
-      const mockMidi = { connection: mockConnection }
-
+      const mockMidi = new EventEmitter()
       deviceManager.setMIDI(mockMidi)
       deviceManager.currentDevice = { name: "Device 1" }
 
       const onDeviceListChange = vi.fn()
       deviceManager.setupDeviceListeners(onDeviceListChange)
 
-      // Emit OUT_DEV_DISCONNECTED for different device
+      // Emit DEV_OUT_DISCONNECTED for different device
       const device = { name: "Device 2", id: "2" }
-      mockConnection.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device })
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
 
       expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
       expect(onDeviceListChange).toHaveBeenCalled()
@@ -382,10 +381,10 @@ describe("MIDIDeviceManager", () => {
     })
   })
 
-  describe("populateDeviceList", () => {
+  describe("populateOutputDeviceList", () => {
     it("should populate select element with devices", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [
             { id: "1", name: "Device 1", manufacturer: "Company A" },
             { id: "2", name: "Device 2", manufacturer: "Company B" },
@@ -395,39 +394,39 @@ describe("MIDIDeviceManager", () => {
       deviceManager.setMIDI(mockMidi)
 
       const select = document.createElement("select")
-      deviceManager.populateDeviceList(select)
+      deviceManager.output.populateDeviceList(select)
 
       expect(select.innerHTML).toContain('value=""')
       expect(select.innerHTML).toContain('value="0"')
       expect(select.innerHTML).toContain("Device 1")
       expect(select.innerHTML).toContain("Device 2")
       expect(statusUpdates).toContainEqual({
-        message: "Select a MIDI device",
+        message: "Select a device",
         state: "",
       })
     })
 
     it("should show no devices message when no outputs", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [],
         },
       }
       deviceManager.setMIDI(mockMidi)
 
       const select = document.createElement("select")
-      deviceManager.populateDeviceList(select)
+      deviceManager.output.populateDeviceList(select)
 
-      expect(select.innerHTML).toContain("No MIDI devices found")
+      expect(select.innerHTML).toContain("No devices connected")
       expect(statusUpdates).toContainEqual({
-        message: "No MIDI devices available",
+        message: "No devices connected",
         state: "error",
       })
     })
 
     it("should call onChange callback if provided", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [{ id: "1", name: "Device 1", manufacturer: "Company A" }],
         },
       }
@@ -436,28 +435,28 @@ describe("MIDIDeviceManager", () => {
       const onChange = vi.fn()
       const select = document.createElement("select")
 
-      deviceManager.populateDeviceList(select, onChange)
+      deviceManager.output.populateDeviceList(select, onChange)
 
       expect(onChange).toHaveBeenCalled()
     })
 
     it("should return early if no select element", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [{ id: "1", name: "Device 1", manufacturer: "Company A" }],
         },
       }
       deviceManager.setMIDI(mockMidi)
 
       statusUpdates = []
-      deviceManager.populateDeviceList(null)
+      deviceManager.output.populateDeviceList(null)
 
       expect(statusUpdates).toEqual([]) // No status updates should occur
     })
 
     it("should keep current device selected if still available", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [
             { id: "1", name: "Device 1", manufacturer: "Company A" },
             { id: "2", name: "Device 2", manufacturer: "Company B" },
@@ -468,7 +467,7 @@ describe("MIDIDeviceManager", () => {
       deviceManager.currentDevice = { name: "Device 1" }
 
       const select = document.createElement("select")
-      deviceManager.populateDeviceList(select)
+      deviceManager.output.populateDeviceList(select)
 
       expect(select.value).toBe("0") // Device 1 is at index 0
       expect(deviceManager.currentDevice).toEqual({ name: "Device 1" })
@@ -476,7 +475,7 @@ describe("MIDIDeviceManager", () => {
 
     it("should clear selection and currentDevice if device disconnected", () => {
       const mockMidi = {
-        connection: {
+        device: {
           getOutputs: () => [{ id: "2", name: "Device 2", manufacturer: "Company B" }],
         },
       }
@@ -486,7 +485,7 @@ describe("MIDIDeviceManager", () => {
       statusUpdates = []
       connectionUpdates = []
       const select = document.createElement("select")
-      deviceManager.populateDeviceList(select)
+      deviceManager.output.populateDeviceList(select)
 
       expect(select.value).toBe("") // Selection cleared
       expect(deviceManager.currentDevice).toBe(null) // Current device cleared
@@ -494,6 +493,357 @@ describe("MIDIDeviceManager", () => {
         device: null,
         midi: mockMidi,
       })
+    })
+  })
+
+  describe("populateInputDeviceList", () => {
+    it("should populate select element with input devices", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [
+            { id: "1", name: "Input 1", manufacturer: "Company A" },
+            { id: "2", name: "Input 2", manufacturer: "Company B" },
+          ],
+          getCurrentInput: () => null,
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      await deviceManager.input.populateDeviceList(select)
+
+      expect(select.innerHTML).toContain('<option value="">Select a device</option>')
+      expect(select.innerHTML).toContain('<option value="0">Input 1</option>')
+      expect(select.innerHTML).toContain('<option value="1">Input 2</option>')
+      expect(select.value).toBe("")
+    })
+
+    it("should show no input devices message when no inputs", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [],
+          getCurrentInput: () => null,
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      await deviceManager.input.populateDeviceList(select)
+
+      expect(select.innerHTML).toContain("No devices connected")
+    })
+
+    it("should call onChange callback if provided", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [{ id: "1", name: "Input 1", manufacturer: "Company A" }],
+          getCurrentInput: () => null,
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const onChange = vi.fn()
+      const select = document.createElement("select")
+
+      await deviceManager.input.populateDeviceList(select, onChange)
+
+      expect(onChange).toHaveBeenCalled()
+    })
+
+    it("should return early if no select element", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [{ id: "1", name: "Input 1", manufacturer: "Company A" }],
+          getCurrentInput: () => null,
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      // Should not throw
+      await deviceManager.input.populateDeviceList(null)
+    })
+
+    it("should keep current input selected if still available", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [
+            { id: "1", name: "Input 1", manufacturer: "Company A" },
+            { id: "2", name: "Input 2", manufacturer: "Company B" },
+          ],
+          getCurrentInput: () => ({ name: "Input 1", id: "1" }),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      await deviceManager.input.populateDeviceList(select)
+
+      expect(select.value).toBe("0") // Input 1 is at index 0
+    })
+
+    it("should clear selection if current input was disconnected", async () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [{ id: "2", name: "Input 2", manufacturer: "Company B" }],
+          getCurrentInput: () => ({ name: "Input 1", id: "1" }),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      await deviceManager.input.populateDeviceList(select)
+
+      expect(select.value).toBe("") // Selection cleared
+    })
+  })
+
+  describe("connectInputDeviceSelection", () => {
+    it("should connect to selected input device", async () => {
+      const mockMidi = {
+        device: {
+          connectInput: vi.fn().mockResolvedValue(undefined),
+          getCurrentInput: vi.fn().mockReturnValue({ name: "Input 1", id: "1" }),
+          getInputs: vi.fn().mockReturnValue([
+            { id: "1", name: "Input 1", manufacturer: "Company A" },
+            { id: "2", name: "Input 2", manufacturer: "Company B" },
+          ]),
+        },
+        connection: {
+          on: vi.fn(),
+          disconnect: vi.fn(),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      select.innerHTML =
+        '<option value="">Select a device</option><option value="0">Input 1</option><option value="1">Input 2</option>'
+
+      let connectedDevice = null
+      deviceManager.input.connectDeviceSelection(select, async (_midi, device) => {
+        connectedDevice = device
+      })
+
+      // Simulate selecting device
+      select.value = "0"
+      select.dispatchEvent(new Event("change"))
+
+      // Wait for async operation
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockMidi.device.connectInput).toHaveBeenCalledWith(0)
+      expect(connectedDevice).toEqual({ name: "Input 1", id: "1" })
+    })
+
+    it("should disconnect when selecting empty option", async () => {
+      const mockMidi = {
+        device: {
+          connectInput: vi.fn().mockResolvedValue(undefined),
+          disconnectInput: vi.fn().mockResolvedValue(undefined),
+          getCurrentInput: vi.fn().mockReturnValue({ name: "Input 1", id: "1" }),
+          getInputs: vi.fn().mockReturnValue([{ id: "1", name: "Input 1", manufacturer: "Company A" }]),
+        },
+        connection: {
+          on: vi.fn(),
+          disconnect: vi.fn(),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      select.innerHTML = '<option value="">Select a device</option><option value="0">Input 1</option>'
+
+      deviceManager.input.connectDeviceSelection(select)
+
+      // Select a device first
+      select.value = "0"
+      select.dispatchEvent(new Event("change"))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Now select empty option
+      statusUpdates = []
+      select.value = ""
+      select.dispatchEvent(new Event("change"))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockMidi.device.disconnectInput).toHaveBeenCalled()
+      expect(statusUpdates).toContainEqual({
+        message: "Input disconnected",
+        state: "",
+      })
+    })
+
+    it("should prevent concurrent connections", async () => {
+      const mockMidi = {
+        device: {
+          connectInput: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50))),
+          getCurrentInput: vi.fn().mockReturnValue({ name: "Input 1", id: "1" }),
+          getInputs: vi.fn().mockReturnValue([{ id: "1", name: "Input 1", manufacturer: "Company A" }]),
+        },
+        connection: {
+          on: vi.fn(),
+          disconnect: vi.fn(),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      const select = document.createElement("select")
+      select.innerHTML = '<option value="">Select a device</option><option value="0">Input 1</option>'
+
+      let connectCount = 0
+      deviceManager.input.connectDeviceSelection(select, async () => {
+        connectCount++
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      })
+
+      // Trigger change twice rapidly
+      select.value = "0"
+      select.dispatchEvent(new Event("change"))
+      select.dispatchEvent(new Event("change"))
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      expect(connectCount).toBe(1) // Should only connect once
+    })
+
+    it("should return early if no select element", () => {
+      const mockMidi = {
+        device: {
+          connectInput: vi.fn(),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      deviceManager.input.connectDeviceSelection(null)
+
+      expect(mockMidi.device.connectInput).not.toHaveBeenCalled()
+    })
+
+    it("should return early if no midi", () => {
+      const select = document.createElement("select")
+      deviceManager.input.connectDeviceSelection(select)
+
+      // Should not throw
+      select.dispatchEvent(new Event("change"))
+    })
+  })
+
+  describe("isOutputDeviceConnected", () => {
+    it("should return true if output device is connected", () => {
+      const mockMidi = {
+        device: {
+          getOutputs: () => [
+            { id: "1", name: "Device 1", manufacturer: "Company A" },
+            { id: "2", name: "Device 2", manufacturer: "Company B" },
+          ],
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      expect(deviceManager.output.isDeviceConnected("Device 1")).toBe(true)
+      expect(deviceManager.output.isDeviceConnected("Device 2")).toBe(true)
+    })
+
+    it("should return false if output device is not connected", () => {
+      const mockMidi = {
+        device: {
+          getOutputs: () => [{ id: "1", name: "Device 1", manufacturer: "Company A" }],
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      expect(deviceManager.output.isDeviceConnected("Device 2")).toBe(false)
+    })
+
+    it("should return false if no midi", () => {
+      expect(deviceManager.output.isDeviceConnected("Device 1")).toBe(false)
+    })
+  })
+
+  describe("isInputDeviceConnected", () => {
+    it("should return true if input device is connected", () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [
+            { id: "1", name: "Input 1", manufacturer: "Company A" },
+            { id: "2", name: "Input 2", manufacturer: "Company B" },
+          ],
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      expect(deviceManager.input.isDeviceConnected("Input 1")).toBe(true)
+      expect(deviceManager.input.isDeviceConnected("Input 2")).toBe(true)
+    })
+
+    it("should return false if input device is not connected", () => {
+      const mockMidi = {
+        device: {
+          getInputs: () => [{ id: "1", name: "Input 1", manufacturer: "Company A" }],
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      expect(deviceManager.input.isDeviceConnected("Input 2")).toBe(false)
+    })
+
+    it("should return false if no midi", () => {
+      expect(deviceManager.input.isDeviceConnected("Input 1")).toBe(false)
+    })
+  })
+
+  describe("setupDeviceListeners for input events", () => {
+    let mockMidi
+    let onDeviceListChange
+
+    beforeEach(() => {
+      mockMidi = {
+        on: vi.fn(),
+        device: {
+          getOutputs: vi.fn().mockReturnValue([]),
+          getInputs: vi.fn().mockReturnValue([]),
+        },
+      }
+      onDeviceListChange = vi.fn()
+      deviceManager.setMIDI(mockMidi)
+    })
+
+    it("should listen for DEV_IN_CONNECTED events", () => {
+      deviceManager.setupDeviceListeners(onDeviceListChange)
+
+      const inConnectedHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_IN_CONNECTED,
+      )?.[1]
+
+      expect(inConnectedHandler).toBeDefined()
+
+      // Simulate input device connection
+      inConnectedHandler?.({ name: "Input 1", id: "1" })
+
+      expect(statusUpdates).toContainEqual({
+        message: "Input device connected: Input 1",
+        state: "connected",
+      })
+      expect(onDeviceListChange).toHaveBeenCalled()
+    })
+
+    it("should listen for DEV_IN_DISCONNECTED events", () => {
+      deviceManager.setupDeviceListeners(onDeviceListChange)
+
+      const inDisconnectedHandler = mockMidi.on.mock.calls.find(
+        (call) => call[0] === CONTROLLER_EVENTS.DEV_IN_DISCONNECTED,
+      )?.[1]
+
+      expect(inDisconnectedHandler).toBeDefined()
+
+      // Simulate input device disconnection
+      inDisconnectedHandler?.({ name: "Input 1", id: "1" })
+
+      expect(statusUpdates).toContainEqual({
+        message: "Input device disconnected: Input 1",
+        state: "error",
+      })
+      expect(onDeviceListChange).toHaveBeenCalled()
     })
   })
 })
@@ -546,12 +896,14 @@ describe("createMIDIDeviceManager", () => {
     const { createMIDIDeviceManager } = await import("../../src/index.js")
 
     const deviceManager = await createMIDIDeviceManager({
-      channel: 2,
+      inputChannel: 2,
+      outputChannel: 2,
     })
 
     expect(deviceManager).toBeInstanceOf(MIDIDeviceManager)
     expect(deviceManager.midi).toBeDefined()
-    expect(deviceManager.midi.options.channel).toBe(2)
+    expect(deviceManager.midi.options.inputChannel).toBe(2)
+    expect(deviceManager.midi.options.outputChannel).toBe(2)
   })
 
   it("should auto-connect to specified device if output option provided", async () => {
@@ -559,7 +911,8 @@ describe("createMIDIDeviceManager", () => {
 
     const deviceManager = await createMIDIDeviceManager({
       output: "Test Output Device",
-      channel: 1,
+      inputChannel: 1,
+      outputChannel: 1,
     })
 
     expect(deviceManager.currentDevice).toEqual({
@@ -577,7 +930,8 @@ describe("createMIDIDeviceManager", () => {
 
     const deviceManager = await createMIDIDeviceManager({
       onReady,
-      channel: 1,
+      inputChannel: 1,
+      outputChannel: 1,
     })
 
     expect(onReady).toHaveBeenCalledWith(deviceManager.midi, deviceManager)

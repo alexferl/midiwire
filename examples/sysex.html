@@ -14,13 +14,13 @@
 <div class="section">
   <h2>MIDI Configuration</h2>
   <label>Output Device</label>
-  <select id="device-select">
+  <select id="output-device-select">
     <option value="">Select a device</option>
   </select>
 
   <label style="margin-top: 15px;">Input Device</label>
   <select id="input-device-select">
-    <option value="">Select an input device</option>
+    <option value="">Select a device</option>
   </select>
 </div>
 
@@ -141,49 +141,29 @@
         onConnectionUpdate: () => {
           updateConnectionStatus();
         },
-        onReady: async (midiObj) => {
+        onReady: async (midiObj, deviceManager) => {
           midi = midiObj;
           window.midi = midiObj;
 
           // Set up output device selection
-          const outputSelect = document.getElementById("device-select");
-          const outputs = midi.device.getOutputs();
-          if (outputs.length > 0) {
-            outputSelect.innerHTML = '<option value="">Select a device</option>' +
-              outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("");
-
-            outputSelect.addEventListener("change", async (e) => {
-              const index = e.target.value;
-              if (index) {
-                const outputs = midi.device.getOutputs();
-                await midi.device.connectOutput(outputs[index].id);
-                updateConnectionStatus();
-              }
-            });
-          } else {
-            outputSelect.innerHTML = '<option value="">No MIDI devices found</option>';
-          }
+          const outputSelect = document.getElementById("output-device-select");
+          await deviceManager.output.populateDeviceList(outputSelect);
+          deviceManager.output.connectDeviceSelection(outputSelect, () => {
+            updateConnectionStatus();
+          });
 
           // Set up input device selection
           const inputSelect = document.getElementById("input-device-select");
-          const inputs = midi.device.getInputs();
-          if (inputs.length > 0) {
-            inputSelect.innerHTML = '<option value="">Select an input device</option>' +
-              inputs.map((input, i) => `<option value="${i}">${input.name}</option>`).join("");
+          await deviceManager.input.populateDeviceList(inputSelect);
+          deviceManager.input.connectDeviceSelection(inputSelect, () => {
+            updateConnectionStatus();
+          });
 
-            inputSelect.addEventListener("change", async (e) => {
-              const index = e.target.value;
-              if (index) {
-                const inputs = midi.device.getInputs();
-                await midi.device.connectInput(inputs[index].id);
-                updateConnectionStatus();
-              } else {
-                updateConnectionStatus();
-              }
-            });
-          } else {
-            inputSelect.innerHTML = '<option value="">No input devices found</option>';
-          }
+          // Set up device change listeners for automatic refresh
+          deviceManager.setupDeviceListeners(async () => {
+            await deviceManager.output.populateDeviceList(outputSelect);
+            await deviceManager.input.populateDeviceList(inputSelect);
+          });
 
           // Listen for SysEx messages
           midi.on(CTRL.SYS_EX_RECV, handleSysExReceived);

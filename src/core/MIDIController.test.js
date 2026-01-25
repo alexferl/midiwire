@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { CONNECTION_EVENTS } from "./MIDIConnection.js"
 import { CONTROLLER_EVENTS, MIDIController } from "./MIDIController.js"
 
 // Mock the dependencies
@@ -57,7 +58,8 @@ describe("MIDIController", () => {
 
     midiController = new MIDIController({
       sysex: true,
-      channel: 2,
+      inputChannel: 2,
+      outputChannel: 2,
     })
   })
 
@@ -67,8 +69,9 @@ describe("MIDIController", () => {
 
   describe("constructor", () => {
     it("should create controller with default options", () => {
-      const controller = new MIDIController({ channel: 1 })
-      expect(controller.options.channel).toBe(1)
+      const controller = new MIDIController({ inputChannel: 1, outputChannel: 1 })
+      expect(controller.options.inputChannel).toBe(1)
+      expect(controller.options.outputChannel).toBe(1)
       expect(controller.options.autoConnect).toBe(true)
       expect(controller.options.sysex).toBe(false)
     })
@@ -156,6 +159,36 @@ describe("MIDIController", () => {
 
       // Verify the CC value was stored (which happens in _handleMIDIMessage)
       expect(midiController.channel.getCC(74, 1)).toBe(100)
+    })
+  })
+
+  describe("disconnectInput", () => {
+    beforeEach(async () => {
+      await midiController.init()
+    })
+
+    it("should disconnect from input and emit event", async () => {
+      // First connect
+      await midiController.device.connectInput("Test Input")
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, spy)
+
+      await midiController.device.disconnectInput()
+
+      expect(spy).toHaveBeenCalledWith({
+        id: "input-1",
+        name: "Test Input",
+        manufacturer: "Test Manufacturer",
+      })
+    })
+
+    it("should disconnect using connection method", async () => {
+      await midiController.device.connectInput("Test Input")
+      const spy = vi.spyOn(midiController.connection, "disconnectInput")
+
+      await midiController.device.disconnectInput()
+
+      expect(spy).toHaveBeenCalled()
     })
   })
 
@@ -1590,7 +1623,7 @@ describe("MIDIController", () => {
           min: 0,
           max: 127,
           invert: false,
-          // Note: channel is NOT specified, should use this.options.channel (which is 2)
+          // Note: channel is NOT specified, should use this.options.outputChannel (which is 2)
         }
 
         midiController._createBinding(element, config)
@@ -1997,6 +2030,33 @@ describe("MIDIController", () => {
     })
   })
 
+  describe("disconnectOutput", () => {
+    beforeEach(async () => {
+      await midiController.init()
+    })
+
+    it("should disconnect from output and emit event", async () => {
+      // First connect
+      await midiController.device.connectOutput(1)
+      const spy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, spy)
+
+      await midiController.device.disconnectOutput()
+
+      expect(spy).toHaveBeenCalled()
+      expect(midiController.device.getCurrentOutput()).toBeNull()
+    })
+
+    it("should disconnect using connection method", async () => {
+      await midiController.device.connectOutput(1)
+      const spy = vi.spyOn(midiController.connection, "disconnectOutput")
+
+      await midiController.device.disconnectOutput()
+
+      expect(spy).toHaveBeenCalled()
+    })
+  })
+
   describe("getCurrentOutput", () => {
     it("should return current output", async () => {
       await midiController.init()
@@ -2055,6 +2115,145 @@ describe("MIDIController", () => {
     })
   })
 
+  describe("device change listeners", () => {
+    beforeEach(async () => {
+      await midiController.init()
+    })
+
+    it("should automatically disconnect output when current device is physically disconnected", async () => {
+      // Connect to a device first
+      await midiController.device.connectOutput(0)
+      const connectedDevice = midiController.device.getCurrentOutput()
+      expect(connectedDevice).toBeTruthy()
+
+      // Spy on disconnectOutput and event emission
+      const disconnectSpy = vi.spyOn(midiController.connection, "disconnectOutput")
+      const eventSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, eventSpy)
+
+      // Simulate DEVICE_CHANGE event with disconnected state
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "disconnected",
+        type: "output",
+        device: connectedDevice,
+      })
+
+      // Should have disconnected and emitted event
+      expect(disconnectSpy).toHaveBeenCalled()
+      expect(eventSpy).toHaveBeenCalledWith(connectedDevice)
+      expect(midiController.device.getCurrentOutput()).toBeNull()
+    })
+
+    it("should emit disconnect event but not disconnect current device when a different device is disconnected", async () => {
+      // Connect to first device
+      await midiController.device.connectOutput(0)
+      const connectedDevice = midiController.device.getCurrentOutput()
+
+      // Spy on disconnectOutput
+      const disconnectSpy = vi.spyOn(midiController.connection, "disconnectOutput")
+      const eventSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, eventSpy)
+
+      // Simulate DEVICE_CHANGE for a different device
+      const differentDevice = {
+        id: "output-2",
+        name: "Test Output 2",
+        manufacturer: "Test Manufacturer",
+      }
+
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "disconnected",
+        type: "output",
+        device: differentDevice,
+      })
+
+      // Should NOT disconnect current device but SHOULD emit event for device list refresh
+      expect(disconnectSpy).not.toHaveBeenCalled()
+      expect(eventSpy).toHaveBeenCalledWith(differentDevice) // Event emitted for device list refresh
+      expect(midiController.device.getCurrentOutput()).toEqual(connectedDevice) // Still connected
+    })
+
+    it("should automatically disconnect input when current device is physically disconnected", async () => {
+      // Connect to input device
+      await midiController.device.connectInput(0)
+      const connectedInput = midiController.device.getCurrentInput()
+      expect(connectedInput).toBeTruthy()
+
+      // Spy on disconnectInput and event emission
+      const disconnectSpy = vi.spyOn(midiController.connection, "disconnectInput")
+      const eventSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, eventSpy)
+
+      // Simulate DEVICE_CHANGE event with disconnected state
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "disconnected",
+        type: "input",
+        device: connectedInput,
+      })
+
+      // Should have disconnected and emitted event
+      expect(disconnectSpy).toHaveBeenCalled()
+      expect(eventSpy).toHaveBeenCalledWith(connectedInput)
+      expect(midiController.device.getCurrentInput()).toBeNull()
+    })
+
+    it("should handle device connection events", async () => {
+      const outputSpy = vi.fn()
+      const inputSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, outputSpy)
+      midiController.on(CONTROLLER_EVENTS.DEV_IN_CONNECTED, inputSpy)
+
+      // Simulate output device connection
+      const outputDevice = {
+        id: "output-3",
+        name: "New Output Device",
+        manufacturer: "Test Manufacturer",
+      }
+
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "connected",
+        type: "output",
+        device: outputDevice,
+      })
+
+      expect(outputSpy).toHaveBeenCalledWith(outputDevice)
+
+      // Simulate input device connection
+      const inputDevice = {
+        id: "input-2",
+        name: "New Input Device",
+        manufacturer: "Test Manufacturer",
+      }
+
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "connected",
+        type: "input",
+        device: inputDevice,
+      })
+
+      expect(inputSpy).toHaveBeenCalledWith(inputDevice)
+    })
+
+    it("should handle null device in disconnect event gracefully", async () => {
+      await midiController.device.connectOutput(0)
+
+      const eventSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, eventSpy)
+
+      // Simulate disconnect with null device
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "disconnected",
+        type: "output",
+        device: null,
+      })
+
+      // Should NOT emit event or disconnect since device is null
+      expect(eventSpy).not.toHaveBeenCalled()
+      // Should still be connected
+      expect(midiController.device.getCurrentOutput()).toBeTruthy()
+    })
+  })
+
   describe("destroy", () => {
     beforeEach(async () => {
       await midiController.init()
@@ -2091,28 +2290,28 @@ describe("MIDIController", () => {
       expect(spy).toHaveBeenCalled()
     })
 
-    it("should remove all listeners", () => {
+    it("should remove all listeners", async () => {
       const spy = vi.fn()
       midiController.on("test", spy)
 
-      midiController.destroy()
+      await midiController.destroy()
 
       midiController.emit("test")
       expect(spy).not.toHaveBeenCalled()
     })
 
-    it("should emit destroyed event", () => {
+    it("should emit destroyed event", async () => {
       const spy = vi.fn()
       midiController.on(CONTROLLER_EVENTS.DESTROYED, spy)
 
-      midiController.destroy()
+      await midiController.destroy()
 
       expect(spy).toHaveBeenCalled()
       expect(midiController.initialized).toBe(false)
     })
 
-    it("should clean up on destroy", () => {
-      midiController.destroy()
+    it("should clean up on destroy", async () => {
+      await midiController.destroy()
       expect(midiController.initialized).toBe(false)
     })
   })
