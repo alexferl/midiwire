@@ -489,6 +489,58 @@ export class MIDIDeviceManager {
   }
 
   /**
+   * Helper method to populate device list for either input or output devices
+   * @private
+   * @param {HTMLSelectElement} selectElement - The select element to populate
+   * @param {Array} devices - Array of device objects
+   * @param {Object} currentDevice - The currently connected device
+   * @param {Function} [onChange] - Optional callback
+   * @param {boolean} isOutput - Whether these are output devices
+   * @returns {void}
+   */
+  _populateDeviceList(selectElement, devices, currentDevice, onChange, isOutput) {
+    if (devices.length > 0) {
+      selectElement.innerHTML =
+        '<option value="">Select a device</option>' +
+        devices.map((device, i) => `<option value="${i}">${device.name}</option>`).join("")
+
+      // Check if the currently connected device is still available
+      if (currentDevice) {
+        const deviceIndex = devices.findIndex((d) => d.name === currentDevice.name)
+        if (deviceIndex !== -1) {
+          // Device is still connected, keep it selected
+          selectElement.value = deviceIndex.toString()
+        } else {
+          // Current device was disconnected
+          selectElement.value = ""
+          if (isOutput) {
+            this.currentDevice = null
+            this.updateConnectionStatus()
+          }
+        }
+      } else {
+        // No device connected, show "Select a device"
+        selectElement.value = ""
+      }
+
+      selectElement.disabled = false
+      if (isOutput && !this.currentDevice) {
+        this.updateStatus("Select a device")
+      }
+    } else {
+      selectElement.innerHTML = '<option value="">No devices connected</option>'
+      selectElement.disabled = true
+      if (isOutput) {
+        this.updateStatus("No devices connected", "error")
+      }
+    }
+
+    if (onChange) {
+      onChange()
+    }
+  }
+
+  /**
    * Populate a select element with available MIDI output devices. Automatically
    * handles maintaining selection when the current device remains connected, and clears
    * selection when the current device is disconnected. Updates status message accordingly.
@@ -501,42 +553,7 @@ export class MIDIDeviceManager {
     if (!selectElement || !this.midi) return
 
     const outputs = this._getOutputDevices()
-
-    if (outputs.length > 0) {
-      selectElement.innerHTML =
-        '<option value="">Select a device</option>' +
-        outputs.map((output, i) => `<option value="${i}">${output.name}</option>`).join("")
-
-      // Check if the currently connected device is still available
-      if (this.currentDevice) {
-        const deviceIndex = outputs.findIndex((o) => o.name === this.currentDevice.name)
-        if (deviceIndex !== -1) {
-          // Device is still connected, keep it selected
-          selectElement.value = deviceIndex.toString()
-        } else {
-          // Current device was disconnected
-          selectElement.value = ""
-          this.currentDevice = null
-          this.updateConnectionStatus()
-        }
-      } else {
-        // No device connected, show "Select a device"
-        selectElement.value = ""
-      }
-
-      selectElement.disabled = false
-      if (!this.currentDevice) {
-        this.updateStatus("Select a device")
-      }
-    } else {
-      selectElement.innerHTML = '<option value="">No devices connected</option>'
-      selectElement.disabled = true
-      this.updateStatus("No devices connected", "error")
-    }
-
-    if (onChange) {
-      onChange()
-    }
+    this._populateDeviceList(selectElement, outputs, this.currentDevice, onChange, true)
   }
 
   /**
@@ -552,37 +569,8 @@ export class MIDIDeviceManager {
     if (!selectElement || !this.midi) return
 
     const inputs = this._getInputDevices()
-
-    if (inputs.length > 0) {
-      selectElement.innerHTML =
-        '<option value="">Select a device</option>' +
-        inputs.map((input, i) => `<option value="${i}">${input.name}</option>`).join("")
-
-      // Check if the currently connected input device is still available
-      const currentInput = this.midi?.device.getCurrentInput()
-      if (currentInput) {
-        const deviceIndex = inputs.findIndex((input) => input.name === currentInput.name)
-        if (deviceIndex !== -1) {
-          // Input device is still connected, keep it selected
-          selectElement.value = deviceIndex.toString()
-        } else {
-          // Current input device was disconnected
-          selectElement.value = ""
-        }
-      } else {
-        // No input device connected, show "Select a device"
-        selectElement.value = ""
-      }
-
-      selectElement.disabled = false
-    } else {
-      selectElement.innerHTML = '<option value="">No devices connected</option>'
-      selectElement.disabled = true
-    }
-
-    if (onChange) {
-      onChange()
-    }
+    const currentInput = this.midi.device.getCurrentInput()
+    this._populateDeviceList(selectElement, inputs, currentInput, onChange, false)
   }
 
   /**

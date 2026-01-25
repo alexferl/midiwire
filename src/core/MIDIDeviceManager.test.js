@@ -43,6 +43,44 @@ describe("MIDIDeviceManager", () => {
       expect(dm.midi).toBe(mockMidi)
       expect(dm.channel).toBe(5)
     })
+
+    it("should use default empty functions when no callbacks provided", () => {
+      const dm = new MIDIDeviceManager()
+
+      // Should not throw when calling the default callbacks
+      expect(() => {
+        dm.updateStatus("Test message", "test-state")
+        dm.updateConnectionStatus()
+      }).not.toThrow()
+
+      // Verify callbacks are functions
+      expect(typeof dm.onStatusUpdate).toBe("function")
+      expect(typeof dm.onConnectionUpdate).toBe("function")
+    })
+
+    it("should use provided custom callbacks", () => {
+      let statusCalled = false
+      let connectionCalled = false
+
+      const dm = new MIDIDeviceManager({
+        onStatusUpdate: (message, state) => {
+          statusCalled = true
+          expect(message).toBe("Test status")
+          expect(state).toBe("connected")
+        },
+        onConnectionUpdate: (device, midi) => {
+          connectionCalled = true
+          expect(device).toBe(null)
+          expect(midi).toBe(null)
+        },
+      })
+
+      dm.updateStatus("Test status", "connected")
+      dm.updateConnectionStatus()
+
+      expect(statusCalled).toBe(true)
+      expect(connectionCalled).toBe(true)
+    })
   })
 
   describe("setMIDI", () => {
@@ -195,6 +233,29 @@ describe("MIDIDeviceManager", () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       expect(connectCount).toBe(1) // Should only connect once
+    })
+
+    it("should return early if no select element", () => {
+      const mockMidi = {
+        device: {
+          connectOutput: vi.fn(),
+        },
+      }
+      deviceManager.setMIDI(mockMidi)
+
+      deviceManager.output.connectDeviceSelection(null)
+
+      expect(mockMidi.device.connectOutput).not.toHaveBeenCalled()
+    })
+
+    it("should return early if no midi connection", () => {
+      deviceManager.midi = null
+
+      const select = document.createElement("select")
+      deviceManager.output.connectDeviceSelection(select)
+
+      // Should not throw
+      select.dispatchEvent(new Event("change"))
     })
   })
 
