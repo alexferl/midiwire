@@ -198,7 +198,7 @@ describe("MIDIDeviceManager", () => {
       expect(deviceManager.currentDevice).toBe(null)
       expect(statusUpdates).toContainEqual({
         message: "Output device disconnected",
-        state: "error",
+        state: "",
       })
     })
 
@@ -500,6 +500,65 @@ describe("MIDIDeviceManager", () => {
       // Should not throw error and onDeviceListChange should not be called
       expect(onDeviceListChange).not.toHaveBeenCalled()
     })
+
+    it("should clear output select element when current device disconnects", () => {
+      const mockMidi = new EventEmitter()
+      deviceManager.setMIDI(mockMidi)
+      deviceManager.currentDevice = { name: "Device 1" }
+
+      const outputSelect = document.createElement("select")
+      outputSelect.innerHTML = '<option value="">Select a device</option><option value="0">Device 1</option>'
+      outputSelect.value = "0" // Device is selected
+
+      const selectElements = { output: outputSelect }
+      deviceManager.setupDeviceListeners(null, selectElements)
+
+      // Emit DEV_OUT_DISCONNECTED event for current device
+      const device = { name: "Device 1", id: "1" }
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
+
+      expect(outputSelect.value).toBe("") // Select element should be cleared
+      expect(deviceManager.currentDevice).toBe(null)
+    })
+
+    it("should clear input select element when current input device disconnects", () => {
+      const mockMidi = new EventEmitter()
+      deviceManager.setMIDI(mockMidi)
+
+      const inputSelect = document.createElement("select")
+      inputSelect.innerHTML = '<option value="">Select a device</option><option value="0">Input 1</option>'
+      inputSelect.value = "0" // Input device is selected
+
+      const selectElements = { input: inputSelect }
+      deviceManager.setupDeviceListeners(null, selectElements)
+
+      // Emit DEV_IN_DISCONNECTED event
+      const device = { name: "Input 1", id: "1" }
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, device)
+
+      expect(inputSelect.value).toBe("") // Select element should be cleared
+    })
+
+    it("should not clear select element when different device disconnects", () => {
+      const mockMidi = new EventEmitter()
+      deviceManager.setMIDI(mockMidi)
+      deviceManager.currentDevice = { name: "Device 1" }
+
+      const outputSelect = document.createElement("select")
+      outputSelect.innerHTML =
+        '<option value="">Select a device</option><option value="0">Device 1</option><option value="1">Device 2</option>'
+      outputSelect.value = "0" // Device 1 is selected
+
+      const selectElements = { output: outputSelect }
+      deviceManager.setupDeviceListeners(null, selectElements)
+
+      // Emit DEV_OUT_DISCONNECTED event for different device (Device 2)
+      const device = { name: "Device 2", id: "2" }
+      mockMidi.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
+
+      expect(outputSelect.value).toBe("0") // Select element should NOT be cleared
+      expect(deviceManager.currentDevice).toEqual({ name: "Device 1" }) // Current device unchanged
+    })
   })
 
   describe("populateOutputDeviceList", () => {
@@ -790,7 +849,7 @@ describe("MIDIDeviceManager", () => {
       expect(mockMidi.device.disconnectInput).toHaveBeenCalled()
       expect(statusUpdates).toContainEqual({
         message: "Input device disconnected",
-        state: "error",
+        state: "",
       })
     })
 

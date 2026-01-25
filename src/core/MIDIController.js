@@ -345,8 +345,10 @@ export class MIDIController extends EventEmitter {
               const currentOutput = this.connection.getCurrentOutput()
               if (currentOutput && currentOutput.id === device.id) {
                 await this._disconnectOutput()
+              } else {
+                // Only emit if not the current device (current device emits in _disconnectOutput)
+                this.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
               }
-              this.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
             }
 
             // Emit disconnection event for any input device that disconnects
@@ -355,8 +357,10 @@ export class MIDIController extends EventEmitter {
               const currentInput = this.connection.getCurrentInput()
               if (currentInput && currentInput.id === device.id) {
                 await this._disconnectInput()
+              } else {
+                // Only emit if not the current device (current device emits in _disconnectInput)
+                this.emit(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, device)
               }
-              this.emit(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, device)
             }
           }
         } catch (error) {

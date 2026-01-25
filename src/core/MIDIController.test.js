@@ -2055,6 +2055,22 @@ describe("MIDIController", () => {
 
       expect(spy).toHaveBeenCalled()
     })
+
+    it("should clear internal state when disconnectOutput is called", async () => {
+      await midiController.device.connectOutput(1)
+      expect(midiController.device.getCurrentOutput()).toBeTruthy()
+
+      // Store reference to disconnect method emit
+      const disconnectSpy = vi.spyOn(midiController.connection, "disconnectOutput")
+
+      await midiController.device.disconnectOutput()
+
+      // Verify disconnectOutput was called
+      expect(disconnectSpy).toHaveBeenCalled()
+
+      // Verify internal state is cleared
+      expect(midiController.device.getCurrentOutput()).toBeNull()
+    })
   })
 
   describe("getCurrentOutput", () => {
@@ -2195,6 +2211,35 @@ describe("MIDIController", () => {
       expect(disconnectSpy).toHaveBeenCalled()
       expect(eventSpy).toHaveBeenCalledWith(connectedInput)
       expect(midiController.device.getCurrentInput()).toBeNull()
+    })
+
+    it("should emit disconnect event but not disconnect current input when a different input device is disconnected", async () => {
+      // Connect to input device
+      await midiController.device.connectInput(0)
+      const connectedInput = midiController.device.getCurrentInput()
+
+      // Spy on disconnectInput
+      const disconnectSpy = vi.spyOn(midiController.connection, "disconnectInput")
+      const eventSpy = vi.fn()
+      midiController.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, eventSpy)
+
+      // Simulate DEVICE_CHANGE for a different input device
+      const differentInputDevice = {
+        id: "input-2",
+        name: "Test Input 2",
+        manufacturer: "Test Manufacturer",
+      }
+
+      midiController.connection.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
+        state: "disconnected",
+        type: "input",
+        device: differentInputDevice,
+      })
+
+      // Should NOT disconnect current input but SHOULD emit event for device list refresh
+      expect(disconnectSpy).not.toHaveBeenCalled()
+      expect(eventSpy).toHaveBeenCalledWith(differentInputDevice) // Event emitted for device list refresh
+      expect(midiController.device.getCurrentInput()).toEqual(connectedInput) // Still connected
     })
 
     it("should handle device connection events", async () => {

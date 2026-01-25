@@ -270,6 +270,9 @@ export class MIDIDeviceManager {
    * updating status messages and tracking the current device state.
    *
    * @param {Function} [onDeviceListChange] - Optional callback to refresh device list UI when devices change
+   * @param {Object} [selectElements] - Optional select elements to update on disconnect
+   * @param {HTMLSelectElement} [selectElements.output] - Output device select element
+   * @param {HTMLSelectElement} [selectElements.input] - Input device select element
    * @returns {void}
    *
    * @emits CONTROLLER_EVENTS.DEV_OUT_CONNECTED
@@ -284,8 +287,15 @@ export class MIDIDeviceManager {
    * manager.setupDeviceListeners(() => {
    *   manager.output.populateDeviceList(deviceSelect);
    * });
+   *
+   * @example
+   * // With select elements to clear on disconnect
+   * manager.setupDeviceListeners(null, {
+   *   output: outputSelect,
+   *   input: inputSelect
+   * });
    */
-  setupDeviceListeners(onDeviceListChange) {
+  setupDeviceListeners(onDeviceListChange, selectElements = {}) {
     if (!this.midi) return
 
     this.midi.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, (device) => {
@@ -303,6 +313,10 @@ export class MIDIDeviceManager {
       if (wasCurrentDevice) {
         this.currentDevice = null
         this.updateConnectionStatus()
+        // Clear output select element if provided
+        if (selectElements.output) {
+          selectElements.output.value = ""
+        }
       }
 
       if (onDeviceListChange) {
@@ -319,6 +333,10 @@ export class MIDIDeviceManager {
 
     this.midi.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, (device) => {
       this.updateStatus(`Input device disconnected: ${device?.name || "Unknown"}`, "error")
+      // Clear input select element if provided
+      if (selectElements.input) {
+        selectElements.input.value = ""
+      }
       if (onDeviceListChange) {
         onDeviceListChange()
       }
@@ -405,20 +423,22 @@ export class MIDIDeviceManager {
     if (!deviceSelectElement || !this.midi) return
 
     deviceSelectElement.addEventListener("change", async (e) => {
+      // Check for concurrent connections first
+      if (this.isConnecting) return
+      this.isConnecting = true
+
       const deviceIndex = e.target.value
 
       if (!deviceIndex) {
         if (this.currentDevice && this.midi) {
           await this.midi.device.disconnectOutput()
           this.currentDevice = null
-          this.updateStatus("Output device disconnected", "error")
+          this.updateStatus("Output device disconnected", "")
           this.updateConnectionStatus()
         }
+        this.isConnecting = false
         return
       }
-
-      if (this.isConnecting) return
-      this.isConnecting = true
 
       try {
         await this.midi.device.connectOutput(parseInt(deviceIndex, 10))
@@ -439,7 +459,7 @@ export class MIDIDeviceManager {
           await onConnect(this.midi, this.currentDevice)
         }
       } catch (err) {
-        this.updateStatus(`Connection failed: ${err.message}`, "error")
+        this.updateStatus(`Output connection failed: ${err.message}`, "error")
       } finally {
         this.isConnecting = false
       }
@@ -463,7 +483,7 @@ export class MIDIDeviceManager {
       if (!deviceIndex) {
         if (this.midi) {
           await this.midi.device.disconnectInput()
-          this.updateStatus("Input device disconnected", "error")
+          this.updateStatus("Input device disconnected", "")
           this.updateConnectionStatus()
         }
         return
