@@ -64,6 +64,14 @@
     "vite-plugin-dts": "4.5.4",
     "vitest": "4.0.17"
   },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=20.0.0"
   }
