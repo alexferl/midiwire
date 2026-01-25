@@ -61,107 +61,6 @@ export class MIDIDeviceManager {
   }
 
   /**
-   * Set up device change event listeners for automatic UI updates when devices
-   * connect or disconnect. Handles both successful connections and disconnections,
-   * updating status messages and tracking the current device state.
-   *
-   * @param {Function} [onDeviceListChange] - Optional callback to refresh device list UI when devices change
-   * @param {Object} [selectElements] - Optional select elements to update on disconnect
-   * @param {HTMLSelectElement} [selectElements.output] - Output device select element
-   * @param {HTMLSelectElement} [selectElements.input] - Input device select element
-   * @returns {void}
-   *
-   * @emits CONTROLLER_EVENTS.DEV_OUT_CONNECTED
-   * @emits CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED
-   *
-   * @example
-   * // Basic setup
-   * manager.setupDeviceListeners();
-   *
-   * @example
-   * // With device list refresh callback
-   * manager.setupDeviceListeners(() => {
-   *   manager.output.populateDeviceList(deviceSelect);
-   * });
-   *
-   * @example
-   * // With select elements to clear on disconnect
-   * manager.setupDeviceListeners(null, {
-   *   output: outputSelect,
-   *   input: inputSelect
-   * });
-   */
-  setupDeviceListeners(onDeviceListChange, selectElements = {}) {
-    if (!this.midi) return
-
-    this.midi.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, (device) => {
-      this.updateStatus(`Output device connected: ${device?.name || "Unknown"}`, "connected")
-      if (onDeviceListChange) {
-        onDeviceListChange()
-      }
-    })
-
-    this.midi.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, (device) => {
-      this.updateStatus(`Output device disconnected: ${device?.name || "Unknown"}`, "error")
-
-      const wasCurrentDevice = this.currentOutput && device?.name === this.currentOutput.name
-
-      if (wasCurrentDevice) {
-        this.currentOutput = null
-        this.updateConnectionStatus()
-        if (selectElements.output) {
-          selectElements.output.value = ""
-        }
-      }
-
-      if (onDeviceListChange) {
-        onDeviceListChange()
-      }
-    })
-
-    this.midi.on(CONTROLLER_EVENTS.DEV_IN_CONNECTED, (device) => {
-      this.updateStatus(`Input device connected: ${device?.name || "Unknown"}`, "connected")
-      if (onDeviceListChange) {
-        onDeviceListChange()
-      }
-    })
-
-    this.midi.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, (device) => {
-      this.updateStatus(`Input device disconnected: ${device?.name || "Unknown"}`, "error")
-      if (selectElements.input) {
-        selectElements.input.value = ""
-      }
-      if (onDeviceListChange) {
-        onDeviceListChange()
-      }
-    })
-  }
-
-  /**
-   * Update status message and trigger status callback
-   *
-   * @param {string} message - Status message to display
-   * @param {string} [state=""] - Status state (e.g., "connected", "error", "warning")
-   * @returns {void}
-   *
-   * @example
-   * manager.updateStatus("Connected to MIDI keyboard", "connected");
-   *
-   * @example
-   * manager.updateStatus("Connection failed", "error");
-   */
-  updateStatus(message, state = "") {
-    this.onStatusUpdate(message, state)
-  }
-
-  /**
-   * Update connection status
-   */
-  updateConnectionStatus() {
-    this.onConnectionUpdate(this.currentOutput, this.currentInput, this.midi)
-  }
-
-  /**
    * Set up all MIDI device selectors in one call. Handles population, connection
    * handling, channel selection, and automatic refresh on device changes.
    *
@@ -254,6 +153,122 @@ export class MIDIDeviceManager {
     }
 
     return this.midi
+  }
+
+  /**
+   * Set up device change event listeners for automatic UI updates when devices
+   * connect or disconnect. Handles both successful connections and disconnections,
+   * updating status messages and tracking the current device state.
+   *
+   * @param {Function} [onDeviceListChange] - Optional callback to refresh device list UI when devices change
+   * @param {Object} [selectElements] - Optional select elements to update on disconnect
+   * @param {HTMLSelectElement|string} [selectElements.output] - Output device select element or CSS selector string (e.g., "#output-select")
+   * @param {HTMLSelectElement|string} [selectElements.input] - Input device select element or CSS selector string (e.g., "#input-select")
+   * @returns {void}
+   *
+   * @emits CONTROLLER_EVENTS.DEV_OUT_CONNECTED
+   * @emits CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED
+   *
+   * @example
+   * // Basic setup
+   * manager.setupDeviceListeners();
+   *
+   * @example
+   * // With device list refresh callback
+   * manager.setupDeviceListeners(() => {
+   *   manager.output.populateDeviceList(deviceSelect);
+   * });
+   *
+   * @example
+   * // With select elements to clear on disconnect
+   * manager.setupDeviceListeners(null, {
+   *   output: outputSelect,
+   *   input: inputSelect
+   * });
+   *
+   * @example
+   * // With CSS selectors
+   * manager.setupDeviceListeners(null, {
+   *   output: "#output-select",
+   *   input: "#input-select"
+   * });
+   */
+  setupDeviceListeners(onDeviceListChange, selectElements = {}) {
+    if (!this.midi) return
+
+    const resolvedSelectElements = {}
+    if (selectElements.output) {
+      resolvedSelectElements.output = this._resolveSelector(selectElements.output)
+    }
+    if (selectElements.input) {
+      resolvedSelectElements.input = this._resolveSelector(selectElements.input)
+    }
+
+    this.midi.on(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, (device) => {
+      this.updateStatus(`Output device connected: ${device?.name || "Unknown"}`, "connected")
+      if (onDeviceListChange) {
+        onDeviceListChange()
+      }
+    })
+
+    this.midi.on(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, (device) => {
+      this.updateStatus(`Output device disconnected: ${device?.name || "Unknown"}`, "error")
+
+      const wasCurrentDevice = this.currentOutput && device?.name === this.currentOutput.name
+
+      if (wasCurrentDevice) {
+        this.currentOutput = null
+        this.updateConnectionStatus()
+        if (resolvedSelectElements.output) {
+          resolvedSelectElements.output.value = ""
+        }
+      }
+
+      if (onDeviceListChange) {
+        onDeviceListChange()
+      }
+    })
+
+    this.midi.on(CONTROLLER_EVENTS.DEV_IN_CONNECTED, (device) => {
+      this.updateStatus(`Input device connected: ${device?.name || "Unknown"}`, "connected")
+      if (onDeviceListChange) {
+        onDeviceListChange()
+      }
+    })
+
+    this.midi.on(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, (device) => {
+      this.updateStatus(`Input device disconnected: ${device?.name || "Unknown"}`, "error")
+      if (resolvedSelectElements.input) {
+        resolvedSelectElements.input.value = ""
+      }
+      if (onDeviceListChange) {
+        onDeviceListChange()
+      }
+    })
+  }
+
+  /**
+   * Update status message and trigger status callback
+   *
+   * @param {string} message - Status message to display
+   * @param {string} [state=""] - Status state (e.g., "connected", "error", "warning")
+   * @returns {void}
+   *
+   * @example
+   * manager.updateStatus("Connected to MIDI keyboard", "connected");
+   *
+   * @example
+   * manager.updateStatus("Connection failed", "error");
+   */
+  updateStatus(message, state = "") {
+    this.onStatusUpdate(message, state)
+  }
+
+  /**
+   * Update connection status
+   */
+  updateConnectionStatus() {
+    this.onConnectionUpdate(this.currentOutput, this.currentInput, this.midi)
   }
 
   /**
