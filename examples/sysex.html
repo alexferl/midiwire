@@ -145,24 +145,16 @@
           midi = midiObj;
           window.midi = midiObj;
 
-          // Set up output device selection
+          // Set up output and input device selectors
           const outputSelect = document.getElementById("output-device-select");
-          await deviceManager.output.populateDeviceList(outputSelect);
-          deviceManager.output.connectDeviceSelection(outputSelect, () => {
-            updateConnectionStatus();
-          });
-
-          // Set up input device selection
           const inputSelect = document.getElementById("input-device-select");
-          await deviceManager.input.populateDeviceList(inputSelect);
-          deviceManager.input.connectDeviceSelection(inputSelect, () => {
-            updateConnectionStatus();
-          });
 
-          // Set up device change listeners for automatic refresh
-          deviceManager.setupDeviceListeners(async () => {
-            await deviceManager.output.populateDeviceList(outputSelect);
-            await deviceManager.input.populateDeviceList(inputSelect);
+          await deviceManager.setupSelectors({
+            output: outputSelect,
+            input: inputSelect
+          }, {
+            onConnect: () => updateConnectionStatus(),
+            onDisconnect: () => updateConnectionStatus()
           });
 
           // Listen for SysEx messages

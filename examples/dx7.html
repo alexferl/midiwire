@@ -105,8 +105,9 @@
             status.textContent = message;
             status.className = state ? `status ${state}` : "status";
           },
-          onConnectionUpdate: (device, midiInstance) => {
-            if (device && midiInstance) {
+          onConnectionUpdate: (outputDevice, inputDevice, midi) => {
+            const device = outputDevice || inputDevice;
+            if (device && midi) {
               status.textContent = `Connected to ${device.name}`;
               status.className = "status connected";
             } else {
@@ -123,13 +124,10 @@
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
-        deviceManager.setupDeviceListeners(async () => {
-          await deviceManager.output.populateDeviceList(deviceSelect);
+        await deviceManager.setupSelectors({
+          output: deviceSelect,
+          channel: channelSelect
         });
-
-        await deviceManager.output.populateDeviceList(deviceSelect);
-        deviceManager.output.connectDeviceSelection(deviceSelect);
-        deviceManager.output.connectChannelSelection(channelSelect);
       } catch (err) {
         status.textContent = `MIDI initialization failed: ${err.message}`;
         status.className = "status error";
@@ -240,7 +238,7 @@
     function updateSendButtons() {
       const sendButtons = document.querySelectorAll(".voice-actions .button-primary");
       const requestButton = document.getElementById("request-current-voice");
-      const isConnected = !!deviceManager?.currentDevice;
+      const isConnected = !!deviceManager?.currentOutput;
 
       // Update voice send buttons
       sendButtons.forEach(button => {
@@ -315,7 +313,7 @@
         const voiceName = voice.name || "(Empty)";
         const originalIndex = isSingleVoice ? voiceIndices[0] : displayIndex;
 
-        const isConnected = !!deviceManager?.currentDevice;
+        const isConnected = !!deviceManager?.currentOutput;
 
         const sendButtonClass = isConnected ? "button button-primary" : "button button-primary disabled";
 
@@ -350,13 +348,13 @@
     }
 
     window.sendPatch = (index, button) => {
-      if (!bank || !deviceManager?.currentDevice) {
+      if (!bank || !deviceManager?.currentOutput) {
         status.textContent = "Error: No bank loaded or MIDI not connected";
         status.className = "status error";
         return;
       }
 
-      if (!deviceManager?.currentDevice) {
+      if (!deviceManager?.currentOutput) {
         status.textContent = "Error: MIDI device disconnected";
         status.className = "status error";
         return;
@@ -528,7 +526,7 @@
      * @returns {Promise<DX7Voice>} A promise that resolves to the received voice
      */
     async function requestCurrentVoice() {
-      if (!deviceManager?.currentDevice) {
+      if (!deviceManager?.currentOutput) {
         throw new Error("MIDI not connected");
       }
 

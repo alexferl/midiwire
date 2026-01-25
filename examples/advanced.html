@@ -304,9 +304,11 @@
             status.textContent = message;
             status.className = state ? `status ${state}` : "status";
           },
-          onConnectionUpdate: (device, midi) => {
+          onConnectionUpdate: (outputDevice, inputDevice, midi) => {
+            const device = outputDevice || inputDevice;
             if (device && midi) {
-              status.textContent = `Connected to ${device.name} (Channel ${midi.options.channel})`;
+              const channel = outputDevice ? midi.options.outputChannel : midi.options.inputChannel;
+              status.textContent = `Connected to ${device.name} (Channel ${channel})`;
               status.className = "status connected";
               controlsContainer.style.display = "block";
               connectMessage.style.display = "none";
@@ -328,16 +330,10 @@
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
-        deviceManager.setupDeviceListeners(async () => {
-          await deviceManager.output.populateDeviceList(deviceSelect);
+        await deviceManager.setupSelectors({
+          output: deviceSelect,
+          channel: channelSelect
         });
-
-        // Initial population
-        await deviceManager.output.populateDeviceList(deviceSelect);
-        deviceManager.output.connectDeviceSelection(deviceSelect, (midi) => {
-          window.midi = midi;
-        });
-        deviceManager.output.connectChannelSelection(channelSelect);
       } catch (err) {
         const status = document.getElementById("status");
         status.textContent = `MIDI initialization failed: ${err.message}`;

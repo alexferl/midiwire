@@ -64,7 +64,7 @@ Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.c
     import { createMIDIController } from "midiwire";
 
     await createMIDIController({
-      channel: 1,
+      outputChannel: 1,
       selector: "[data-midi-cc]"
     });
   </script>
@@ -78,7 +78,7 @@ Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.c
 import { createMIDIController } from "midiwire";
 
 const midi = await createMIDIController({
-  channel: 1,
+  outputChannel: 1,
   output: "My Synth"
 });
 
