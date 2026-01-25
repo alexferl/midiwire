@@ -1009,7 +1009,8 @@ describe("createMIDIDeviceManager", () => {
 
     const deviceManager = await createMIDIDeviceManager()
 
-    expect(deviceManager.midi.options.channel).toBe(1)
+    expect(deviceManager.midi.options.inputChannel).toBe(1)
+    expect(deviceManager.midi.options.outputChannel).toBe(1)
     // sysex option is passed to MIDIConnection, not stored in options
     expect(deviceManager.channel).toBe(1)
   })

@@ -22,23 +22,23 @@ import { CONTROLLER_EVENTS } from "./MIDIController.js"
  * const channelSelect = document.getElementById("channel-select");
  *
  * // Set up output device list dropdown
- * manager.populateOutputDeviceList(outputSelect);
+ * manager.output.populateDeviceList(outputSelect);
  *
  * // Handle output device selection
- * manager.connectOutputDeviceSelection(outputSelect, (midi, device) => {
+ * manager.output.connectDeviceSelection(outputSelect, (midi, device) => {
  *   console.log(`Connected to ${device.name}`);
  * });
  *
  * // Set up input device list dropdown
- * manager.populateInputDeviceList(inputSelect);
+ * manager.input.populateDeviceList(inputSelect);
  *
  * // Handle input device selection
- * manager.connectInputDeviceSelection(inputSelect, (midi, device) => {
+ * manager.input.connectDeviceSelection(inputSelect, (midi, device) => {
  *   console.log(`Connected to input: ${device.name}`);
  * });
  *
  * // Handle channel selection
- * manager.connectChannelSelection(channelSelect);
+ * manager.output.connectChannelSelection(channelSelect); // or manager.input.connectChannelSelection(channelSelect)
  *
  * @example
  * // With status and connection callbacks
@@ -282,7 +282,7 @@ export class MIDIDeviceManager {
    * @example
    * // With device list refresh callback
    * manager.setupDeviceListeners(() => {
-   *   manager.populateOutputDeviceList(deviceSelect);
+   *   manager.output.populateDeviceList(deviceSelect);
    * });
    */
   setupDeviceListeners(onDeviceListChange) {
