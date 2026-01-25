@@ -328,37 +328,29 @@ export class MIDIController extends EventEmitter {
 
       await this.connection.requestAccess()
 
-      // Set up device change listeners for physical connect/disconnect
       this.connection.on(CONNECTION_EVENTS.DEVICE_CHANGE, async ({ state, type, device }) => {
         try {
           if (state === "connected") {
-            // Emit connected event when device is physically connected
             if (type === "output") {
               this.emit(CONTROLLER_EVENTS.DEV_OUT_CONNECTED, device)
             } else if (type === "input") {
               this.emit(CONTROLLER_EVENTS.DEV_IN_CONNECTED, device)
             }
           } else if (state === "disconnected") {
-            // Emit disconnection event for any output device that disconnects
             if (type === "output" && device) {
-              // Check if this is the current output device
               const currentOutput = this.connection.getCurrentOutput()
               if (currentOutput && currentOutput.id === device.id) {
                 await this._disconnectOutput()
               } else {
-                // Only emit if not the current device (current device emits in _disconnectOutput)
                 this.emit(CONTROLLER_EVENTS.DEV_OUT_DISCONNECTED, device)
               }
             }
 
-            // Emit disconnection event for any input device that disconnects
             if (type === "input" && device) {
-              // Check if this is the current input device
               const currentInput = this.connection.getCurrentInput()
               if (currentInput && currentInput.id === device.id) {
                 await this._disconnectInput()
               } else {
-                // Only emit if not the current device (current device emits in _disconnectInput)
                 this.emit(CONTROLLER_EVENTS.DEV_IN_DISCONNECTED, device)
               }
             }
@@ -373,7 +365,6 @@ export class MIDIController extends EventEmitter {
         await this.connection.connect(this.options.output)
       }
 
-      // Connect input if specified
       if (this.options.input !== undefined) {
         await this._connectInput(this.options.input)
       }
@@ -895,7 +886,6 @@ export class MIDIController extends EventEmitter {
     const binding = this._createBinding(element, config, options)
     this.bindings.set(element, binding)
 
-    // Send initial value
     if (this.initialized && this.connection?.isConnected()) {
       binding.handler({ target: element })
     }
@@ -921,8 +911,6 @@ export class MIDIController extends EventEmitter {
     } = config
     const { debounce = 0 } = options
 
-    // Store resolved values back to config for patch saving
-    // Don't store channel if not explicitly provided - use dynamic midi.options.channel
     const resolvedConfig = {
       ...config,
       min,
@@ -934,7 +922,6 @@ export class MIDIController extends EventEmitter {
       resolvedConfig.channel = channel
     }
 
-    // Handle 14-bit CC (MSB + LSB)
     if (config.is14Bit) {
       const { msb, lsb } = config
 
@@ -946,13 +933,11 @@ export class MIDIController extends EventEmitter {
         // Normalize to 14-bit range (0-16383)
         const { msb: msbValue, lsb: lsbValue } = normalize14BitValue(value, min, max, invert)
 
-        // Send MSB and LSB using dynamic channel
         const channelToUse = channel || this.options.outputChannel
         this._sendCC(msb, msbValue, channelToUse)
         this._sendCC(lsb, lsbValue, channelToUse)
       }
 
-      // Add debouncing if specified
       let timeoutId = null
       const debouncedHandler =
         debounce > 0
@@ -980,7 +965,6 @@ export class MIDIController extends EventEmitter {
       }
     }
 
-    // Handle 7-bit CC
     const { cc } = config
 
     const handler = (event) => {
@@ -988,15 +972,12 @@ export class MIDIController extends EventEmitter {
 
       if (Number.isNaN(value)) return
 
-      // Normalize to 0-127 MIDI range
       const midiValue = normalizeValue(value, min, max, invert)
 
-      // Use dynamic channel from midi.options.outputChannel
       const channelToUse = channel === undefined ? this.options.outputChannel : channel
       this._sendCC(cc, midiValue, channelToUse)
     }
 
-    // Add debouncing if specified
     let timeoutId = null
     const debouncedHandler =
       debounce > 0
@@ -1232,12 +1213,11 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Validate inputs
     cc = clamp(Math.round(cc), 0, 127)
     value = clamp(Math.round(value), 0, 127)
     channel = clamp(Math.round(channel), 1, 16)
 
-    const status = 0xb0 + (channel - 1) // Control Change status
+    const status = 0xb0 + (channel - 1)
     this.connection.send([status, cc, value])
 
     const key = `${channel}:${cc}`
@@ -1399,13 +1379,11 @@ export class MIDIController extends EventEmitter {
     }
 
     if (channel !== undefined) {
-      // Send to specific channel
       channel = clamp(Math.round(channel), 1, 16)
       const status = 0xb0 + (channel - 1)
       this.connection.send([status, 120, 0])
       this.emit(CONTROLLER_EVENTS.CH_ALL_SOUNDS_OFF_SEND, { channel })
     } else {
-      // Broadcast to all channels
       for (let ch = 1; ch <= 16; ch++) {
         const status = 0xb0 + (ch - 1)
         this.connection.send([status, 120, 0])
@@ -1424,13 +1402,11 @@ export class MIDIController extends EventEmitter {
     }
 
     if (channel !== undefined) {
-      // Send to specific channel
       channel = clamp(Math.round(channel), 1, 16)
       const status = 0xb0 + (channel - 1)
       this.connection.send([status, 121, 0])
       this.emit(CONTROLLER_EVENTS.CH_RESET_CONTROLLERS_SEND, { channel })
     } else {
-      // Broadcast to all channels
       for (let ch = 1; ch <= 16; ch++) {
         const status = 0xb0 + (ch - 1)
         this.connection.send([status, 121, 0])
@@ -1764,7 +1740,6 @@ export class MIDIController extends EventEmitter {
     const messageType = status & 0xf0
     const channel = (status & 0x0f) + 1
 
-    // System Real-Time messages (0xF8-0xFF)
     if (status === 0xf8) {
       this.emit(CONTROLLER_EVENTS.SYS_CLOCK_RECV, {
         timestamp: event.midiwire,
@@ -1807,7 +1782,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // SysEx message (0xF0)
     if (status === 0xf0) {
       this.emit(CONTROLLER_EVENTS.SYS_EX_RECV, {
         data: Array.from(event.data),
@@ -1816,7 +1790,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // System Common messages (0xF1-0xF7)
     if (status === 0xf1) {
       this.emit(CONTROLLER_EVENTS.SYS_MTC_RECV, {
         data: data1,
@@ -1850,7 +1823,6 @@ export class MIDIController extends EventEmitter {
     }
 
     if (status === 0xf7) {
-      // End of SysEx - emit raw message
       this.emit(CONTROLLER_EVENTS.MIDI_RAW, {
         status,
         data: [data1, data2],
@@ -1860,7 +1832,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Control Change
     if (messageType === 0xb0) {
       const key = `${channel}:${data1}`
       this.state.controlChange.set(key, data2)
@@ -1873,7 +1844,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Program Change
     if (messageType === 0xc0) {
       this.state.programChange.set(channel.toString(), data1)
 
@@ -1884,7 +1854,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Pitch Bend
     if (messageType === 0xe0) {
       const value = data1 + (data2 << 7) // Combine LSB and MSB
       this.state.pitchBend.set(channel.toString(), value)
@@ -1896,7 +1865,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Channel Pressure (Aftertouch)
     if (messageType === 0xd0) {
       this.state.monoPressure.set(channel.toString(), data1)
 
@@ -1907,7 +1875,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Polyphonic Pressure (Polyphonic Aftertouch)
     if (messageType === 0xa0) {
       const key = `${channel}:${data1}`
       this.state.polyPressure.set(key, data2)
@@ -1920,7 +1887,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Note On
     if (messageType === 0x90 && data2 > 0) {
       this.emit(CONTROLLER_EVENTS.CH_NOTE_ON_RECV, {
         note: data1,
@@ -1930,7 +1896,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Note Off (either 0x80 or 0x90 with velocity 0)
     if (messageType === 0x80 || (messageType === 0x90 && data2 === 0)) {
       this.emit(CONTROLLER_EVENTS.CH_NOTE_OFF_RECV, {
         note: data1,
@@ -1939,7 +1904,6 @@ export class MIDIController extends EventEmitter {
       return
     }
 
-    // Other messages
     this.emit(CONTROLLER_EVENTS.MIDI_RAW, {
       status,
       data: [data1, data2],
@@ -1964,7 +1928,6 @@ export class MIDIController extends EventEmitter {
       settings: {},
     }
 
-    // Collect CC values by channel
     for (const [key, value] of this.state.controlChange.entries()) {
       const [channel, cc] = key.split(":").map(Number)
       if (!patch.channels[channel]) {
@@ -1973,7 +1936,6 @@ export class MIDIController extends EventEmitter {
       patch.channels[channel].ccs[cc] = value
     }
 
-    // Collect program changes by channel
     for (const [channelStr, value] of this.state.programChange.entries()) {
       const channel = parseInt(channelStr, 10)
       if (!patch.channels[channel]) {
@@ -1982,7 +1944,6 @@ export class MIDIController extends EventEmitter {
       patch.channels[channel].program = value
     }
 
-    // Collect pitch bend values by channel
     for (const [channelStr, value] of this.state.pitchBend.entries()) {
       const channel = parseInt(channelStr, 10)
       if (!patch.channels[channel]) {
@@ -1991,7 +1952,6 @@ export class MIDIController extends EventEmitter {
       patch.channels[channel].pitchBend = value
     }
 
-    // Collect channel pressure values by channel
     for (const [channelStr, value] of this.state.monoPressure.entries()) {
       const channel = parseInt(channelStr, 10)
       if (!patch.channels[channel]) {
@@ -2000,7 +1960,6 @@ export class MIDIController extends EventEmitter {
       patch.channels[channel].monoPressure = value
     }
 
-    // Collect polyphonic pressure values by channel:note
     for (const [key, value] of this.state.polyPressure.entries()) {
       const [channelStr, note] = key.split(":").map(Number)
       const channel = parseInt(channelStr, 10)
@@ -2013,7 +1972,6 @@ export class MIDIController extends EventEmitter {
       patch.channels[channel].polyPressure[note] = value
     }
 
-    // Collect control settings
     for (const [element, binding] of this.bindings.entries()) {
       const { config } = binding
       if (config.cc) {
@@ -2044,7 +2002,6 @@ export class MIDIController extends EventEmitter {
       throw new MIDIValidationError("Invalid patch format", "patch")
     }
 
-    // Handle different patch versions
     const version = patch.version || "1.0"
 
     if (version === "1.0") {
@@ -2064,11 +2021,9 @@ export class MIDIController extends EventEmitter {
    * @returns {Promise<void>}
    */
   async _applyPatchV1(patch) {
-    // Apply CC values
     for (const [channelStr, channelData] of Object.entries(patch.channels)) {
       const channel = parseInt(channelStr, 10)
 
-      // Apply CC values
       if (channelData.ccs) {
         for (const [ccStr, value] of Object.entries(channelData.ccs)) {
           const cc = parseInt(ccStr, 10)
@@ -2076,22 +2031,18 @@ export class MIDIController extends EventEmitter {
         }
       }
 
-      // Apply program change
       if (channelData.program !== undefined) {
         this._sendPC(channelData.program, channel)
       }
 
-      // Apply pitch bend
       if (channelData.pitchBend !== undefined) {
         this._sendPitchBend(channelData.pitchBend, channel)
       }
 
-      // Apply channel pressure
       if (channelData.monoPressure !== undefined) {
         this._sendMonoPressure(channelData.monoPressure, channel)
       }
 
-      // Apply polyphonic pressure
       if (channelData.polyPressure) {
         for (const [noteStr, pressure] of Object.entries(channelData.polyPressure)) {
           const note = parseInt(noteStr, 10)
@@ -2099,7 +2050,6 @@ export class MIDIController extends EventEmitter {
         }
       }
 
-      // Apply note states if present
       if (channelData.notes) {
         for (const [noteStr, velocity] of Object.entries(channelData.notes)) {
           const note = parseInt(noteStr, 10)
@@ -2112,13 +2062,10 @@ export class MIDIController extends EventEmitter {
       }
     }
 
-    // Apply settings to controls (if they exist)
     if (patch.settings) {
       for (const [bindingKey, setting] of Object.entries(patch.settings)) {
-        // Find controls by CC number and update their settings
         for (const [element, binding] of this.bindings.entries()) {
           if (binding.config.cc?.toString() === bindingKey.replace("cc", "")) {
-            // Update element attributes if they exist
             if (element.min !== undefined && setting.min !== undefined) {
               element.min = String(setting.min)
             }
@@ -2130,7 +2077,6 @@ export class MIDIController extends EventEmitter {
       }
     }
 
-    // Update element values from channel data for all bound elements
     for (const [element, binding] of this.bindings.entries()) {
       const { config } = binding
       if (config.cc !== undefined) {
@@ -2139,7 +2085,6 @@ export class MIDIController extends EventEmitter {
         if (channelData?.ccs) {
           const ccValue = channelData.ccs[config.cc]
           if (ccValue !== undefined) {
-            // Convert MIDI value (0-127) back to element value
             const min = config.min !== undefined ? config.min : parseFloat(element.getAttribute?.("min")) || 0
             const max = config.max !== undefined ? config.max : parseFloat(element.getAttribute?.("max")) || 127
             const invert = config.invert || false
@@ -2151,12 +2096,10 @@ export class MIDIController extends EventEmitter {
               elementValue = min + (ccValue / 127) * (max - min)
             }
 
-            // Use onInput callback if provided, otherwise fall back to direct element update
             if (config.onInput && typeof config.onInput === "function") {
               config.onInput(elementValue)
             } else {
               element.value = elementValue
-              // Dispatch input event to trigger any display updates
               element.dispatchEvent(new Event("input", { bubbles: true }))
             }
           }

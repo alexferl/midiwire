@@ -534,7 +534,6 @@
         // Set up a one-time handler for the SysEx response
         const sysExHandler = (event) => {
           try {
-            // Use DX7Voice.fromSysEx to parse the received data
             const voice = DX7Voice.fromSysEx(event.data);
 
             // Remove the handler immediately after receiving valid data

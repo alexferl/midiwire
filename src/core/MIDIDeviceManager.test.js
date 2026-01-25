@@ -400,6 +400,132 @@ describe("MIDIDeviceManager", () => {
         expect(mockMidi.device.disconnectOutput).toHaveBeenCalled()
       })
     })
+
+    describe("setupSelectors() - String Selectors", () => {
+      it("should accept string selectors and resolve them to elements", async () => {
+        // Create elements with IDs that match our test selectors
+        const outputElement = document.createElement("select")
+        outputElement.id = "test-output-select"
+        document.body.appendChild(outputElement)
+
+        const inputElement = document.createElement("select")
+        inputElement.id = "test-input-select"
+        document.body.appendChild(inputElement)
+
+        const channelElement = document.createElement("select")
+        channelElement.id = "test-channel-select"
+        document.body.appendChild(channelElement)
+
+        const mockMidi = {
+          on: vi.fn(),
+          device: {
+            getOutputs: vi.fn().mockReturnValue([{ name: "Output 1", id: "1" }]),
+            getInputs: vi.fn().mockReturnValue([{ name: "Input 1", id: "1" }]),
+            getCurrentInput: vi.fn().mockReturnValue(null),
+          },
+          options: { outputChannel: 1, inputChannel: 1 },
+        }
+
+        const manager = new MIDIDeviceManager()
+        manager.setMIDI(mockMidi)
+
+        // Call setupSelectors with string selectors
+        await manager.setupSelectors({
+          output: "#test-output-select",
+          input: "#test-input-select",
+          channel: "#test-channel-select",
+        })
+
+        // Verify elements were populated
+        expect(outputElement.innerHTML).toContain("Output 1")
+        expect(inputElement.innerHTML).toContain("Input 1")
+
+        // Cleanup
+        document.body.removeChild(outputElement)
+        document.body.removeChild(inputElement)
+        document.body.removeChild(channelElement)
+      })
+
+      it("should handle null/undefined selectors gracefully", async () => {
+        const mockMidi = {
+          on: vi.fn(),
+          device: {
+            getOutputs: vi.fn().mockReturnValue([]),
+            getInputs: vi.fn().mockReturnValue([]),
+          },
+          options: { outputChannel: 1, inputChannel: 1 },
+        }
+
+        const manager = new MIDIDeviceManager()
+        manager.setMIDI(mockMidi)
+
+        // Should not throw with null/undefined selectors
+        await expect(
+          manager.setupSelectors({
+            output: null,
+            input: undefined,
+            channel: "#non-existent",
+          }),
+        ).resolves.not.toThrow()
+      })
+
+      it("should warn when string selector is not found", async () => {
+        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const mockMidi = {
+          on: vi.fn(),
+          device: {
+            getOutputs: vi.fn().mockReturnValue([]),
+            getInputs: vi.fn().mockReturnValue([]),
+          },
+          options: { outputChannel: 1 },
+        }
+
+        const manager = new MIDIDeviceManager()
+        manager.setMIDI(mockMidi)
+
+        // Use non-existent selector
+        await manager.setupSelectors({
+          output: "#does-not-exist",
+        })
+
+        // Should have warned about missing element
+        expect(consoleWarnSpy).toHaveBeenCalledWith('MIDIDeviceManager: Selector "#does-not-exist" not found')
+
+        consoleWarnSpy.mockRestore()
+      })
+
+      it("should work with mixed element and string selectors", async () => {
+        const outputElement = document.createElement("select")
+        outputElement.id = "mixed-output"
+        document.body.appendChild(outputElement)
+
+        const mockMidi = {
+          on: vi.fn(),
+          device: {
+            getOutputs: vi.fn().mockReturnValue([{ name: "Output 1", id: "1" }]),
+            getInputs: vi.fn().mockReturnValue([{ name: "Input 1", id: "1" }]),
+            getCurrentInput: vi.fn().mockReturnValue(null),
+          },
+          options: { outputChannel: 1, inputChannel: 1 },
+        }
+
+        const manager = new MIDIDeviceManager()
+        manager.setMIDI(mockMidi)
+
+        const inputElement = document.createElement("select")
+
+        // Mix: output as string, input as element
+        await manager.setupSelectors({
+          output: "#mixed-output",
+          input: inputElement,
+        })
+
+        expect(outputElement.innerHTML).toContain("Output 1")
+        expect(inputElement.innerHTML).toContain("Input 1")
+
+        document.body.removeChild(outputElement)
+      })
+    })
   })
 
   // External MIDI device events tests

@@ -166,16 +166,16 @@ export class MIDIDeviceManager {
    * handling, channel selection, and automatic refresh on device changes.
    *
    * @param {Object} selectors - Selectors configuration
-   * @param {HTMLSelectElement} [selectors.output] - Output device dropdown element
-   * @param {HTMLSelectElement} [selectors.input] - Input device dropdown element
-   * @param {HTMLSelectElement} [selectors.channel] - MIDI channel dropdown element
+   * @param {HTMLSelectElement|string} [selectors.output] - Output device dropdown element or CSS selector string (e.g., "#output-select")
+   * @param {HTMLSelectElement|string} [selectors.input] - Input device dropdown element or CSS selector string (e.g., "#input-select")
+   * @param {HTMLSelectElement|string} [selectors.channel] - MIDI channel dropdown element or CSS selector
    * @param {Object} [options] - Configuration options
    * @param {Function} [options.onConnect] - Called when device connects ({ midi, device, type })
    * @param {Function} [options.onDisconnect] - Called when device disconnects ({ midi, type })
    * @returns {Promise<MIDIController>} The MIDI controller instance for chaining
    *
    * @example
-   * // Setup all selectors at once
+   * // Setup all selectors at once with DOM elements
    * const midi = await manager.setupSelectors({
    *   output: document.getElementById("output-select"),
    *   input: document.getElementById("input-select"),
@@ -188,6 +188,14 @@ export class MIDIDeviceManager {
    *   }
    * });
    *
+   * @example
+   * // Setup with CSS selectors (more concise)
+   * const midi = await manager.setupSelectors({
+   *   output: "#output-select",
+   *   input: "#input-select",
+   *   channel: "#channel-select"
+   * });
+   *
    * // Now use the midi controller directly
    * midi.channel.sendCC(1, 100);
    */
@@ -197,7 +205,11 @@ export class MIDIDeviceManager {
     }
 
     const selectElements = {}
-    const { output: outputSelect, input: inputSelect, channel: channelSelect } = selectors
+    const { output: outputSelector, input: inputSelector, channel: channelSelector } = selectors
+
+    const outputSelect = this._resolveSelector(outputSelector)
+    const inputSelect = this._resolveSelector(inputSelector)
+    const channelSelect = this._resolveSelector(channelSelector)
 
     if (outputSelect) {
       selectElements.output = outputSelect
@@ -242,6 +254,23 @@ export class MIDIDeviceManager {
     }
 
     return this.midi
+  }
+
+  /**
+   * Resolve a selector to a DOM element
+   * @private
+   * @param {string|HTMLElement} selector - CSS selector string or DOM element
+   * @returns {HTMLElement|null} The resolved element or null
+   */
+  _resolveSelector(selector) {
+    if (typeof selector === "string") {
+      const element = document.querySelector(selector)
+      if (!element) {
+        console.warn(`MIDIDeviceManager: Selector "${selector}" not found`)
+      }
+      return element
+    }
+    return selector || null
   }
 
   /**

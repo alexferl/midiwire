@@ -93,11 +93,9 @@
     }
   }
 
-  // Message logging
   function logMessage(message, type = "receive") {
     const log = document.getElementById("received-messages");
 
-    // Remove empty state if exists
     const emptyState = log.querySelector(".empty-state");
     if (emptyState) emptyState.remove();
 
@@ -108,7 +106,6 @@
         <span class="timestamp">${timestamp}</span>
         <span class="message">${message}</span>
       `;
-    // Add new messages at the top
     log.insertBefore(entry, log.firstChild);
   }
 
@@ -116,7 +113,6 @@
     return data.map(b => `0x${b.toString(16).padStart(2, "0").toUpperCase()}`).join(" ");
   }
 
-  // SysEx message handlers
   function handleSysExReceived(event) {
     logMessage(`[RECV] SysEx: ${hexString(event.data)}`, "receive");
     console.log("SysEx received:", event.data);
@@ -145,7 +141,6 @@
           midi = midiObj;
           window.midi = midiObj;
 
-          // Set up output and input device selectors
           const outputSelect = document.getElementById("output-device-select");
           const inputSelect = document.getElementById("input-device-select");
 
@@ -157,7 +152,6 @@
             onDisconnect: () => updateConnectionStatus()
           });
 
-          // Listen for SysEx messages
           midi.on(CTRL.SYS_EX_RECV, handleSysExReceived);
           midi.on(CTRL.SYS_EX_SEND, handleSysExSent);
 

@@ -42,7 +42,7 @@ export class MIDIDeviceError extends MIDIError {
   constructor(message, deviceType, deviceId) {
     super(message, "MIDI_DEVICE_ERROR")
     this.name = "MIDIDeviceError"
-    this.deviceType = deviceType // 'input' or 'output'
+    this.deviceType = deviceType // "input" or "output"
     this.deviceId = deviceId
   }
 }
@@ -54,7 +54,7 @@ export class MIDIValidationError extends MIDIError {
   constructor(message, validationType) {
     super(message, "MIDI_VALIDATION_ERROR")
     this.name = "MIDIValidationError"
-    this.validationType = validationType // 'note', 'patch', 'callback', etc.
+    this.validationType = validationType // "note", "patch", "callback", etc.
   }
 }
 
@@ -81,7 +81,7 @@ export class DX7ParseError extends DX7Error {
   constructor(message, parseType, offset) {
     super(message, "DX7_PARSE_ERROR")
     this.name = "DX7ParseError"
-    this.parseType = parseType // 'header', 'voice', 'bank', etc.
+    this.parseType = parseType // "header", "voice", "bank", etc.
     this.offset = offset // Byte offset where error occurred
   }
 }
@@ -93,7 +93,7 @@ export class DX7ValidationError extends DX7Error {
   constructor(message, validationType, value) {
     super(message, "DX7_VALIDATION_ERROR")
     this.name = "DX7ValidationError"
-    this.validationType = validationType // 'offset', 'length', 'parameter', etc.
+    this.validationType = validationType // "offset", "length", "parameter", etc.
     this.value = value // Invalid value that caused the error
   }
 }

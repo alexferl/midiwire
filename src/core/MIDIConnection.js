@@ -111,12 +111,10 @@ export class MIDIConnection extends EventEmitter {
         sysex: this.options.sysex,
       })
 
-      // Set up device state change listener for hotplugged devices
       this.midiAccess.onstatechange = (event) => {
         const port = event.port
         const state = event.port.state
 
-        // Emit device state change event
         this.emit(CONNECTION_EVENTS.DEVICE_CHANGE, {
           port,
           state,
@@ -128,18 +126,14 @@ export class MIDIConnection extends EventEmitter {
           },
         })
 
-        // Check if current devices were disconnected
         if (state === "disconnected") {
-          // Emit events for ALL device disconnects, not just current ones
           if (port.type === "input") {
             this.emit(CONNECTION_EVENTS.IN_DEV_DISCONNECTED, { device: port })
-            // Clear current input if it was this device
             if (this.input && this.input.id === port.id) {
               this.input = null
             }
           } else if (port.type === "output") {
             this.emit(CONNECTION_EVENTS.OUT_DEV_DISCONNECTED, { device: port })
-            // Clear current output if it was this device
             if (this.output && this.output.id === port.id) {
               this.output = null
             }
@@ -195,13 +189,11 @@ export class MIDIConnection extends EventEmitter {
       throw new MIDIDeviceError("No MIDI output devices available", "output")
     }
 
-    // If no device specified, use first available
     if (device === undefined) {
       this.output = outputs[0]
       return
     }
 
-    // Connect by index
     if (typeof device === "number") {
       if (device < 0 || device >= outputs.length) {
         throw new MIDIDeviceError(`Output index ${device} out of range (0-${outputs.length - 1})`, "output", device)
@@ -210,7 +202,6 @@ export class MIDIConnection extends EventEmitter {
       return
     }
 
-    // Connect by name or ID
     this.output = outputs.find((output) => output.name === device || output.id === device)
 
     if (!this.output) {
@@ -233,7 +224,6 @@ export class MIDIConnection extends EventEmitter {
       throw new MIDIConnectionError("MIDI access not initialized. Call requestAccess() first.")
     }
 
-    // Validate onMessage is a function
     if (typeof onMessage !== "function") {
       throw new MIDIValidationError("onMessage callback must be a function", "callback")
     }
@@ -244,22 +234,18 @@ export class MIDIConnection extends EventEmitter {
       throw new MIDIDeviceError("No MIDI input devices available", "input")
     }
 
-    // Disconnect existing input
     if (this.input) {
       this.input.onmidimessage = null
     }
 
-    // If no device specified, use first available
     if (device === undefined) {
       this.input = inputs[0]
     } else if (typeof device === "number") {
-      // Connect by index
       if (device < 0 || device >= inputs.length) {
         throw new MIDIDeviceError(`Input index ${device} out of range (0-${inputs.length - 1})`, "input", device)
       }
       this.input = inputs[device]
     } else {
-      // Connect by name or ID
       this.input = inputs.find((input) => input.name === device || input.id === device)
 
       if (!this.input) {
@@ -268,7 +254,6 @@ export class MIDIConnection extends EventEmitter {
       }
     }
 
-    // Set up message handler
     this.input.onmidimessage = (event) => {
       onMessage(event)
     }
@@ -344,7 +329,6 @@ export class MIDIConnection extends EventEmitter {
 
     const outputs = []
     this.midiAccess.outputs.forEach((output) => {
-      // Only include connected devices
       if (output.state === "connected") {
         outputs.push({
           id: output.id,
@@ -405,7 +389,6 @@ export class MIDIConnection extends EventEmitter {
     }
 
     try {
-      // Convert to Uint8Array for Web MIDI API
       const data = new Uint8Array(message)
 
       if (timestamp === null) {
@@ -441,7 +424,6 @@ export class MIDIConnection extends EventEmitter {
 
     let message
     if (includeWrapper) {
-      // Add SysEx wrapper bytes
       message = [0xf0, ...data, 0xf7]
     } else {
       message = data
