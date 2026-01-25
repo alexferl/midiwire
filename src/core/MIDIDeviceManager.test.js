@@ -469,6 +469,31 @@ describe("MIDIDeviceManager", () => {
         ).resolves.not.toThrow()
       })
 
+      it("should warn when string selector is not found", async () => {
+        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const mockMidi = {
+          on: vi.fn(),
+          device: {
+            getOutputs: vi.fn().mockReturnValue([]),
+            getInputs: vi.fn().mockReturnValue([]),
+          },
+          options: { outputChannel: 1 },
+        }
+
+        const manager = new MIDIDeviceManager()
+        manager.setMIDI(mockMidi)
+
+        // Use non-existent selector
+        await manager.setupSelectors({
+          output: "#does-not-exist",
+        })
+
+        // Should have warned about missing element
+        expect(consoleWarnSpy).toHaveBeenCalledWith('MIDIDeviceManager: Selector "#does-not-exist" not found')
+
+        consoleWarnSpy.mockRestore()
+      })
+
       it("should work with mixed element and string selectors", async () => {
         const outputElement = document.createElement("select")
         outputElement.id = "mixed-output"

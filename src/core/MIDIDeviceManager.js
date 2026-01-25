@@ -166,8 +166,8 @@ export class MIDIDeviceManager {
    * handling, channel selection, and automatic refresh on device changes.
    *
    * @param {Object} selectors - Selectors configuration
-   * @param {HTMLSelectElement|string} [selectors.output] - Output device dropdown element or CSS selector
-   * @param {HTMLSelectElement|string} [selectors.input] - Input device dropdown element or CSS selector
+   * @param {HTMLSelectElement|string} [selectors.output] - Output device dropdown element or CSS selector string (e.g., "#output-select")
+   * @param {HTMLSelectElement|string} [selectors.input] - Input device dropdown element or CSS selector string (e.g., "#input-select")
    * @param {HTMLSelectElement|string} [selectors.channel] - MIDI channel dropdown element or CSS selector
    * @param {Object} [options] - Configuration options
    * @param {Function} [options.onConnect] - Called when device connects ({ midi, device, type })
@@ -264,7 +264,11 @@ export class MIDIDeviceManager {
    */
   _resolveSelector(selector) {
     if (typeof selector === "string") {
-      return document.querySelector(selector)
+      const element = document.querySelector(selector)
+      if (!element) {
+        console.warn(`MIDIDeviceManager: Selector "${selector}" not found`)
+      }
+      return element
     }
     return selector || null
   }
