@@ -1,7 +1,13 @@
 import { resolve } from "node:path"
 import { defineConfig } from "vite"
+import dts from "vite-plugin-dts"
 
 export default defineConfig({
+  plugins: [
+    dts({
+      exclude: ["**/*.{test,spec}.*", "tests/**/*", "examples/**/*", "docs/**/*"],
+    }),
+  ],
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.js"),

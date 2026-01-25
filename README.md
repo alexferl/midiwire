@@ -36,7 +36,7 @@ Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.c
 
 <!-- Or specify a version if needed -->
 <script type="module">
-  import { createMIDIController } from "https://cdn.jsdelivr.net/npm/midiwire@0.7.0/+esm";
+  import { createMIDIController } from "https://cdn.jsdelivr.net/npm/midiwire@0.8.0/+esm";
 </script>
 ```
 
