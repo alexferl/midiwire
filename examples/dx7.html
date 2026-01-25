@@ -123,13 +123,13 @@
         const deviceSelect = document.getElementById("device-select");
         const channelSelect = document.getElementById("channel-select");
 
-        deviceManager.setupDeviceListeners(() => {
-          deviceManager.populateDeviceList(deviceSelect);
+        deviceManager.setupDeviceListeners(async () => {
+          await deviceManager.output.populateDeviceList(deviceSelect);
         });
 
-        deviceManager.populateDeviceList(deviceSelect);
-        deviceManager.connectDeviceSelection(deviceSelect);
-        deviceManager.connectChannelSelection(channelSelect);
+        await deviceManager.output.populateDeviceList(deviceSelect);
+        deviceManager.output.connectDeviceSelection(deviceSelect);
+        deviceManager.output.connectChannelSelection(channelSelect);
       } catch (err) {
         status.textContent = `MIDI initialization failed: ${err.message}`;
         status.className = "status error";
