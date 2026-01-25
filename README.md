@@ -42,53 +42,75 @@ Or use directly in the browser from a CDN like [jsDelivr](https://www.jsdelivr.c
 
 ## Quick Start
 
-### HTML Data Attributes (Easiest)
+midiwire provides three API levels to match your needs. Choose the one that fits your project:
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<body>
-  <h1>Synth Editor</h1>
+### High-Level API: `MIDIDeviceManager`
 
-  <label>
-    Filter Cutoff
-    <input type="range" min="0" max="127" data-midi-cc="74">
-  </label>
-
-  <label>
-    Resonance
-    <input type="range" min="0" max="127" data-midi-cc="71">
-  </label>
-
-  <script type="module">
-    import { createMIDIController } from "midiwire";
-
-    await createMIDIController({
-      outputChannel: 1,
-      selector: "[data-midi-cc]"
-    });
-  </script>
-</body>
-</html>
-```
-
-### Programmatic API
+For complete web UI integration with automatic device selectors and status management.
 
 ```javascript
-import { createMIDIController } from "midiwire";
+import { MIDIDeviceManager } from "midiwire";
 
-const midi = await createMIDIController({
-  outputChannel: 1,
-  output: "My Synth"
+const manager = new MIDIDeviceManager({
+  onStatusUpdate: (msg, state) => console.log(msg),
+  onConnectionUpdate: (output, input) => console.log("Connected!"),
 });
 
-// Bind controls
-const cutoff = document.querySelector("#cutoff");
-midi.bind(cutoff, { cc: 74 });
+// Setup all selectors at once (returns MIDIController)
+const midi = await manager.setupSelectors({
+  output: "#output-select",
+  input: "#input-select",
+  channel: "#channel-select",
+  onConnect: ({ device, type }) => console.log(`${type}: ${device.name}`)
+});
 
-// Send MIDI
-midi.channel.sendCC(74, 64);
+// Use the MIDI controller directly
+midi.channel.sendCC(1, 100);
 ```
+
+**Best for**: Complete web applications with device selection UI
+
+### Mid-Level API: `MIDIController`
+
+The main programmatic API for device management, MIDI messaging, and patch handling.
+
+```javascript
+import { MIDIController, CONTROLLER_EVENTS } from "midiwire";
+
+const midi = new MIDIController({ outputChannel: 1 });
+await midi.init();
+
+// Send MIDI messages
+midi.channel.sendCC(74, 64);
+midi.channel.sendNoteOn(60, 100);
+
+// Device management
+await midi.device.connect("My Synth");
+const devices = midi.device.getOutputs();
+
+// Patch management
+midi.patch.save("My Settings");
+```
+
+**Best for**: Programmatic MIDI control, synth editors, and controllers
+
+### Low-Level API: `MIDIConnection`
+
+Direct Web MIDI API wrapper for raw MIDI access and custom implementations.
+
+```javascript
+import { MIDIConnection } from "midiwire";
+
+const connection = new MIDIConnection({ sysex: true });
+await connection.requestAccess();
+await connection.connect("My Device");
+
+// Send raw MIDI
+connection.send([0x90, 60, 100]); // Note on
+connection.sendSysEx([0x41, 0x10, 0x42]); // SysEx
+```
+
+**Best for**: Custom MIDI implementations and direct protocol control
 
 ### Full API Documentation
 
