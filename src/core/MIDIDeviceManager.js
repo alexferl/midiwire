@@ -392,7 +392,7 @@ export class MIDIDeviceManager {
         } else {
           selectElement.value = ""
           if (isOutput) {
-            this.currentDevice = null
+            this.currentOutput = null
             this.updateConnectionStatus()
           }
         }
