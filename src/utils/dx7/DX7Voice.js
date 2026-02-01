@@ -265,6 +265,8 @@ export class DX7Voice {
   static DEFAULT_PITCH_EG_LEVEL = 50
   static DEFAULT_LFO_SPEED = 35
   static DEFAULT_LFO_PM_SENS = 3
+  static DEFAULT_DETUNE = 7 // Detune center (actual detune = value - 7)
+  static DEFAULT_FREQ_COARSE = 1
   static DEFAULT_ALGORITHM = 0
   static DEFAULT_FEEDBACK = 0
 
@@ -743,14 +745,14 @@ export class DX7Voice {
 
       // Rate scaling, detune, sensitivities
       unpacked[opOffset + DX7Voice.UNPACKED_OP_RATE_SCALING] = 0
-      unpacked[opOffset + DX7Voice.UNPACKED_OP_DETUNE] = 7 // Detune center (actual detune = value - 7)
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_DETUNE] = DX7Voice.DEFAULT_DETUNE
       unpacked[opOffset + DX7Voice.UNPACKED_OP_AMP_MOD_SENS] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_KEY_VEL_SENS] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = DX7Voice.DEFAULT_OUTPUT_LEVEL
 
       // Oscillator parameters
       unpacked[opOffset + DX7Voice.UNPACKED_OP_MODE] = 0 // Ratio mode
-      unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE] = 0
+      unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE] = DX7Voice.DEFAULT_FREQ_COARSE
       unpacked[opOffset + DX7Voice.UNPACKED_OP_OSC_DETUNE] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE] = 0
     }
