@@ -260,7 +260,7 @@ export class DX7Voice {
   static DEFAULT_EG_RATE = 99
   static DEFAULT_EG_LEVEL_MAX = 99
   static DEFAULT_EG_LEVEL_MIN = 0
-  static DEFAULT_BREAK_POINT = 60 // MIDI note 60 = C3
+  static DEFAULT_BREAK_POINT = 0 // DX7 breakpoint 0 = A-1 (MIDI note 9)
   static DEFAULT_OUTPUT_LEVEL = 99
   static DEFAULT_PITCH_EG_LEVEL = 50
   static DEFAULT_LFO_SPEED = 35
