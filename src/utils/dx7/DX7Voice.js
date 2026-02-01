@@ -269,6 +269,8 @@ export class DX7Voice {
   static DEFAULT_FREQ_COARSE = 1
   static DEFAULT_ALGORITHM = 0
   static DEFAULT_FEEDBACK = 0
+  static DEFAULT_OSC_SYNC = 1
+  static DEFAULT_LFO_KEY_SYNC = 1
 
   // MIDI notes
   static MIDI_OCTAVE_OFFSET = -2 // For displaying MIDI notes (MIDI 0 = C-2)
@@ -772,12 +774,12 @@ export class DX7Voice {
     // Global params
     unpacked[DX7Voice.UNPACKED_ALGORITHM] = DX7Voice.DEFAULT_ALGORITHM
     unpacked[DX7Voice.UNPACKED_FEEDBACK] = DX7Voice.DEFAULT_FEEDBACK
-    unpacked[DX7Voice.UNPACKED_OSC_SYNC] = 0
+    unpacked[DX7Voice.UNPACKED_OSC_SYNC] = DX7Voice.DEFAULT_OSC_SYNC
     unpacked[DX7Voice.UNPACKED_LFO_SPEED] = DX7Voice.DEFAULT_LFO_SPEED
     unpacked[DX7Voice.UNPACKED_LFO_DELAY] = 0
     unpacked[DX7Voice.UNPACKED_LFO_PM_DEPTH] = 0
     unpacked[DX7Voice.UNPACKED_LFO_AM_DEPTH] = 0
-    unpacked[DX7Voice.UNPACKED_LFO_KEY_SYNC] = 0
+    unpacked[DX7Voice.UNPACKED_LFO_KEY_SYNC] = DX7Voice.DEFAULT_LFO_KEY_SYNC
     unpacked[DX7Voice.UNPACKED_LFO_WAVE] = 0
     unpacked[DX7Voice.UNPACKED_LFO_PM_SENS] = DX7Voice.DEFAULT_LFO_PM_SENS
     unpacked[DX7Voice.UNPACKED_AMP_MOD_SENS] = 0
