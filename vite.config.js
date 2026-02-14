@@ -1,5 +1,7 @@
 import { resolve } from "node:path"
+
 import { defineConfig } from "vite"
+
 import dts from "vite-plugin-dts"
 
 export default defineConfig({
@@ -8,7 +10,9 @@ export default defineConfig({
       exclude: ["**/*.{test,spec}.*", "tests/**/*", "examples/**/*", "docs/**/*"],
     }),
   ],
+
   build: {
+    target: "es2020",
     lib: {
       entry: resolve(__dirname, "src/index.js"),
       name: "MIDIControls",
@@ -21,9 +25,11 @@ export default defineConfig({
       },
     },
   },
+
   server: {
     open: "/examples/index.html",
   },
+
   test: {
     environment: "jsdom",
     coverage: {
