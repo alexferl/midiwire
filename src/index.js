@@ -372,6 +372,33 @@ export async function createMIDIController(options = {}) {
   return controller
 }
 
+/**
+ * Check if the browser supports the Web MIDI API.
+ * Returns true if `navigator.requestMIDIAccess` is available.
+ *
+ * @returns {boolean} True if Web MIDI is supported, false otherwise
+ *
+ * @example
+ * // Check before initializing
+ * if (isMIDISupported()) {
+ *   const midi = await createMIDIController()
+ * } else {
+ *   alert("Please use Chrome, Edge, or Opera for Web MIDI support")
+ * }
+ *
+ * @example
+ * // Conditional UI rendering
+ * const midiSection = document.getElementById("midi-controls")
+ * if (isMIDISupported()) {
+ *   midiSection.style.display = "block"
+ * } else {
+ *   midiSection.innerHTML = "<p>MIDI not supported in this browser</p>"
+ * }
+ */
+export function isMIDISupported() {
+  return typeof navigator !== "undefined" && typeof navigator.requestMIDIAccess === "function"
+}
+
 export { DataAttributeBinder } from "./bindings/DataAttributeBinder.js"
 export { EventEmitter } from "./core/EventEmitter.js"
 export {
