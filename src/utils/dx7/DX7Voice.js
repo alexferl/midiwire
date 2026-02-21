@@ -1247,7 +1247,7 @@ export class DX7Voice {
       const freqFine = Number(opData.osc?.freq?.fine) || 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_MODE] = mode
       setParam(opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE, freqCoarse, `operators[${op}].osc.freq.coarse`, 0, 31)
-      setParam(opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE, freqFine, `operators[${op}].osc.freq.fine`, 0, 15)
+      setParam(opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE, freqFine, `operators[${op}].osc.freq.fine`, 0, 99)
 
       // Key velocity sensitivity (0-7)
       setParam(
