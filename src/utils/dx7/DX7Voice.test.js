@@ -363,7 +363,13 @@ describe("DX7Voice", () => {
       const reconstructedUnpacked = bass1reconstructed.unpack()
 
       for (let i = 0; i < DX7Voice.UNPACKED_SIZE; i++) {
-        expect(reconstructedUnpacked[i]).toBe(originalUnpacked[i])
+        // Index 20 is now an unused zeroed byte (was UNPACKED_OP_OSC_DETUNE)
+        // Detune now goes to index 14 (UNPACKED_OP_DETUNE) from packed byte 12
+        if (i === 20) {
+          expect(reconstructedUnpacked[i]).toBe(0) // Unused byte is zeroed
+        } else {
+          expect(reconstructedUnpacked[i]).toBe(originalUnpacked[i])
+        }
       }
 
       expect(bass1reconstructed.name).toBe(bass1original.name)
@@ -467,7 +473,13 @@ describe("DX7Voice", () => {
       const reconstructedUnpacked = reconstructed.unpack()
 
       for (let i = 0; i < DX7Voice.UNPACKED_SIZE; i++) {
-        expect(reconstructedUnpacked[i]).toBe(originalUnpacked[i])
+        // Index 20 is now an unused zeroed byte (was UNPACKED_OP_OSC_DETUNE)
+        // Detune now goes to index 14 (UNPACKED_OP_DETUNE) from packed byte 12
+        if (i === 20) {
+          expect(reconstructedUnpacked[i]).toBe(0) // Unused byte is zeroed
+        } else {
+          expect(reconstructedUnpacked[i]).toBe(originalUnpacked[i])
+        }
       }
     })
 
@@ -1112,25 +1124,23 @@ describe("DX7Voice", () => {
         const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
 
         // Detune/Fine byte: bits 0-2 = OSC DET, bits 3-6 = FREQ FINE
-        packed[101] = 0b01011101 // Detune=5 (101), Fine=11 (1011)
+        packed[101] = 93 // Freq Fine = 93 (full 7-bit value)
 
         voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
 
-        expect(unpacked[20]).toBe(5) // OSC Detune (3 bits)
-        expect(unpacked[21]).toBe(11) // Fine freq (4 bits)
+        expect(unpacked[21]).toBe(93) // Fine freq (7 bits, full range 0-99)
       })
 
-      it("should handle maximum detune and fine frequency", () => {
+      it("should handle maximum fine frequency", () => {
         const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
         const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
 
-        // Max Detune=7 (111), Max Fine=15 (1111)
-        packed[101] = 0b01111111
+        // Max Fine=99 (0x63 = 01100011)
+        packed[101] = 99
 
         voice._unpackOperatorFrequency(packed, unpacked, 85, 0)
 
-        expect(unpacked[20]).toBe(7) // OSC Detune max (3 bits)
-        expect(unpacked[21]).toBe(15) // Fine freq max (4 bits)
+        expect(unpacked[21]).toBe(99) // Fine freq max (7 bits, full range 0-99)
       })
     })
 
@@ -1474,16 +1484,15 @@ describe("DX7Voice", () => {
         expect(packed[100]).toBe(0b00001011) // Mode=1, Coarse=5
       })
 
-      it("should correctly combine OSC detune and fine frequency", () => {
+      it("should correctly write fine frequency as 7-bit value", () => {
         const unpacked = new Uint8Array(DX7Voice.UNPACKED_SIZE)
         const packed = new Uint8Array(DX7Voice.PACKED_SIZE)
 
-        unpacked[20] = 5 // OSC Detune
-        unpacked[21] = 11 // Fine freq
+        unpacked[21] = 93 // Fine freq (7-bit value)
 
         DX7Voice._packOperatorFrequency(unpacked, packed, 0, 85)
 
-        expect(packed[101]).toBe(0b01011101) // Detune=5, Fine=11
+        expect(packed[101]).toBe(93) // Fine freq written directly as 7-bit value
       })
     })
 
