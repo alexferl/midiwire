@@ -1,6 +1,6 @@
 {
   "name": "midiwire",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Declarative JavaScript library for browser-based MIDI control",
   "type": "module",
   "main": "./dist/midiwire.umd.js",
