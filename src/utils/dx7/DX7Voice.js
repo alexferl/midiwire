@@ -136,7 +136,7 @@ export class DX7Voice {
   static PACKED_OP_MOD_SENS = 13 // AMS and KVS packed
   static PACKED_OP_OUTPUT_LEVEL = 14
   static PACKED_OP_MODE_FREQ = 15 // Mode and Freq Coarse packed
-  static PACKED_OP_DETUNE_FINE = 16 // OSC Detune and Freq Fine packed
+  static PACKED_OP_DETUNE_FINE = 16 // Freq Fine (full 7-bit value, range 0-99)
 
   // Packed voice offsets (after 6 operators = bytes 102+)
   static PACKED_PITCH_EG_RATE_1 = 102
@@ -191,7 +191,6 @@ export class DX7Voice {
   static UNPACKED_OP_MODE = 17 // Mode (0=ratio, 1=fixed)
   static UNPACKED_OP_KEY_VEL_SENS = 18
   static UNPACKED_OP_FREQ_COARSE = 19
-  static UNPACKED_OP_OSC_DETUNE = 20
   static UNPACKED_OP_FREQ_FINE = 21
 
   // Unpacked pitch EG offsets (after 6 operators = index 138+)
@@ -484,10 +483,8 @@ export class DX7Voice {
     unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = modeFreq & DX7Voice.MASK_1BIT
     unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = (modeFreq >> 1) & DX7Voice.MASK_5BIT
 
-    // OSC detune and frequency fine (bits 0-2 = OSC DET, bits 3-6 = FREQ FINE)
-    const detuneFine = packed[src + DX7Voice.PACKED_OP_DETUNE_FINE] & DX7Voice.MASK_7BIT
-    unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = detuneFine & DX7Voice.MASK_3BIT
-    unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = (detuneFine >> 3) & DX7Voice.MASK_4BIT
+    // Freq Fine is stored as a full 7-bit value in byte 16 (range 0-99)
+    unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = packed[src + DX7Voice.PACKED_OP_DETUNE_FINE] & DX7Voice.MASK_7BIT
   }
 
   /**
@@ -655,10 +652,8 @@ export class DX7Voice {
     const freq = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_COARSE] & DX7Voice.MASK_5BIT
     packed[dst + DX7Voice.PACKED_OP_MODE_FREQ] = mode | (freq << 1)
 
-    // Combine OSC detune and frequency fine
-    const oscDetune = unpacked[src + DX7Voice.UNPACKED_OP_OSC_DETUNE] & DX7Voice.MASK_3BIT
-    const freqFine = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_FINE] & DX7Voice.MASK_4BIT
-    packed[dst + DX7Voice.PACKED_OP_DETUNE_FINE] = oscDetune | (freqFine << 3)
+    // Freq Fine is stored as a full 7-bit value in byte 16 (range 0-99)
+    packed[dst + DX7Voice.PACKED_OP_DETUNE_FINE] = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_FINE] & DX7Voice.MASK_7BIT
   }
 
   /**
@@ -755,7 +750,6 @@ export class DX7Voice {
       // Oscillator parameters
       unpacked[opOffset + DX7Voice.UNPACKED_OP_MODE] = 0 // Ratio mode
       unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE] = DX7Voice.DEFAULT_FREQ_COARSE
-      unpacked[opOffset + DX7Voice.UNPACKED_OP_OSC_DETUNE] = 0
       unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE] = 0
     }
 
@@ -879,9 +873,8 @@ export class DX7Voice {
             unpacked[dst + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = voiceData[offset++]
             unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = voiceData[offset++]
             unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = voiceData[offset++]
-            // FREQ_FINE and OSC_DETUNE order swapped from unpacked format
             unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = voiceData[offset++]
-            unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = voiceData[offset++]
+            offset++ // consume unused 21st VCED operator byte
           }
 
           // Pitch EG: 8 bytes
@@ -1008,9 +1001,8 @@ export class DX7Voice {
         unpacked[dst + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL] = voiceData[offset++]
         unpacked[dst + DX7Voice.UNPACKED_OP_MODE] = voiceData[offset++]
         unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_COARSE] = voiceData[offset++]
-        // FREQ_FINE and OSC_DETUNE order swapped from unpacked format
         unpacked[dst + DX7Voice.UNPACKED_OP_FREQ_FINE] = voiceData[offset++]
-        unpacked[dst + DX7Voice.UNPACKED_OP_OSC_DETUNE] = voiceData[offset++]
+        offset++ // consume unused 21st VCED operator byte
       }
 
       // Pitch EG: 8 bytes
@@ -1219,9 +1211,11 @@ export class DX7Voice {
         7,
       )
 
-      // Detune (-7 to +7, stored as 0-14)
+      // Detune (-7 to +7, stored as 0-14 where 7 = center/no detune)
       const detune = Number(opData.osc?.detune) || 0
-      setParam(opOffset + DX7Voice.UNPACKED_OP_DETUNE, detune + 7, `operators[${op}].osc.detune`, 0, 14)
+      // Clamp to valid range -7 to +7, then add 7 to get stored value 0-14
+      const clampedDetune = Math.max(-7, Math.min(7, detune))
+      setParam(opOffset + DX7Voice.UNPACKED_OP_DETUNE, clampedDetune + 7, `operators[${op}].osc.detune`, 0, 14)
 
       // Amp mod sensitivity (0-3)
       setParam(
@@ -1350,7 +1344,7 @@ export class DX7Voice {
     for (let op = DX7Voice.NUM_OPERATORS - 1; op >= 0; op--) {
       const src = op * DX7Voice.UNPACKED_OP_SIZE
 
-      // Copy 21 bytes per operator, skipping bytes 18 and 22 in our format
+      // Copy 21 bytes per operator (VCED format has 21 bytes, our unpacked has 23)
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_1]
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_2]
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_EG_RATE_3]
@@ -1373,9 +1367,8 @@ export class DX7Voice {
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_OUTPUT_LEVEL]
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_MODE]
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_COARSE]
-      // VCED has OSC_DETUNE before FREQ_FINE (opposite of unpacked format)
-      result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_OSC_DETUNE]
       result[offset++] = unpacked[src + DX7Voice.UNPACKED_OP_FREQ_FINE]
+      result[offset++] = 0 // unused 21st VCED operator byte (padding)
     }
 
     // Pitch EG: 8 bytes (Rates 1-4, Levels 1-4)
@@ -1450,7 +1443,7 @@ export class DX7Voice {
       operators.push({
         id: op + 1,
         osc: {
-          detune: unpacked[opOffset + DX7Voice.UNPACKED_OP_OSC_DETUNE],
+          detune: unpacked[opOffset + DX7Voice.UNPACKED_OP_DETUNE] - 7, // Convert 0-14 to -7 to +7
           freq: {
             coarse: unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_COARSE],
             fine: unpacked[opOffset + DX7Voice.UNPACKED_OP_FREQ_FINE],
